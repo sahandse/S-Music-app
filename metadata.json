@@ -1,0 +1,6 @@
+{
+  "name": "S Music",
+  "description": "A premium Apple Music-inspired music player client for Subsonic API.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
