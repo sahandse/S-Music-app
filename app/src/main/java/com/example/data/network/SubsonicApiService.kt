@@ -13,6 +13,9 @@ interface SubsonicApiService {
     @GET("rest/getArtist.view")
     suspend fun getArtist(@Query("id") id: String): SubsonicResponseWrapper
 
+    @GET("rest/getArtistInfo2.view")
+    suspend fun getArtistInfo2(@Query("id") id: String): SubsonicResponseWrapper
+
     @GET("rest/getAlbum.view")
     suspend fun getAlbum(@Query("id") id: String): SubsonicResponseWrapper
 

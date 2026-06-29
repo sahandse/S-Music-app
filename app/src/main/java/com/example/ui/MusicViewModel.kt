@@ -13,6 +13,7 @@ import com.example.data.network.SearchResult3
 import com.example.data.network.SubsonicAlbum
 import com.example.data.network.SubsonicArtist
 import com.example.data.network.SubsonicSong
+import com.example.data.network.ArtistInfo
 import com.example.data.repository.MusicRepository
 import com.example.playback.PlaybackConnection
 import kotlinx.coroutines.Job
@@ -58,6 +59,9 @@ class MusicViewModel(
 
     private val _selectedArtistAlbums = MutableStateFlow<List<SubsonicAlbum>>(emptyList())
     val selectedArtistAlbums: StateFlow<List<SubsonicAlbum>> = _selectedArtistAlbums.asStateFlow()
+
+    private val _selectedArtistBio = MutableStateFlow<ArtistInfo?>(null)
+    val selectedArtistBio: StateFlow<ArtistInfo?> = _selectedArtistBio.asStateFlow()
 
     private val _selectedAlbumDetails = MutableStateFlow<SubsonicAlbum?>(null)
     val selectedAlbumDetails: StateFlow<SubsonicAlbum?> = _selectedAlbumDetails.asStateFlow()
@@ -236,12 +240,15 @@ class MusicViewModel(
     fun loadArtistDetails(artist: SubsonicArtist) {
         _selectedArtistDetails.value = artist
         _selectedArtistAlbums.value = emptyList()
+        _selectedArtistBio.value = null
         viewModelScope.launch {
             _isLoadingDetail.value = true
             val details = repository.getArtistDetails(artist.id)
             if (details != null) {
                 _selectedArtistAlbums.value = details.album ?: emptyList()
             }
+            val bio = repository.getArtistInfo(artist.id)
+            _selectedArtistBio.value = bio
             _isLoadingDetail.value = false
         }
     }

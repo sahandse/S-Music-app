@@ -24,7 +24,9 @@ data class SubsonicResponse(
     val lyricsList: List<LyricsInfo>? = null,
     val randomSongs: SongList? = null,
     val albumList: AlbumList? = null, // Used for random/newest lists
-    val albumList2: AlbumList? = null
+    val albumList2: AlbumList? = null,
+    val artistInfo: ArtistInfo? = null,
+    val artistInfo2: ArtistInfo? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -181,4 +183,14 @@ data class LyricsInfo(
     val artist: String? = null,
     val title: String? = null,
     val value: String? = null // Contains lyrics text
+)
+
+@JsonClass(generateAdapter = true)
+data class ArtistInfo(
+    val biography: String? = null,
+    val musicBrainzId: String? = null,
+    val lastFmUrl: String? = null,
+    val smallImageUrl: String? = null,
+    val mediumImageUrl: String? = null,
+    val largeImageUrl: String? = null
 )

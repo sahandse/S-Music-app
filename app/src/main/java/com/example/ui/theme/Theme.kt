@@ -101,11 +101,11 @@ fun MyApplicationTheme(
     val colorScheme = when (themeMode) {
         "light" -> LightColorScheme
         "amoled" -> AmoledColorScheme
-        "glass" -> DarkColorScheme.copy(
-            background = Color.Transparent,
-            surface = Color(0x22FFFFFF),
-            onSurface = Color.White,
-            onBackground = Color.White
+        "glass" -> LightColorScheme.copy(
+            background = Color(0xFFF0F2F6),
+            surface = Color(0xC0FFFFFF),
+            onSurface = Color.Black,
+            onBackground = Color.Black
         )
         else -> DarkColorScheme
     }

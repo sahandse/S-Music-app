@@ -219,6 +219,21 @@ class MusicRepository(
         }
     }
 
+    suspend fun getArtistInfo(id: String): ArtistInfo? = withContext(Dispatchers.IO) {
+        if (id.startsWith("demo_") || cachedServer == null) {
+            val artistName = DemoData.artists.find { it.id == id }?.name ?: "This Artist"
+            return@withContext ArtistInfo(
+                biography = "بیوگرافی هنری و خلاقانه $artistName:\n\nاین هنرمند برجسته یکی از تاثیرگذارترین چهره‌های موسیقی در سبک خود است. با تلفیق ملودی‌های مدرن و ریشه‌های موسیقی اصیل، توانسته آثاری خلق کند که مرزهای زمان را درنوردیده‌اند. آلبوم‌های پرفروش او گواهی بر خلاقیت بی‌پایان و درک عمیق هنری وی دارند.\n\n$artistName with their legendary sound and deep, evocative songwriting, has shaped the soundscapes of a generation. Seamlessly merging traditional roots with cutting-edge production styles, they have delivered timeless albums and electrifying performances worldwide."
+            )
+        }
+        try {
+            val resp = apiService.getArtistInfo2(id).response
+            resp.artistInfo2 ?: resp.artistInfo
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun getAlbumDetails(id: String): AlbumDetail? = withContext(Dispatchers.IO) {
         if (id.startsWith("demo_") || cachedServer == null) {
             val album = DemoData.albums.find { it.id == id } ?: return@withContext null
