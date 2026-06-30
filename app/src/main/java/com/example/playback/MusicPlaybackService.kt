@@ -124,10 +124,10 @@ class MusicPlaybackService : MediaLibraryService() {
     private fun <T> futureResult(block: suspend () -> LibraryResult<T>): ListenableFuture<LibraryResult<T>> {
         val future = SettableFuture.create<LibraryResult<T>>()
         serviceScope.launch {
-            val result = try {
+            val result: LibraryResult<T> = try {
                 block()
             } catch (e: Exception) {
-                LibraryResult.ofError<T>(LibraryResult.RESULT_ERROR_UNKNOWN)
+                LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
             }
             future.set(result)
         }
