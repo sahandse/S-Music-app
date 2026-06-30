@@ -122,10 +122,10 @@ class MusicPlaybackService : MediaLibraryService() {
     }
 
     private suspend fun <T> safeLibraryResult(block: suspend () -> LibraryResult<T>): LibraryResult<T> {
-        return try {
-            block()
+        try {
+            return block()
         } catch (e: Exception) {
-            LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
+            return LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
         }
     }
 
