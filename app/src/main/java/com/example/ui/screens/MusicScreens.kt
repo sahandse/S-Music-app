@@ -4872,7 +4872,6 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
     val favoriteAlbums by viewModel.favoriteAlbums.collectAsStateWithLifecycle()
     val localPlaylists by viewModel.localPlaylists.collectAsStateWithLifecycle()
     val estimatedMinutes by viewModel.estimatedListeningMinutes.collectAsStateWithLifecycle()
-    val allServers by viewModel.allServers.collectAsStateWithLifecycle()
     val recentPlays by viewModel.recentPlays.collectAsStateWithLifecycle()
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
@@ -4995,14 +4994,6 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                         fontWeight = FontWeight.Bold,
                         fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = allServers.firstOrNull { it.isActive }?.url ?: translate("بدون سرور فعال", "No active server", viewModel),
-                        fontSize = 12.sp,
-                        fontFamily = LocalAppFontFamily.current,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
                     )
                 }
                 IconButton(onClick = { showEditNameDialog = true }, modifier = Modifier.size(36.dp)) {
