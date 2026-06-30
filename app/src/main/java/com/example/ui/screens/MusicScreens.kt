@@ -90,6 +90,8 @@ import kotlin.math.roundToInt
 
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 
 @Composable
 fun Modifier.glassmorphic(
@@ -2350,10 +2352,7 @@ fun SearchScreen(
                 )
                 BasicTextField(
                     value = query,
-                    onValueChange = { input ->
-                        val englishOnly = input.filter { char -> char.code in 32..126 }
-                        viewModel.updateSearchQuery(englishOnly)
-                    },
+                    onValueChange = { input -> viewModel.updateSearchQuery(input) },
                     singleLine = true,
                     textStyle = androidx.compose.ui.text.TextStyle(
                         fontSize = 15.sp,
@@ -2368,7 +2367,7 @@ fun SearchScreen(
                         Box(contentAlignment = Alignment.CenterStart) {
                             if (query.isEmpty()) {
                                 Text(
-                                    text = translate("جستجو (فقط انگلیسی)...", "Search (English Only)...", viewModel),
+                                    text = translate("جستجو آهنگ، هنرمند، آلبوم...", "Search songs, artists, albums...", viewModel),
                                     fontSize = 15.sp,
                                     fontFamily = LocalAppFontFamily.current,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
@@ -2389,11 +2388,13 @@ fun SearchScreen(
                         try {
                             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-US") // English Voice Search
+                                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "fa-IR")
+                                putExtra(RecognizerIntent.EXTRA_SUPPORTED_LANGUAGES, arrayListOf("fa-IR", "en-US"))
+                                putExtra(RecognizerIntent.EXTRA_PROMPT, if (viewModel.language.value == "fa") "بگویید..." else "Speak now...")
                             }
                             voiceLauncher.launch(intent)
                         } catch (e: Exception) {
-                            Toast.makeText(context, "Voice search is not available.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "جستجوی صوتی در دسترس نیست", Toast.LENGTH_SHORT).show()
                         }
                     },
                     modifier = Modifier
@@ -2655,7 +2656,8 @@ fun SearchScreen(
                     }
                 }
             } else {
-                // Unified, Minimalist Search Results Panel ordered: Artists -> Albums -> Songs
+                // Unified, Minimalist Search Results Panel ordered: Artists -> Albums -> Songs -> Downloaded
+                val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
                 val artists = searchResults.artist ?: emptyList()
                 val albums = (searchResults.album ?: emptyList()).filter { a ->
                     (selectedGenre == null || a.genre == selectedGenre) && (selectedYear == null || a.year == selectedYear)
@@ -2663,14 +2665,21 @@ fun SearchScreen(
                 val songs = (searchResults.song ?: emptyList()).filter { s ->
                     (selectedGenre == null || s.genre == selectedGenre) && (selectedYear == null || s.year == selectedYear)
                 }
+                val offlineMatches = remember(downloadedTracks, query) {
+                    if (query.isBlank()) emptyList()
+                    else downloadedTracks.filter { t ->
+                        t.title.contains(query, ignoreCase = true) || t.artist.contains(query, ignoreCase = true)
+                    }
+                }
 
                 val showArtists = activeFilter == "همه" || activeFilter == "هنرمندان"
                 val showAlbums = activeFilter == "همه" || activeFilter == "آلبوم‌ها"
                 val showSongs = activeFilter == "همه" || activeFilter == "آهنگ‌ها"
 
-                val isResultEmpty = (artists.isEmpty() || !showArtists) && 
-                                    (albums.isEmpty() || !showAlbums) && 
-                                    (songs.isEmpty() || !showSongs)
+                val isResultEmpty = (artists.isEmpty() || !showArtists) &&
+                                    (albums.isEmpty() || !showAlbums) &&
+                                    (songs.isEmpty() || !showSongs) &&
+                                    offlineMatches.isEmpty()
 
                 if (isResultEmpty) {
                     Column(
@@ -2823,6 +2832,72 @@ fun SearchScreen(
                                     onPlay = { viewModel.playSongDirectly(song, songs) },
                                     viewModel = viewModel
                                 )
+                            }
+                        }
+
+                        // 4. Downloaded / Offline matches
+                        if (offlineMatches.isNotEmpty()) {
+                            item {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.OfflinePin,
+                                        contentDescription = null,
+                                        tint = AppleRed,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = translate("دانلودشده", "Downloaded", viewModel),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = AppleRed,
+                                        fontFamily = LocalAppFontFamily.current
+                                    )
+                                }
+                            }
+                            items(offlineMatches) { track ->
+                                val offlineSong = SubsonicSong(
+                                    id = track.id,
+                                    title = track.title,
+                                    artist = track.artist,
+                                    album = track.album,
+                                    duration = track.duration
+                                )
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { viewModel.playDownloadedTrack(track) }
+                                        .padding(vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.surfaceVariant),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (track.coverArtPath != null) {
+                                            AsyncImage(
+                                                model = track.coverArtPath,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Icon(Icons.Default.MusicNote, contentDescription = null, tint = AppleRed, modifier = Modifier.size(22.dp))
+                                        }
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(track.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                                        Text(track.artist, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                                    }
+                                    Icon(Icons.Default.OfflinePin, contentDescription = null, tint = AppleRed.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+                                }
                             }
                         }
                     }
@@ -5955,6 +6030,10 @@ fun FullscreenPlayer(
 
     var showTimerDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
+    var showQueueSheet by remember { mutableStateOf(false) }
+    var showAddToPlaylist by remember { mutableStateOf(false) }
+
+    val haptic = LocalHapticFeedback.current
 
     // Toggle Tab: 0: AlbumArt Cover, 1: Lyrics list
     var playerTab by remember { mutableStateOf(0) }
@@ -6149,7 +6228,15 @@ fun FullscreenPlayer(
                                     rotationZ = rotationDegrees.floatValue
                                 )
                                 .clip(CircleShape)
-                                .shadow(16.dp, CircleShape),
+                                .shadow(16.dp, CircleShape)
+                                .pointerInput(song.id) {
+                                    detectTapGestures(
+                                        onLongPress = {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            showAddToPlaylist = true
+                                        }
+                                    )
+                                },
                             contentScale = ContentScale.Crop
                         )
 
@@ -6377,7 +6464,10 @@ fun FullscreenPlayer(
 
                             // Giant centered play/pause trigger with background ripple accent
                             IconButton(
-                                onClick = { viewModel.playbackConnection.togglePlayPause() },
+                                onClick = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    viewModel.playbackConnection.togglePlayPause()
+                                },
                                 modifier = Modifier
                                     .size(72.dp)
                                     .background(Color.White.copy(alpha = 0.1f), CircleShape)
@@ -6413,7 +6503,7 @@ fun FullscreenPlayer(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Lower accessories toolbar (Speed dial, equalizer trigger info)
+            // Lower accessories toolbar (Speed dial, Queue, equalizer trigger info)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -6423,9 +6513,18 @@ fun FullscreenPlayer(
                     Text(text = "سرعت: ${speed}x", color = Color.White, fontSize = 13.sp)
                 }
 
+                IconButton(onClick = { showQueueSheet = true }) {
+                    Icon(
+                        imageVector = Icons.Default.QueueMusic,
+                        contentDescription = "صف پخش",
+                        tint = Color.White.copy(alpha = 0.8f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Icon(imageVector = Icons.Default.Equalizer, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
-                    Text(text = "اکولایزر خودکار فعال", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                    Text(text = "اکولایزر فعال", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
                 }
             }
         }
@@ -6457,6 +6556,113 @@ fun FullscreenPlayer(
                 showSpeedDialog = false
             }
         )
+    }
+
+    // Add to playlist dialog (triggered by long-press on cover)
+    if (showAddToPlaylist) {
+        val localPlaylists by viewModel.localPlaylists.collectAsStateWithLifecycle()
+        PlaylistSelectorDialog(
+            playlists = localPlaylists,
+            onDismiss = { showAddToPlaylist = false },
+            onSelect = { playlistId ->
+                viewModel.addTrackToPlaylist(playlistId, song)
+                showAddToPlaylist = false
+            }
+        )
+    }
+
+    // Playback queue bottom sheet
+    if (showQueueSheet) {
+        val queue by viewModel.playbackConnection.playbackQueue.collectAsStateWithLifecycle()
+        val currentTrackId = song.id
+        Dialog(onDismissRequest = { showQueueSheet = false }) {
+            Surface(
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
+                color = CardDark,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(16.dp).heightIn(max = 480.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "صف پخش (${queue.size} آهنگ)",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 17.sp,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                        IconButton(onClick = { showQueueSheet = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "بستن", tint = Color.White.copy(alpha = 0.6f))
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (queue.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text("صف پخش خالی است", color = Color.Gray, fontFamily = LocalAppFontFamily.current)
+                        }
+                    } else {
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            itemsIndexed(queue) { index, qSong ->
+                                val isActive = qSong.id == currentTrackId
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isActive) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
+                                        .clickable {
+                                            viewModel.playbackConnection.playTrack(qSong, queue)
+                                            showQueueSheet = false
+                                        }
+                                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Text(
+                                        text = "${index + 1}",
+                                        fontSize = 12.sp,
+                                        color = if (isActive) AppleRed else Color.Gray,
+                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                        modifier = Modifier.width(22.dp),
+                                        textAlign = TextAlign.Center
+                                    )
+                                    AsyncImage(
+                                        model = viewModel.getCoverArtUrl(qSong.coverArt),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = qSong.title,
+                                            color = if (isActive) AppleRed else Color.White,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontFamily = LocalAppFontFamily.current
+                                        )
+                                        Text(
+                                            text = qSong.artist ?: "",
+                                            color = Color.Gray,
+                                            fontSize = 11.sp,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontFamily = LocalAppFontFamily.current
+                                        )
+                                    }
+                                    if (isActive) {
+                                        Icon(Icons.Default.VolumeUp, contentDescription = null, tint = AppleRed, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

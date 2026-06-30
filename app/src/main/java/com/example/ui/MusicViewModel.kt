@@ -389,6 +389,17 @@ class MusicViewModel(
         playbackConnection.playTrack(song, queue)
     }
 
+    fun playDownloadedTrack(track: com.example.data.local.DownloadedTrack) {
+        val song = SubsonicSong(
+            id = track.id,
+            title = track.title,
+            artist = track.artist,
+            album = track.album,
+            duration = track.duration
+        )
+        playbackConnection.playTrack(song, listOf(song))
+    }
+
     fun playAllSongsInQueue(songsList: List<SubsonicSong>) {
         if (songsList.isNotEmpty()) {
             playSongDirectly(songsList.first(), songsList)
