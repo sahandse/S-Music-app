@@ -34,8 +34,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val themeAccent by viewModel.themeAccent.collectAsStateWithLifecycle()
+            val lang by viewModel.language.collectAsStateWithLifecycle()
 
-            MyApplicationTheme(themeMode = themeMode, themeAccent = themeAccent) {
+            MyApplicationTheme(themeMode = themeMode, themeAccent = themeAccent, lang = lang) {
                 Surface(
                     modifier = Modifier.fillMaxSize()
                 ) {

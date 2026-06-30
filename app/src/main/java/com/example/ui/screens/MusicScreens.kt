@@ -75,7 +75,7 @@ import com.example.data.network.SubsonicSong
 import com.example.ui.MusicViewModel
 import com.example.ui.theme.AppleRed
 import com.example.ui.theme.AppleRedDark
-import com.example.ui.theme.VazirFontFamily
+import com.example.ui.theme.LocalAppFontFamily
 import java.util.*
 import kotlin.math.roundToInt
 
@@ -192,7 +192,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                         color = Color.White,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = VazirFontFamily
+                        fontFamily = LocalAppFontFamily.current
                     )
                 }
 
@@ -219,7 +219,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                         color = Color.White,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = VazirFontFamily
+                        fontFamily = LocalAppFontFamily.current
                     )
                 }
             }
@@ -271,7 +271,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     textAlign = TextAlign.Center
                                 )
                                 Text(
@@ -280,7 +280,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                                         else "An unparalleled, beautiful music streaming experience styled like Apple Music with high fidelity sound.",
                                     fontSize = 14.sp,
                                     color = Color.White.copy(alpha = 0.7f),
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(horizontal = 8.dp)
                                 )
@@ -291,7 +291,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     textAlign = TextAlign.Center
                                 )
                                 Text(
@@ -300,7 +300,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                                         else "Download tracks to your device and play them offline. You can choose where downloads are stored seamlessly.",
                                     fontSize = 14.sp,
                                     color = Color.White.copy(alpha = 0.7f),
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(horizontal = 8.dp)
                                 )
@@ -311,7 +311,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     textAlign = TextAlign.Center
                                 )
                                 Text(
@@ -320,7 +320,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                                         else "To begin, please enter your name so we can personalize your experience.",
                                     fontSize = 14.sp,
                                     color = Color.White.copy(alpha = 0.7f),
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     textAlign = TextAlign.Center,
                                     modifier = Modifier.padding(horizontal = 16.dp)
                                 )
@@ -328,7 +328,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                                 OutlinedTextField(
                                     value = nameInput,
                                     onValueChange = { nameInput = it },
-                                    label = { Text(if (lang == "fa") "نام شما" else "Your Name", fontFamily = VazirFontFamily) },
+                                    label = { Text(if (lang == "fa") "نام شما" else "Your Name", fontFamily = LocalAppFontFamily.current) },
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth(),
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -394,7 +394,7 @@ fun IntroScreen(viewModel: MusicViewModel) {
                         text = if (currentPage < 2) (if (lang == "fa") "بعدی" else "Next") else (if (lang == "fa") "شروع سفر موسیقی" else "Start Music Journey"),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = LocalAppFontFamily.current,
                         fontSize = 15.sp
                     )
                 }
@@ -456,7 +456,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
             title = {
                 Text(
                     text = "ثبت‌نام اولیه موفقیت‌آمیز بود",
-                    fontFamily = VazirFontFamily,
+                    fontFamily = LocalAppFontFamily.current,
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = MaterialTheme.colorScheme.primary,
@@ -469,7 +469,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     Text(
                         text = "کاربر گرامی ${name}، ثبت‌نام اولیه شما انجام شد.\n\n" +
                                 "جهت فعال‌سازی حساب کاربری و دریافت رمز عبور اختصاصی، لطفاً به آیدی پشتیبانی ما در تلگرام پیام دهید تا مشخصات برایتان ارسال گردد.",
-                        fontFamily = VazirFontFamily,
+                        fontFamily = LocalAppFontFamily.current,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 22.sp,
@@ -486,7 +486,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     ) {
                         Text(
                             text = "آیدی تلگرام: @iappSupport",
-                            fontFamily = VazirFontFamily,
+                            fontFamily = LocalAppFontFamily.current,
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = MaterialTheme.colorScheme.primary,
@@ -509,12 +509,12 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = AppleRed)
                 ) {
-                    Text("ارسال پیام در تلگرام", fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold)
+                    Text("ارسال پیام در تلگرام", fontFamily = LocalAppFontFamily.current, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRegisterSuccessDialog = false }) {
-                    Text("بستن", fontFamily = VazirFontFamily)
+                    Text("بستن", fontFamily = LocalAppFontFamily.current)
                 }
             }
         )
@@ -603,7 +603,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                 fontSize = 13.sp,
                 color = Color.White.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
-                fontFamily = VazirFontFamily
+                fontFamily = LocalAppFontFamily.current
             )
 
             Spacer(modifier = Modifier.height(4.dp))
@@ -613,7 +613,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name (نام کامل)", fontFamily = VazirFontFamily) },
+                    label = { Text("Name (نام کامل)", fontFamily = LocalAppFontFamily.current) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("name_input"),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -630,7 +630,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
-                label = { Text("Username (نام کاربری)", fontFamily = VazirFontFamily) },
+                label = { Text("Username (نام کاربری)", fontFamily = LocalAppFontFamily.current) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("username_input"),
                 colors = OutlinedTextFieldDefaults.colors(
@@ -646,7 +646,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                label = { Text("Password (کلمه عبور)", fontFamily = VazirFontFamily) },
+                label = { Text("Password (کلمه عبور)", fontFamily = LocalAppFontFamily.current) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("password_input"),
                 visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -692,7 +692,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                             text = "آیدی تلگرام: http://t.me/iappSupport پیام بدید رمز و پسورد براتون ارسال میشه و حساب کاربری شما فعال می‌شود.",
                             fontSize = 11.sp,
                             lineHeight = 17.sp,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = LocalAppFontFamily.current,
                             color = Color.White,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
@@ -700,7 +700,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                         Text(
                             text = "لمس کنید تا تلگرام باز شود",
                             fontSize = 9.sp,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = LocalAppFontFamily.current,
                             fontWeight = FontWeight.Bold,
                             color = AppleRed,
                             textAlign = TextAlign.Center,
@@ -715,7 +715,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     text = loginError ?: "",
                     color = MaterialTheme.colorScheme.error,
                     fontSize = 12.sp,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = LocalAppFontFamily.current,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 10.dp)
                 )
@@ -755,7 +755,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     Text(
                         text = if (isRegisterMode) "ثبت‌نام و فعال‌سازی" else "ثبت‌نام جدید",
                         fontWeight = FontWeight.Bold,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = LocalAppFontFamily.current,
                         fontSize = 12.sp
                     )
                 }
@@ -790,7 +790,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                         Text(
                             text = "ورود به حساب",
                             fontWeight = FontWeight.Bold,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = LocalAppFontFamily.current,
                             fontSize = 12.sp
                         )
                     }
@@ -876,7 +876,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         selected = selectedTab == 0 && currentSubScreen == null,
                         onClick = { selectedTab = 0; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "خانه") },
-                        label = { Text("خانه", fontSize = 11.sp, fontFamily = VazirFontFamily) },
+                        label = { Text("خانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -885,7 +885,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         selected = selectedTab == 1 && currentSubScreen == null,
                         onClick = { selectedTab = 1; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Search else Icons.Outlined.Search, contentDescription = "جستجو") },
-                        label = { Text("جستجو", fontSize = 11.sp, fontFamily = VazirFontFamily) },
+                        label = { Text("جستجو", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -894,7 +894,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         selected = selectedTab == 2 && currentSubScreen == null,
                         onClick = { selectedTab = 2; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 2) Icons.Filled.LibraryMusic else Icons.Outlined.LibraryMusic, contentDescription = "کتابخانه") },
-                        label = { Text("کتابخانه", fontSize = 11.sp, fontFamily = VazirFontFamily) },
+                        label = { Text("کتابخانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -903,7 +903,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         selected = selectedTab == 3 && currentSubScreen == null,
                         onClick = { selectedTab = 3; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 3) Icons.Filled.Person else Icons.Outlined.Person, contentDescription = "پروفایل") },
-                        label = { Text("پروفایل", fontSize = 11.sp, fontFamily = VazirFontFamily) },
+                        label = { Text("پروفایل", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -1054,28 +1054,28 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 selected = selectedTab == 0 && currentSubScreen == null,
                                 onClick = { selectedTab = 0; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "خانه") },
-                                label = { Text("خانه", fontSize = 11.sp, fontFamily = VazirFontFamily) },
+                                label = { Text("خانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 1 && currentSubScreen == null,
                                 onClick = { selectedTab = 1; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Search else Icons.Outlined.Search, contentDescription = "جستجو") },
-                                label = { Text("جستجو", fontSize = 11.sp, fontFamily = VazirFontFamily) },
+                                label = { Text("جستجو", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 2 && currentSubScreen == null,
                                 onClick = { selectedTab = 2; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 2) Icons.Filled.LibraryMusic else Icons.Outlined.LibraryMusic, contentDescription = "کتابخانه") },
-                                label = { Text("کتابخانه", fontSize = 11.sp, fontFamily = VazirFontFamily) },
+                                label = { Text("کتابخانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 3 && currentSubScreen == null,
                                 onClick = { selectedTab = 3; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 3) Icons.Filled.Settings else Icons.Outlined.Settings, contentDescription = "تنظیمات") },
-                                label = { Text("تنظیمات", fontSize = 11.sp, fontFamily = VazirFontFamily) },
+                                label = { Text("تنظیمات", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
                             )
                         }
@@ -1354,7 +1354,7 @@ fun HomeScreen(
                     text = greetingText,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = VazirFontFamily,
+                    fontFamily = LocalAppFontFamily.current,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
@@ -1418,7 +1418,7 @@ fun HomeScreen(
                                     color = MaterialTheme.colorScheme.primary,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = VazirFontFamily
+                                    fontFamily = LocalAppFontFamily.current
                                 )
                             }
                             
@@ -1429,7 +1429,7 @@ fun HomeScreen(
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                fontFamily = VazirFontFamily
+                                fontFamily = LocalAppFontFamily.current
                             )
                             
                             Text(
@@ -1438,7 +1438,7 @@ fun HomeScreen(
                                 fontSize = 13.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
-                                fontFamily = VazirFontFamily
+                                fontFamily = LocalAppFontFamily.current
                             )
                         }
                         
@@ -1466,7 +1466,7 @@ fun HomeScreen(
                                     color = Color.White,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = VazirFontFamily
+                                    fontFamily = LocalAppFontFamily.current
                                 )
                             }
                         }
@@ -1495,14 +1495,14 @@ fun HomeScreen(
                             color = Color.White.copy(alpha = 0.7f),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = VazirFontFamily
+                            fontFamily = LocalAppFontFamily.current
                         )
                         Text(
                             text = "High Music مجموعه برتر پاپ",
                             color = Color.White,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = VazirFontFamily
+                            fontFamily = LocalAppFontFamily.current
                         )
                     }
                 }
@@ -1815,7 +1815,7 @@ fun DownloadedTrackRow(
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontFamily = VazirFontFamily
+                fontFamily = LocalAppFontFamily.current
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
@@ -1824,7 +1824,7 @@ fun DownloadedTrackRow(
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontFamily = VazirFontFamily
+                fontFamily = LocalAppFontFamily.current
             )
             Spacer(modifier = Modifier.height(6.dp))
             // Size & Duration badges
@@ -1843,7 +1843,7 @@ fun DownloadedTrackRow(
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
-                        fontFamily = VazirFontFamily
+                        fontFamily = LocalAppFontFamily.current
                     )
                 }
                 Box(
@@ -1856,7 +1856,7 @@ fun DownloadedTrackRow(
                         text = durationText,
                         fontSize = 9.sp,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        fontFamily = VazirFontFamily
+                        fontFamily = LocalAppFontFamily.current
                     )
                 }
             }
@@ -2137,7 +2137,7 @@ fun SearchScreen(
                         val englishOnly = input.filter { char -> char.code in 32..126 }
                         viewModel.updateSearchQuery(englishOnly)
                     },
-                    placeholder = { Text(translate("جستجو (فقط انگلیسی)...", "Search (English Only)...", viewModel), fontFamily = VazirFontFamily) },
+                    placeholder = { Text(translate("جستجو (فقط انگلیسی)...", "Search (English Only)...", viewModel), fontFamily = LocalAppFontFamily.current) },
                     singleLine = true,
                     modifier = Modifier
                         .weight(1f)
@@ -2201,7 +2201,7 @@ fun SearchScreen(
                                 color = textColor,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                fontFamily = VazirFontFamily
+                                fontFamily = LocalAppFontFamily.current
                             )
                         }
                     }
@@ -2230,9 +2230,9 @@ fun SearchScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "تاریخچه جستجو", fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = VazirFontFamily)
+                            Text(text = "تاریخچه جستجو", fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = LocalAppFontFamily.current)
                             TextButton(onClick = { viewModel.clearSearchHistory() }) {
-                                Text("پاک کردن همه", color = AppleRed, fontFamily = VazirFontFamily)
+                                Text("پاک کردن همه", color = AppleRed, fontFamily = LocalAppFontFamily.current)
                             }
                         }
 
@@ -2252,7 +2252,7 @@ fun SearchScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(imageVector = Icons.Default.History, contentDescription = null, tint = Color.Gray)
-                                    Text(text = hist, fontSize = 14.sp, fontFamily = VazirFontFamily)
+                                    Text(text = hist, fontSize = 14.sp, fontFamily = LocalAppFontFamily.current)
                                 }
                                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                             }
@@ -2260,7 +2260,7 @@ fun SearchScreen(
                     }
 
                     // Quick Search Suggestions
-                    Text(text = "پیشنهادهای جستجو", fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = VazirFontFamily)
+                    Text(text = "پیشنهادهای جستجو", fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = LocalAppFontFamily.current)
                     val suggestions = listOf("The Weeknd", "Taylor Swift", "Coldplay", "Adele", "Eminem", "Billie Eilish", "Dua Lipa")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -2273,7 +2273,7 @@ fun SearchScreen(
                                     viewModel.updateSearchQuery(sugg)
                                     viewModel.addSearchHistory(sugg)
                                 },
-                                label = { Text(sugg, fontFamily = VazirFontFamily) }
+                                label = { Text(sugg, fontFamily = LocalAppFontFamily.current) }
                             )
                         }
                     }
@@ -2285,7 +2285,7 @@ fun SearchScreen(
                         text = translate("مرور دسته‌بندی‌ها", "Browse Categories", viewModel),
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        fontFamily = VazirFontFamily
+                        fontFamily = LocalAppFontFamily.current
                     )
 
                     val categories = listOf(
@@ -2328,7 +2328,7 @@ fun SearchScreen(
                                             color = Color.White,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
-                                            fontFamily = VazirFontFamily
+                                            fontFamily = LocalAppFontFamily.current
                                         )
                                     }
                                 }
@@ -2363,7 +2363,7 @@ fun SearchScreen(
                         Text(
                             text = translate("نتیجه‌ای یافت نشد", "No results found", viewModel),
                             color = Color.Gray,
-                            fontFamily = VazirFontFamily,
+                            fontFamily = LocalAppFontFamily.current,
                             fontSize = 14.sp
                         )
                     }
@@ -2381,7 +2381,7 @@ fun SearchScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = AppleRed,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                                 LazyRow(
@@ -2412,7 +2412,7 @@ fun SearchScreen(
                                                 fontSize = 11.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                fontFamily = VazirFontFamily,
+                                                fontFamily = LocalAppFontFamily.current,
                                                 textAlign = TextAlign.Center
                                             )
                                         }
@@ -2429,7 +2429,7 @@ fun SearchScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = AppleRed,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                                 LazyRow(
@@ -2460,7 +2460,7 @@ fun SearchScreen(
                                                 fontSize = 11.sp,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                fontFamily = VazirFontFamily,
+                                                fontFamily = LocalAppFontFamily.current,
                                                 textAlign = TextAlign.Center
                                             )
                                             Text(
@@ -2469,7 +2469,7 @@ fun SearchScreen(
                                                 color = Color.Gray,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis,
-                                                fontFamily = VazirFontFamily,
+                                                fontFamily = LocalAppFontFamily.current,
                                                 textAlign = TextAlign.Center
                                             )
                                         }
@@ -2486,7 +2486,7 @@ fun SearchScreen(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
                                     color = AppleRed,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
                             }
@@ -2840,13 +2840,13 @@ fun SubLibraryItemsView(
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 15.sp,
                                             color = MaterialTheme.colorScheme.primary,
-                                            fontFamily = VazirFontFamily
+                                            fontFamily = LocalAppFontFamily.current
                                         )
                                         Text(
                                             text = translate("${downloads.size} آهنگ ذخیره شده", "${downloads.size} Tracks Saved", viewModel),
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                            fontFamily = VazirFontFamily
+                                            fontFamily = LocalAppFontFamily.current
                                         )
                                     }
 
@@ -2905,16 +2905,16 @@ fun SubLibraryItemsView(
                                         ) {
                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                 Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(AppleRed))
-                                                Text(text = "$usedLabel $totalMB", fontSize = 10.sp, fontFamily = VazirFontFamily, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                                Text(text = "$usedLabel $totalMB", fontSize = 10.sp, fontFamily = LocalAppFontFamily.current, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                                             }
                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                 Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)))
-                                                Text(text = "$otherLabel $otherMB", fontSize = 10.sp, fontFamily = VazirFontFamily, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                                Text(text = "$otherLabel $otherMB", fontSize = 10.sp, fontFamily = LocalAppFontFamily.current, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                                             }
                                         }
                                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                             Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Gray.copy(alpha = 0.1f)).border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), CircleShape))
-                                            Text(text = "$freeLabel $freeMB", fontSize = 10.sp, fontFamily = VazirFontFamily, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                                            Text(text = "$freeLabel $freeMB", fontSize = 10.sp, fontFamily = LocalAppFontFamily.current, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                                         }
                                     }
                                 }
@@ -2932,13 +2932,13 @@ fun SubLibraryItemsView(
                                             text = locationLabel,
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                            fontFamily = VazirFontFamily
+                                            fontFamily = LocalAppFontFamily.current
                                         )
                                         Text(
                                             text = if (downloadLocation.isBlank()) defaultLoc else downloadLocation,
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = LocalAppFontFamily.current,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -2953,7 +2953,7 @@ fun SubLibraryItemsView(
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.height(32.dp)
                                     ) {
-                                        Text(text = changeBtn, fontSize = 11.sp, fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold)
+                                        Text(text = changeBtn, fontSize = 11.sp, fontFamily = LocalAppFontFamily.current, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -2984,7 +2984,7 @@ fun SubLibraryItemsView(
                                             text = translate("در حال دانلود موسیقی...", "Downloading Tracks...", viewModel),
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = LocalAppFontFamily.current,
                                             color = AppleRed
                                         )
                                         Text(
@@ -2994,7 +2994,7 @@ fun SubLibraryItemsView(
                                                 viewModel
                                             ),
                                             fontSize = 10.sp,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = LocalAppFontFamily.current,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                         )
                                     }
@@ -3006,7 +3006,7 @@ fun SubLibraryItemsView(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text(searchPlaceholder, fontFamily = VazirFontFamily) },
+                            placeholder = { Text(searchPlaceholder, fontFamily = LocalAppFontFamily.current) },
                             singleLine = true,
                             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                             trailingIcon = {
@@ -3037,7 +3037,7 @@ fun SubLibraryItemsView(
                             Text(
                                 text = translate("مرتب‌سازی بر اساس:", "Sort by:", viewModel),
                                 fontSize = 11.sp,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = LocalAppFontFamily.current,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
                             
@@ -3069,7 +3069,7 @@ fun SubLibraryItemsView(
                                         Text(
                                             text = option.second,
                                             fontSize = 10.sp,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = LocalAppFontFamily.current,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                             color = chipTextColor
                                         )
@@ -3134,7 +3134,7 @@ fun SubLibraryItemsView(
                     if (showLocationDialog) {
                         AlertDialog(
                             onDismissRequest = { showLocationDialog = false },
-                            title = { Text(translate("تغییر مکان ذخیره‌سازی", "Change Storage Path", viewModel), fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold) },
+                            title = { Text(translate("تغییر مکان ذخیره‌سازی", "Change Storage Path", viewModel), fontFamily = LocalAppFontFamily.current, fontWeight = FontWeight.Bold) },
                             text = {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Text(
@@ -3144,7 +3144,7 @@ fun SubLibraryItemsView(
                                             viewModel
                                         ),
                                         fontSize = 13.sp,
-                                        fontFamily = VazirFontFamily
+                                        fontFamily = LocalAppFontFamily.current
                                     )
                                     OutlinedTextField(
                                         value = customLocationInput,
@@ -3164,12 +3164,12 @@ fun SubLibraryItemsView(
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     }
                                 ) {
-                                    Text(translate("ذخیره", "Save", viewModel), fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    Text(translate("ذخیره", "Save", viewModel), fontFamily = LocalAppFontFamily.current, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 }
                             },
                             dismissButton = {
                                 TextButton(onClick = { showLocationDialog = false }) {
-                                    Text(translate("انصراف", "Cancel", viewModel), fontFamily = VazirFontFamily, color = Color.Gray)
+                                    Text(translate("انصراف", "Cancel", viewModel), fontFamily = LocalAppFontFamily.current, color = Color.Gray)
                                 }
                             }
                         )
@@ -3179,7 +3179,7 @@ fun SubLibraryItemsView(
                     if (showDeleteAllDialog) {
                         AlertDialog(
                             onDismissRequest = { showDeleteAllDialog = false },
-                            title = { Text(translate("حذف همه فایل‌های دانلود شده", "Delete All Downloads", viewModel), fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold) },
+                            title = { Text(translate("حذف همه فایل‌های دانلود شده", "Delete All Downloads", viewModel), fontFamily = LocalAppFontFamily.current, fontWeight = FontWeight.Bold) },
                             text = {
                                 Text(
                                     text = translate(
@@ -3188,7 +3188,7 @@ fun SubLibraryItemsView(
                                         viewModel
                                     ),
                                     fontSize = 14.sp,
-                                    fontFamily = VazirFontFamily
+                                    fontFamily = LocalAppFontFamily.current
                                 )
                             },
                             confirmButton = {
@@ -3200,12 +3200,12 @@ fun SubLibraryItemsView(
                                         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                                     }
                                 ) {
-                                    Text(translate("حذف همه", "Delete All", viewModel), fontFamily = VazirFontFamily, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                    Text(translate("حذف همه", "Delete All", viewModel), fontFamily = LocalAppFontFamily.current, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 }
                             },
                             dismissButton = {
                                 TextButton(onClick = { showDeleteAllDialog = false }) {
-                                    Text(translate("انصراف", "Cancel", viewModel), fontFamily = VazirFontFamily, color = Color.Gray)
+                                    Text(translate("انصراف", "Cancel", viewModel), fontFamily = LocalAppFontFamily.current, color = Color.Gray)
                                 }
                             }
                         )
@@ -3283,7 +3283,7 @@ fun AlbumGridCard(
                     fontSize = 9.sp,
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = VazirFontFamily
+                    fontFamily = LocalAppFontFamily.current
                 )
             }
         }
@@ -3297,7 +3297,7 @@ fun AlbumGridCard(
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            fontFamily = VazirFontFamily,
+            fontFamily = LocalAppFontFamily.current,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
         
@@ -3309,7 +3309,7 @@ fun AlbumGridCard(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            fontFamily = VazirFontFamily,
+            fontFamily = LocalAppFontFamily.current,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
     }
@@ -3588,7 +3588,7 @@ fun SocialIconCircle(
                     color = color,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    fontFamily = VazirFontFamily
+                    fontFamily = LocalAppFontFamily.current
                 )
             }
         }
@@ -3722,7 +3722,7 @@ fun ArtistDetailView(
                                     text = artist.name,
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     color = MaterialTheme.colorScheme.onBackground
                                 )
                                 
@@ -3737,7 +3737,7 @@ fun ArtistDetailView(
                                         text = details.country,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = LocalAppFontFamily.current,
                                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                                     )
                                     Text(
@@ -3749,7 +3749,7 @@ fun ArtistDetailView(
                                         text = details.birthYearOrActive,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = LocalAppFontFamily.current,
                                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                                     )
                                 }
@@ -3787,7 +3787,7 @@ fun ArtistDetailView(
                                             )
                                             Text(
                                                 text = if (isFav) translate("دنبال شده", "Following", viewModel) else translate("دنبال کردن", "Follow", viewModel),
-                                                fontFamily = VazirFontFamily,
+                                                fontFamily = LocalAppFontFamily.current,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = if (isFav) AppleRed else Color.White
@@ -3859,14 +3859,14 @@ fun ArtistDetailView(
                                                 text = translate("بیوگرافی و داستان هنرمند", "Biography & Story", viewModel),
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                fontFamily = VazirFontFamily,
+                                                fontFamily = LocalAppFontFamily.current,
                                                 color = AppleRed
                                             )
                                         }
                                         Text(
                                             text = if (isBioExpanded) translate("بستن", "Collapse", viewModel) else translate("بیشتر", "Read More", viewModel),
                                             fontSize = 11.sp,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = LocalAppFontFamily.current,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                             fontWeight = FontWeight.Bold
                                         )
@@ -3876,7 +3876,7 @@ fun ArtistDetailView(
                                         text = biographyToShow,
                                         fontSize = 13.sp,
                                         lineHeight = 22.sp,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = LocalAppFontFamily.current,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                                         maxLines = if (isBioExpanded) Int.MAX_VALUE else 3,
                                         overflow = TextOverflow.Ellipsis
@@ -3900,7 +3900,7 @@ fun ArtistDetailView(
                                 text = translate("آلبوم‌ها", "Albums", viewModel),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
-                                fontFamily = VazirFontFamily
+                                fontFamily = LocalAppFontFamily.current
                             )
                             
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -3925,7 +3925,7 @@ fun ArtistDetailView(
                                         Text(
                                             text = opt.second,
                                             fontSize = 11.sp,
-                                            fontFamily = VazirFontFamily,
+                                            fontFamily = LocalAppFontFamily.current,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                             color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
@@ -3941,7 +3941,7 @@ fun ArtistDetailView(
                                 Text(
                                     text = translate("هیچ آلبومی یافت نشد.", "No albums found.", viewModel),
                                     color = Color.Gray,
-                                    fontFamily = VazirFontFamily
+                                    fontFamily = LocalAppFontFamily.current
                                 )
                             }
                         }
@@ -4075,7 +4075,7 @@ fun AlbumDetailView(
                                         text = detail,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Medium,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = LocalAppFontFamily.current,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                     )
                                 }
@@ -4234,7 +4234,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
             fontSize = 32.sp, 
             fontWeight = FontWeight.Bold, 
             modifier = Modifier.padding(bottom = 4.dp),
-            fontFamily = VazirFontFamily
+            fontFamily = LocalAppFontFamily.current
         )
 
         // 1. Theme and Language Card
@@ -4264,7 +4264,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                         text = translate("زبان برنامه", "App Language", viewModel),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -4293,7 +4293,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                                 text = langOption.second,
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = LocalAppFontFamily.current,
                                 color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                             )
                         }
@@ -4318,7 +4318,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                         text = translate("ظاهر برنامه (پوسته)", "App Theme", viewModel),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -4352,7 +4352,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                                 text = t.second,
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = LocalAppFontFamily.current,
                                 color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         }
@@ -4389,7 +4389,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                         text = translate("کیفیت پخش موسیقی", "Audio Streaming Quality", viewModel),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -4424,7 +4424,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                                 text = q.second,
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                fontFamily = VazirFontFamily,
+                                fontFamily = LocalAppFontFamily.current,
                                 color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         }
@@ -4449,7 +4449,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                         text = translate("مدیریت حافظه کش", "Cache Storage Manager", viewModel),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -4459,7 +4459,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                         text = translate("ذخیره موقت هوشمند با تخلیه خودکار برای افزایش سرعت پخش موسیقی.", "Smart local caching with auto-clear maximizes app responsiveness.", viewModel), 
                         fontSize = 12.sp, 
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        fontFamily = VazirFontFamily
+                        fontFamily = LocalAppFontFamily.current
                     )
 
                     OutlinedButton(
@@ -4473,7 +4473,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                         modifier = Modifier.fillMaxWidth(),
                         border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
                     ) {
-                        Text(translate("پاک کردن کش موقت", "Clear Temporary Cache", viewModel), fontSize = 12.sp, fontFamily = VazirFontFamily)
+                        Text(translate("پاک کردن کش موقت", "Clear Temporary Cache", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                 }
             }
@@ -4505,7 +4505,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                         text = translate("حساب کاربری", "User Account", viewModel),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
-                        fontFamily = VazirFontFamily,
+                        fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -4531,7 +4531,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                             text = translate("خروج از حساب کاربری", "Log Out of Account", viewModel),
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp,
-                            fontFamily = VazirFontFamily
+                            fontFamily = LocalAppFontFamily.current
                         )
                     }
                 }
@@ -4555,7 +4555,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
                     color = AppleRed,
-                    fontFamily = VazirFontFamily
+                    fontFamily = LocalAppFontFamily.current
                 )
                 
                 Text(
@@ -4563,14 +4563,14 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = VazirFontFamily
+                    fontFamily = LocalAppFontFamily.current
                 )
                 
                 Text(
                     text = translate("توسعه‌دهنده و طراح نرم‌افزار High Music", "High Music Developer & Designer", viewModel),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    fontFamily = VazirFontFamily
+                    fontFamily = LocalAppFontFamily.current
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -4600,7 +4600,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = AppleRed,
-                            fontFamily = VazirFontFamily
+                            fontFamily = LocalAppFontFamily.current
                         )
                     }
                     Text(
@@ -4614,7 +4614,7 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                     text = translate("نسخه: 1.0.0 (پروژه ویژه High Music)", "Version: 1.0.0 (High Music Special Edition)", viewModel),
                     fontSize = 11.sp,
                     color = Color.Gray,
-                    fontFamily = VazirFontFamily
+                    fontFamily = LocalAppFontFamily.current
                 )
             }
         }
@@ -4782,7 +4782,7 @@ fun FullscreenPlayer(
                                 text = translate("درحال بارگذاری متن...", "Loading lyrics...", viewModel),
                                 fontSize = 12.sp,
                                 color = Color.White.copy(alpha = 0.5f),
-                                fontFamily = VazirFontFamily
+                                fontFamily = LocalAppFontFamily.current
                             )
                         } else if (lyrics != null) {
                             val parsedLyrics = remember(lyrics) { parseLrc(lyrics!!) }
@@ -4825,7 +4825,7 @@ fun FullscreenPlayer(
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        fontFamily = VazirFontFamily,
+                                        fontFamily = LocalAppFontFamily.current,
                                         textAlign = TextAlign.Center,
                                         modifier = Modifier.weight(1f, fill = false)
                                     )
@@ -4846,7 +4846,7 @@ fun FullscreenPlayer(
                                         text = translate("فاقد متن آنلاین (لمس برای ورود دستی/جستجو)", "No lyrics available (Tap to view details)", viewModel),
                                         fontSize = 11.sp,
                                         color = Color.White,
-                                        fontFamily = VazirFontFamily
+                                        fontFamily = LocalAppFontFamily.current
                                     )
                                 }
                             }
@@ -4928,7 +4928,7 @@ fun FullscreenPlayer(
                                     color = Color.White.copy(alpha = 0.85f),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    fontFamily = VazirFontFamily,
+                                    fontFamily = LocalAppFontFamily.current,
                                     modifier = Modifier
                                         .clickable { onArtistClick(artist) }
                                 )

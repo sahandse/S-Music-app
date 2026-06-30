@@ -8,6 +8,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -51,6 +52,7 @@ private val AmoledColorScheme = darkColorScheme(
 fun MyApplicationTheme(
     themeMode: String = "dark", // "light", "dark", "amoled", "glass"
     themeAccent: String = "red", // "red", "blue", "green", "orange", "purple", "pink"
+    lang: String = "fa", // "fa" uses Vazirmatn, "en" uses the Poppins Google font
     content: @Composable () -> Unit,
 ) {
     val accentColor = when (themeAccent) {
@@ -110,9 +112,11 @@ fun MyApplicationTheme(
         else -> DarkColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalAppFontFamily provides appFontFamily(lang)) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = appTypography(lang),
+            content = content
+        )
+    }
 }
