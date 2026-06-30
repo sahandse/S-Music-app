@@ -721,83 +721,80 @@ fun LoginScreen(viewModel: MusicViewModel) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(72.dp))
+        }
 
-            // Two premium action buttons: Left (ثبت‌نام) and Right (ورود)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Left Button: Register (ثبت‌نام)
-                Button(
-                    onClick = {
-                        if (isRegisterMode) {
-                            if (name.isBlank() || username.isBlank() || password.isBlank()) {
-                                Toast.makeText(context, "لطفاً نام، نام کاربری و کلمه عبور را تکمیل کنید", Toast.LENGTH_SHORT).show()
-                            } else {
-                                showRegisterSuccessDialog = true
-                            }
+        // Fixed corner action buttons: Sign-up bottom-left, Login bottom-right
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            // Bottom-Left: Sign-up (ثبت‌نام)
+            Button(
+                onClick = {
+                    if (isRegisterMode) {
+                        if (name.isBlank() || username.isBlank() || password.isBlank()) {
+                            Toast.makeText(context, "لطفاً نام، نام کاربری و کلمه عبور را تکمیل کنید", Toast.LENGTH_SHORT).show()
                         } else {
-                            isRegisterMode = true
+                            showRegisterSuccessDialog = true
                         }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("register_button"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isRegisterMode) AppleRed else Color.White.copy(alpha = 0.12f),
-                        contentColor = if (isRegisterMode) Color.White else Color.White.copy(alpha = 0.85f)
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    border = if (!isRegisterMode) BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)) else null
-                ) {
-                    Text(
-                        text = if (isRegisterMode) "ثبت‌نام و فعال‌سازی" else "ثبت‌نام جدید",
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = LocalAppFontFamily.current,
-                        fontSize = 12.sp
-                    )
-                }
-
-                // Right Button: Login (ورود)
-                Button(
-                    onClick = {
-                        if (!isRegisterMode) {
-                            if (username.isBlank() || password.isBlank()) {
-                                Toast.makeText(context, "لطفاً نام کاربری و کلمه عبور را تکمیل کنید", Toast.LENGTH_SHORT).show()
-                            } else {
-                                viewModel.login(url, username, password, false)
-                            }
-                        } else {
-                            isRegisterMode = false
-                        }
-                    },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp)
-                        .testTag("login_button"),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (!isRegisterMode) AppleRed else Color.White.copy(alpha = 0.12f),
-                        contentColor = if (!isRegisterMode) Color.White else Color.White.copy(alpha = 0.85f)
-                    ),
-                    shape = RoundedCornerShape(14.dp),
-                    border = if (isRegisterMode) BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)) else null
-                ) {
-                    if (isAuthenticating && !isRegisterMode) {
-                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
                     } else {
-                        Text(
-                            text = "ورود به حساب",
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = LocalAppFontFamily.current,
-                            fontSize = 12.sp
-                        )
+                        isRegisterMode = true
                     }
-                }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(20.dp)
+                    .height(48.dp)
+                    .testTag("register_button"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (isRegisterMode) AppleRed else Color.White.copy(alpha = 0.12f),
+                    contentColor = if (isRegisterMode) Color.White else Color.White.copy(alpha = 0.85f)
+                ),
+                shape = RoundedCornerShape(14.dp),
+                border = if (!isRegisterMode) BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)) else null
+            ) {
+                Text(
+                    text = "ثبت‌نام",
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = LocalAppFontFamily.current,
+                    fontSize = 13.sp
+                )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            // Bottom-Right: Login (ورود)
+            Button(
+                onClick = {
+                    if (!isRegisterMode) {
+                        if (username.isBlank() || password.isBlank()) {
+                            Toast.makeText(context, "لطفاً نام کاربری و کلمه عبور را تکمیل کنید", Toast.LENGTH_SHORT).show()
+                        } else {
+                            viewModel.login(url, username, password, false)
+                        }
+                    } else {
+                        isRegisterMode = false
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(20.dp)
+                    .height(48.dp)
+                    .testTag("login_button"),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (!isRegisterMode) AppleRed else Color.White.copy(alpha = 0.12f),
+                    contentColor = if (!isRegisterMode) Color.White else Color.White.copy(alpha = 0.85f)
+                ),
+                shape = RoundedCornerShape(14.dp),
+                border = if (isRegisterMode) BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)) else null
+            ) {
+                if (isAuthenticating && !isRegisterMode) {
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                } else {
+                    Text(
+                        text = "ورود",
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        fontSize = 13.sp
+                    )
+                }
+            }
         }
     }
 }
@@ -964,6 +961,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
                                         onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
                                         onGenreClick = { selectedTab = 1 },
+                                        onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings }
                                     )
                                     1 -> SearchScreen(
@@ -1079,8 +1077,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                             NavigationBarItem(
                                 selected = selectedTab == 3 && currentSubScreen == null,
                                 onClick = { selectedTab = 3; currentSubScreen = null },
-                                icon = { Icon(imageVector = if (selectedTab == 3) Icons.Filled.Settings else Icons.Outlined.Settings, contentDescription = "تنظیمات") },
-                                label = { Text("تنظیمات", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                                icon = { Icon(imageVector = if (selectedTab == 3) Icons.Filled.Person else Icons.Outlined.Person, contentDescription = "پروفایل") },
+                                label = { Text("پروفایل", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
                             )
                         }
@@ -1126,6 +1124,12 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
                             )
                         }
+                        currentSubScreen is SubScreen.Settings -> {
+                            SettingsScreen(
+                                viewModel = viewModel,
+                                onBack = { currentSubScreen = null }
+                            )
+                        }
                         else -> {
                             when (selectedTab) {
                                 0 -> HomeScreen(
@@ -1133,7 +1137,9 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
                                     onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
                                     onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
-                                    onGenreClick = { selectedTab = 1 }
+                                    onGenreClick = { selectedTab = 1 },
+                                    onProfileClick = { selectedTab = 3; currentSubScreen = null },
+                                    onSettingsClick = { currentSubScreen = SubScreen.Settings }
                                 )
                                 1 -> SearchScreen(
                                     viewModel = viewModel,
@@ -1145,7 +1151,10 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     onItemClick = { type -> currentSubScreen = SubScreen.SubLibraryItem(type) },
                                     onPlaylistClick = { currentSubScreen = SubScreen.PlaylistDetail(it) }
                                 )
-                                3 -> SettingsScreen(viewModel = viewModel)
+                                3 -> ProfileScreen(
+                                    viewModel = viewModel,
+                                    onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                )
                             }
                         }
                     }
@@ -1275,6 +1284,7 @@ fun HomeScreen(
     onAlbumClick: (SubsonicAlbum) -> Unit,
     onDownloadClick: () -> Unit,
     onGenreClick: (String) -> Unit,
+    onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {}
 ) {
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
@@ -1313,6 +1323,7 @@ fun HomeScreen(
             CircularProgressIndicator(color = AppleRed)
         }
     } else {
+        Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1328,7 +1339,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Top Left: Download and Settings Icons
+                // Top Left: Download and Profile Icons
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(
                         onClick = onDownloadClick,
@@ -1342,12 +1353,12 @@ fun HomeScreen(
                         )
                     }
                     IconButton(
-                        onClick = onSettingsClick,
+                        onClick = onProfileClick,
                         modifier = Modifier.size(48.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "تنظیمات",
+                            imageVector = Icons.Default.Person,
+                            contentDescription = "پروفایل",
                             tint = AppleRed,
                             modifier = Modifier.size(28.dp)
                         )
@@ -1693,6 +1704,25 @@ fun HomeScreen(
                     }
                 }
             }
+        }
+
+        // Settings shortcut pinned to the true top-left corner of the screen
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            IconButton(
+                onClick = onSettingsClick,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(start = 8.dp, top = 4.dp)
+                    .size(44.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "تنظیمات",
+                    tint = AppleRed,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+        }
         }
     }
 }
@@ -4485,6 +4515,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
     val loginError by viewModel.loginError.collectAsStateWithLifecycle()
 
     var showAddServerDialog by remember { mutableStateOf(false) }
+    var showEditNameDialog by remember { mutableStateOf(false) }
 
     val favoritedCount = favoriteArtists.size + favoriteTracks.size + favoriteAlbums.size
     val listeningHours = estimatedMinutes / 60
@@ -4547,7 +4578,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                         fontFamily = LocalAppFontFamily.current
                     )
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = userName.ifBlank { translate("کاربر مهمان", "Guest User", viewModel) },
                         fontSize = 18.sp,
@@ -4562,6 +4593,14 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
+                    )
+                }
+                IconButton(onClick = { showEditNameDialog = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = translate("ویرایش نام", "Edit Name", viewModel),
+                        tint = AppleRed,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -4691,6 +4730,50 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                 viewModel.addAnotherServer(url, username, pass, isToken)
             }
         )
+    }
+
+    if (showEditNameDialog) {
+        var editedName by remember { mutableStateOf(userName) }
+        Dialog(onDismissRequest = { showEditNameDialog = false }) {
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text = translate("ویرایش نام", "Edit Name", viewModel),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                    OutlinedTextField(
+                        value = editedName,
+                        onValueChange = { editedName = it },
+                        label = { Text(translate("نام", "Name", viewModel)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { showEditNameDialog = false }) {
+                            Text(translate("انصراف", "Cancel", viewModel))
+                        }
+                        TextButton(
+                            onClick = {
+                                viewModel.setUserName(editedName.trim())
+                                showEditNameDialog = false
+                            },
+                            enabled = editedName.isNotBlank()
+                        ) {
+                            Text(translate("ذخیره", "Save", viewModel), color = AppleRed, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -5294,86 +5377,6 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
             }
         }
 
-        // 4. About Us Card
-        val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(
-                    text = translate("درباره ما", "About Us", viewModel),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = AppleRed,
-                    fontFamily = LocalAppFontFamily.current
-                )
-                
-                Text(
-                    text = translate("سهند رضوان", "Sahand Rezvan", viewModel),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontFamily = LocalAppFontFamily.current
-                )
-                
-                Text(
-                    text = translate("توسعه‌دهنده و طراح نرم‌افزار High Music", "High Music Developer & Designer", viewModel),
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                    fontFamily = LocalAppFontFamily.current
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AppleRed.copy(alpha = 0.1f))
-                        .clickable { uriHandler.openUri("https://t.me/sahandse") }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Send,
-                            contentDescription = "Telegram",
-                            tint = AppleRed,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = translate("ارتباط در تلگرام", "Contact on Telegram", viewModel),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AppleRed,
-                            fontFamily = LocalAppFontFamily.current
-                        )
-                    }
-                    Text(
-                        text = "@sahandse",
-                        fontSize = 12.sp,
-                        color = AppleRed.copy(alpha = 0.8f)
-                    )
-                }
-
-                Text(
-                    text = translate("نسخه: 1.0.0 (پروژه ویژه High Music)", "Version: 1.0.0 (High Music Special Edition)", viewModel),
-                    fontSize = 11.sp,
-                    color = Color.Gray,
-                    fontFamily = LocalAppFontFamily.current
-                )
-            }
-        }
     }
 }
 
