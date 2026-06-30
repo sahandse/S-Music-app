@@ -11,6 +11,7 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.input.pointer.pointerInput
@@ -5804,6 +5805,67 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
     }
 }
 
+// --- Stylized waveform-style seek bar (deterministic per-song pattern, tap/drag to seek) ---
+@Composable
+fun WaveformSeekBar(
+    songId: String,
+    progressFraction: Float,
+    onSeek: (Float) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val barCount = 56
+    val barHeights = remember(songId) {
+        val random = kotlin.random.Random(songId.hashCode())
+        List(barCount) { 0.25f + random.nextFloat() * 0.75f }
+    }
+    var dragFraction by remember { mutableStateOf<Float?>(null) }
+    val activeFraction = dragFraction ?: progressFraction.coerceIn(0f, 1f)
+
+    Canvas(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(36.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { offset ->
+                    val fraction = (offset.x / size.width).coerceIn(0f, 1f)
+                    onSeek(fraction)
+                }
+            }
+            .pointerInput(Unit) {
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        dragFraction = (offset.x / size.width).coerceIn(0f, 1f)
+                    },
+                    onHorizontalDrag = { change, _ ->
+                        val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                        dragFraction = fraction
+                    },
+                    onDragEnd = {
+                        dragFraction?.let { onSeek(it) }
+                        dragFraction = null
+                    },
+                    onDragCancel = { dragFraction = null }
+                )
+            }
+    ) {
+        val barWidth = size.width / (barCount * 1.6f)
+        val spacing = size.width / barCount
+        val activeBarIndex = (activeFraction * barCount).toInt()
+        for (i in 0 until barCount) {
+            val barHeightFraction = barHeights[i]
+            val barHeightPx = size.height * barHeightFraction
+            val x = i * spacing
+            val color = if (i <= activeBarIndex) Color.White else Color.White.copy(alpha = 0.28f)
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(x, (size.height - barHeightPx) / 2f),
+                size = Size(barWidth, barHeightPx),
+                cornerRadius = CornerRadius(barWidth / 2f, barWidth / 2f)
+            )
+        }
+    }
+}
+
 // --- Gorgeous Sliding Fullscreen Player Sheet ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -5962,14 +6024,33 @@ fun FullscreenPlayer(
                             label = "ArtworkScale"
                         )
 
+                        // Slow turntable-style rotation while the track is playing,
+                        // pausing (and resuming from the same angle) when paused.
+                        val rotationDegrees = remember { mutableFloatStateOf(0f) }
+                        LaunchedEffect(isPlaying) {
+                            if (isPlaying) {
+                                var lastFrameTime = withFrameNanos { it }
+                                while (true) {
+                                    val frameTime = withFrameNanos { it }
+                                    val deltaSeconds = (frameTime - lastFrameTime) / 1_000_000_000f
+                                    lastFrameTime = frameTime
+                                    rotationDegrees.floatValue = (rotationDegrees.floatValue + deltaSeconds * 18f) % 360f
+                                }
+                            }
+                        }
+
                         AsyncImage(
                             model = viewModel.getCoverArtUrl(song.coverArt),
                             contentDescription = song.title,
                             modifier = Modifier
                                 .size(280.dp)
-                                .graphicsLayer(scaleX = scale, scaleY = scale)
-                                .clip(RoundedCornerShape(24.dp))
-                                .shadow(16.dp, RoundedCornerShape(24.dp)),
+                                .graphicsLayer(
+                                    scaleX = scale,
+                                    scaleY = scale,
+                                    rotationZ = rotationDegrees.floatValue
+                                )
+                                .clip(CircleShape)
+                                .shadow(16.dp, CircleShape),
                             contentScale = ContentScale.Crop
                         )
 
@@ -6155,18 +6236,14 @@ fun FullscreenPlayer(
                 // (which point a fixed visual direction) are never mirrored for RTL locales.
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     Column(modifier = Modifier.fillMaxWidth()) {
-                        // Progress slider track
+                        // Stylized waveform seek bar (visual pattern, not real audio analysis)
                         val sliderPosition = if (duration > 0) progress.toFloat() / duration else 0f
-                        Slider(
-                            value = sliderPosition,
-                            onValueChange = {
-                                viewModel.playbackConnection.seekTo((it * duration).toLong())
+                        WaveformSeekBar(
+                            songId = song.id,
+                            progressFraction = sliderPosition,
+                            onSeek = { fraction ->
+                                viewModel.playbackConnection.seekTo((fraction * duration).toLong())
                             },
-                            colors = SliderDefaults.colors(
-                                activeTrackColor = Color.White,
-                                inactiveTrackColor = Color.White.copy(alpha = 0.24f),
-                                thumbColor = Color.White
-                            ),
                             modifier = Modifier.fillMaxWidth()
                         )
 
