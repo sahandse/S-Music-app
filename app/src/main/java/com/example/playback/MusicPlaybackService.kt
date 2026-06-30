@@ -125,7 +125,7 @@ class MusicPlaybackService : MediaLibraryService() {
         try {
             return block()
         } catch (e: Exception) {
-            return LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
+            return LibraryResult.ofError<T>(LibraryResult.RESULT_ERROR_UNKNOWN)
         }
     }
 
