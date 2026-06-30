@@ -221,15 +221,26 @@ class PlaybackConnection(
 
     fun skipToNext() {
         val controller = mediaController ?: return
-        if (controller.hasNextMediaItem()) {
-            controller.seekToNext()
+        // Seek by playlist index directly rather than relying on hasNextMediaItem()/seekToNext(),
+        // whose backing COMMAND_SEEK_TO_NEXT_MEDIA_ITEM availability can lag behind the actual
+        // playlist state over the MediaController IPC connection, making the button appear dead.
+        val nextIndex = controller.currentMediaItemIndex + 1
+        if (nextIndex < controller.mediaItemCount) {
+            controller.seekTo(nextIndex, 0)
+            controller.playWhenReady = true
         }
     }
 
     fun skipToPrevious() {
         val controller = mediaController ?: return
-        if (controller.hasPreviousMediaItem()) {
-            controller.seekToPrevious()
+        if (controller.currentPosition > 3000L) {
+            controller.seekTo(0)
+            return
+        }
+        val previousIndex = controller.currentMediaItemIndex - 1
+        if (previousIndex >= 0) {
+            controller.seekTo(previousIndex, 0)
+            controller.playWhenReady = true
         } else {
             controller.seekTo(0)
         }

@@ -1248,6 +1248,26 @@ fun HomeScreen(
         }
     }
 
+    // Themed rows built from library genre tags. Only rendered when matching
+    // tracks actually exist, since (unlike the stylized remix row above) labeling
+    // a track "instrumental" or "energetic" is a factual claim about its content.
+    val instrumentalSongs = remember(randomSongs) {
+        val keywords = listOf("instrumental", "بی کلام", "بی‌کلام")
+        randomSongs.filter { song ->
+            keywords.any { kw -> song.genre?.contains(kw, ignoreCase = true) == true || song.title.contains(kw, ignoreCase = true) }
+        }.take(10)
+    }
+
+    val energeticSongs = remember(randomSongs) {
+        val keywords = listOf("energetic", "workout", "dance", "electronic", "edm", "پرانرژی", "ورزشی")
+        randomSongs.filter { song -> keywords.any { kw -> song.genre?.contains(kw, ignoreCase = true) == true } }.take(10)
+    }
+
+    val chillSongs = remember(randomSongs) {
+        val keywords = listOf("chill", "relax", "ambient", "acoustic", "calm", "آرام", "آرامش")
+        randomSongs.filter { song -> keywords.any { kw -> song.genre?.contains(kw, ignoreCase = true) == true } }.take(10)
+    }
+
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = AppleRed)
@@ -1510,12 +1530,9 @@ fun HomeScreen(
             // Continue Play / Recent History
             if (recentPlays.isNotEmpty()) {
                 SectionTitle(title = "ادامه پخش")
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(recentPlays) { play ->
-                        val song = SubsonicSong(
+                val recentQueue = remember(recentPlays) {
+                    recentPlays.map { play ->
+                        SubsonicSong(
                             id = play.trackId,
                             title = play.title,
                             artist = play.artist,
@@ -1523,11 +1540,18 @@ fun HomeScreen(
                             coverArt = play.coverArtUrl,
                             duration = play.duration
                         )
+                    }
+                }
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(recentQueue) { song ->
                         HorizontalMediaCard(
-                            title = play.title,
-                            subtitle = play.artist,
-                            imageUrl = play.coverArtUrl,
-                            onClick = { viewModel.playSongDirectly(song, listOf(song)) }
+                            title = song.title,
+                            subtitle = song.artist,
+                            imageUrl = song.coverArt,
+                            onClick = { viewModel.playSongDirectly(song, recentQueue) }
                         )
                     }
                 }
@@ -1618,6 +1642,60 @@ fun HomeScreen(
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
                             imageUrl = viewModel.getCoverArtUrl(song.coverArt),
                             onClick = { viewModel.playSongDirectly(song, remixSongs) }
+                        )
+                    }
+                }
+            }
+
+            // Instrumental / lyric-less tracks (only shown when the library has tagged ones)
+            if (instrumentalSongs.isNotEmpty()) {
+                SectionTitle(title = translate("آهنگ‌های بی‌کلام", "Instrumental", viewModel))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(instrumentalSongs) { song ->
+                        VerticalBigCard(
+                            title = song.title,
+                            subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            onClick = { viewModel.playSongDirectly(song, instrumentalSongs) }
+                        )
+                    }
+                }
+            }
+
+            // Energetic / workout tracks
+            if (energeticSongs.isNotEmpty()) {
+                SectionTitle(title = translate("پرانرژی و ورزشی", "Energetic & Workout", viewModel))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(energeticSongs) { song ->
+                        VerticalBigCard(
+                            title = song.title,
+                            subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            onClick = { viewModel.playSongDirectly(song, energeticSongs) }
+                        )
+                    }
+                }
+            }
+
+            // Chill / relaxing tracks
+            if (chillSongs.isNotEmpty()) {
+                SectionTitle(title = translate("آرامش‌بخش", "Chill & Relax", viewModel))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(chillSongs) { song ->
+                        VerticalBigCard(
+                            title = song.title,
+                            subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            onClick = { viewModel.playSongDirectly(song, chillSongs) }
                         )
                     }
                 }
@@ -6026,6 +6104,8 @@ fun FullscreenPlayer(
     val lyrics by viewModel.currentLyrics.collectAsStateWithLifecycle()
     val isLoadingLyrics by viewModel.isLoadingLyrics.collectAsStateWithLifecycle()
     val sleepTimerLeft by viewModel.playbackConnection.sleepTimerMinutesLeft.collectAsStateWithLifecycle()
+    val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
+    val downloadProgresses by viewModel.downloadProgresses.collectAsStateWithLifecycle()
 
     var showTimerDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
@@ -6123,12 +6203,41 @@ fun FullscreenPlayer(
                     )
                 }
 
-                IconButton(onClick = { showTimerDialog = true }) {
-                    Icon(
-                        imageVector = if (sleepTimerLeft != null) Icons.Filled.Timer else Icons.Outlined.Timer,
-                        contentDescription = "تایمر خواب",
-                        tint = if (sleepTimerLeft != null) AppleRed else Color.White
-                    )
+                Row {
+                    val isDownloaded = downloadedTracks.any { it.id == song.id }
+                    val downloadProgress = downloadProgresses[song.id]
+                    if (downloadProgress != null) {
+                        CircularProgressIndicator(
+                            progress = { downloadProgress },
+                            color = AppleRed,
+                            modifier = Modifier.padding(10.dp).size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        IconButton(
+                            onClick = {
+                                if (isDownloaded) {
+                                    viewModel.deleteDownload(song.id)
+                                } else {
+                                    viewModel.startDownload(song)
+                                }
+                            }
+                        ) {
+                            Icon(
+                                imageVector = if (isDownloaded) Icons.Default.OfflinePin else Icons.Outlined.FileDownload,
+                                contentDescription = "دانلود",
+                                tint = if (isDownloaded) AppleRed else Color.White
+                            )
+                        }
+                    }
+
+                    IconButton(onClick = { showTimerDialog = true }) {
+                        Icon(
+                            imageVector = if (sleepTimerLeft != null) Icons.Filled.Timer else Icons.Outlined.Timer,
+                            contentDescription = "تایمر خواب",
+                            tint = if (sleepTimerLeft != null) AppleRed else Color.White
+                        )
+                    }
                 }
             }
 
