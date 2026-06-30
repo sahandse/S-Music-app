@@ -838,6 +838,12 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     onBack = { currentSubScreen = null }
                                 )
                             }
+                            currentSubScreen is SubScreen.Radio -> {
+                                RadioScreen(
+                                    viewModel = viewModel,
+                                    onBack = { currentSubScreen = null }
+                                )
+                            }
                             else -> {
                                 when (selectedTab) {
                                     0 -> HomeScreen(
@@ -856,7 +862,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     )
                                     2 -> LibraryScreen(
                                         viewModel = viewModel,
-                                        onItemClick = { type -> currentSubScreen = SubScreen.SubLibraryItem(type) },
+                                        onItemClick = { type -> currentSubScreen = if (type == "radio") SubScreen.Radio else SubScreen.SubLibraryItem(type) },
                                         onPlaylistClick = { currentSubScreen = SubScreen.PlaylistDetail(it) }
                                     )
                                     3 -> ProfileScreen(
@@ -1015,6 +1021,12 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 onBack = { currentSubScreen = null }
                             )
                         }
+                        currentSubScreen is SubScreen.Radio -> {
+                            RadioScreen(
+                                viewModel = viewModel,
+                                onBack = { currentSubScreen = null }
+                            )
+                        }
                         else -> {
                             when (selectedTab) {
                                 0 -> HomeScreen(
@@ -1033,7 +1045,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 )
                                 2 -> LibraryScreen(
                                     viewModel = viewModel,
-                                    onItemClick = { type -> currentSubScreen = SubScreen.SubLibraryItem(type) },
+                                    onItemClick = { type -> currentSubScreen = if (type == "radio") SubScreen.Radio else SubScreen.SubLibraryItem(type) },
                                     onPlaylistClick = { currentSubScreen = SubScreen.PlaylistDetail(it) }
                                 )
                                 3 -> ProfileScreen(
@@ -1079,6 +1091,7 @@ sealed class SubScreen {
     data class PlaylistDetail(val playlist: LocalPlaylist) : SubScreen()
     data class SubLibraryItem(val type: String) : SubScreen()
     object Settings : SubScreen()
+    object Radio : SubScreen()
 }
 
 // --- Mini Player Bar Component ---
@@ -2786,7 +2799,8 @@ fun LibraryScreen(
             Triple("albums", "آلبوم‌های من", Icons.Outlined.Album),
             Triple("artists", "هنرمندان من", Icons.Outlined.People),
             Triple("all_artists", "مرور همه هنرمندان", Icons.Outlined.Groups),
-            Triple("downloads", "دانلودهای آفلاین", Icons.Outlined.OfflinePin)
+            Triple("downloads", "دانلودهای آفلاین", Icons.Outlined.OfflinePin),
+            Triple("radio", "رادیوی اینترنتی", Icons.Outlined.Radio)
         )
 
         items(categories) { cat ->
@@ -3536,6 +3550,143 @@ fun SubLibraryItemsView(
 fun EmptyStateView(message: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(text = message, color = Color.Gray, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
+    }
+}
+
+// --- Internet Radio Screen (Radio Browser, minimal design) ---
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RadioScreen(
+    viewModel: MusicViewModel,
+    onBack: () -> Unit
+) {
+    val stations by viewModel.radioStations.collectAsStateWithLifecycle()
+    val query by viewModel.radioSearchQuery.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoadingRadio.collectAsStateWithLifecycle()
+    val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.playbackConnection.isPlaying.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        if (stations.isEmpty()) viewModel.loadTopRadioStations()
+    }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(translate("رادیوی اینترنتی", "Internet Radio", viewModel), fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.Default.ArrowForward, contentDescription = translate("بازگشت", "Back", viewModel)) // Reversed because RTL Arrow
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+            )
+        },
+        containerColor = Color.Transparent
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { viewModel.searchRadioStations(it) },
+                placeholder = { Text(translate("جستجوی ایستگاه رادیویی...", "Search radio stations...", viewModel), fontFamily = LocalAppFontFamily.current) },
+                singleLine = true,
+                leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                shape = RoundedCornerShape(16.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AppleRed,
+                    unfocusedBorderColor = Color.Gray.copy(alpha = 0.3f)
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+
+            Box(modifier = Modifier.fillMaxSize().padding(bottom = 80.dp)) {
+                when {
+                    isLoading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = AppleRed, strokeWidth = 2.dp, modifier = Modifier.size(28.dp))
+                        }
+                    }
+                    stations.isEmpty() -> {
+                        EmptyStateView(message = translate("ایستگاهی یافت نشد.", "No stations found.", viewModel))
+                    }
+                    else -> {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)
+                        ) {
+                            items(stations, key = { it.stationUuid }) { station ->
+                                val isActiveStation = currentTrack?.id == "radio_${station.stationUuid}"
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .clickable { viewModel.playRadioStation(station) }
+                                        .padding(vertical = 10.dp, horizontal = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(46.dp)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(Color.Gray.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (!station.favicon.isNullOrBlank()) {
+                                            AsyncImage(
+                                                model = station.favicon,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(12.dp)),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                        } else {
+                                            Icon(imageVector = Icons.Default.Radio, contentDescription = null, tint = Color.Gray)
+                                        }
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = station.name,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isActiveStation) AppleRed else MaterialTheme.colorScheme.onSurface,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontFamily = LocalAppFontFamily.current
+                                        )
+                                        val subtitle = listOfNotNull(station.country, station.tags?.split(",")?.firstOrNull()?.trim())
+                                            .filter { it.isNotBlank() }
+                                            .joinToString(" • ")
+                                        if (subtitle.isNotBlank()) {
+                                            Text(
+                                                text = subtitle,
+                                                fontSize = 12.sp,
+                                                color = Color.Gray,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+
+                                    Icon(
+                                        imageVector = if (isActiveStation && isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        tint = if (isActiveStation) AppleRed else Color.Gray,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

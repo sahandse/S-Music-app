@@ -127,7 +127,8 @@ data class SubsonicSong(
     val genre: String? = null,
     val playCount: Long? = 0,
     val starred: String? = null,
-    val type: String? = null
+    val type: String? = null,
+    val streamUrl: String? = null // Used for non-Subsonic sources (e.g. internet radio); bypasses Subsonic stream URL generation
 )
 
 @JsonClass(generateAdapter = true)
