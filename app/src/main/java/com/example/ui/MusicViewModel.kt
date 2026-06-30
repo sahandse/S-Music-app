@@ -132,6 +132,9 @@ class MusicViewModel(
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
 
+    private val _profilePhotoUri = MutableStateFlow("")
+    val profilePhotoUri: StateFlow<String> = _profilePhotoUri.asStateFlow()
+
     private val _introShown = MutableStateFlow(false)
     val introShown: StateFlow<Boolean> = _introShown.asStateFlow()
 
@@ -141,8 +144,14 @@ class MusicViewModel(
     private val _audioQuality = MutableStateFlow("high") // "low", "medium", "high", "lossless"
     val audioQuality: StateFlow<String> = _audioQuality.asStateFlow()
 
+    private val _downloadQuality = MutableStateFlow("high") // "low", "medium", "high", "lossless"
+    val downloadQuality: StateFlow<String> = _downloadQuality.asStateFlow()
+
     private val _cacheSizeMb = MutableStateFlow(128)
     val cacheSizeMb: StateFlow<Int> = _cacheSizeMb.asStateFlow()
+
+    private val _autoBackupEnabled = MutableStateFlow(false)
+    val autoBackupEnabled: StateFlow<Boolean> = _autoBackupEnabled.asStateFlow()
 
     // --- Equalizer & Playback Enhancements ---
     private val _bassLevel = MutableStateFlow(50) // 0..100, 50 = neutral
@@ -229,16 +238,39 @@ class MusicViewModel(
         _themeAccent.value = prefs.getString("theme_accent", "red") ?: "red"
         _language.value = prefs.getString("app_language", "fa") ?: "fa"
         _userName.value = prefs.getString("user_name", "") ?: ""
+        _profilePhotoUri.value = prefs.getString("profile_photo_uri", "") ?: ""
         _introShown.value = prefs.getBoolean("intro_shown", false)
         _downloadLocation.value = prefs.getString("download_location", "") ?: ""
         _audioQuality.value = prefs.getString("audio_quality", "high") ?: "high"
+        _downloadQuality.value = prefs.getString("download_quality", "high") ?: "high"
+        repository.setStreamQuality(_audioQuality.value)
+        repository.setDownloadQuality(_downloadQuality.value)
         _cacheSizeMb.value = prefs.getInt("cache_size_mb", 128)
         _bassLevel.value = prefs.getInt("bass_level", 50)
         _trebleLevel.value = prefs.getInt("treble_level", 50)
         _crossfadeEnabled.value = prefs.getBoolean("crossfade_enabled", false)
         _wifiOnlyDownload.value = prefs.getBoolean("wifi_only_download", false)
+        _autoBackupEnabled.value = prefs.getBoolean("auto_backup_enabled", false)
 
         loadTrendingContent()
+        startAutoBackupLoop()
+    }
+
+    private fun startAutoBackupLoop() {
+        viewModelScope.launch {
+            while (true) {
+                delay(6 * 60 * 60 * 1000L) // every 6 hours
+                if (_autoBackupEnabled.value) {
+                    exportPlaylistsBackup()
+                }
+            }
+        }
+    }
+
+    fun setAutoBackupEnabled(enabled: Boolean) {
+        _autoBackupEnabled.value = enabled
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("auto_backup_enabled", enabled).apply()
     }
 
     // --- Server Auth Actions ---
@@ -359,6 +391,13 @@ class MusicViewModel(
         }
     }
 
+    fun shufflePlayAllSongsInQueue(songsList: List<SubsonicSong>) {
+        if (songsList.isNotEmpty()) {
+            val shuffled = songsList.shuffled()
+            playSongDirectly(shuffled.first(), shuffled)
+        }
+    }
+
     fun addToQueue(songs: List<SubsonicSong>) {
         if (songs.isEmpty()) return
         playbackConnection.addToQueue(songs)
@@ -449,6 +488,30 @@ class MusicViewModel(
         }
     }
 
+    fun startDownloadAll(songs: List<SubsonicSong>) {
+        viewModelScope.launch {
+            for (song in songs) {
+                if (repository.isTrackDownloaded(song.id)) continue
+                if (_wifiOnlyDownload.value && !isOnWifi()) {
+                    _transientMessage.value = "دانلود فقط در حالت وای‌فای فعال است"
+                    return@launch
+                }
+                _downloadProgresses.value = _downloadProgresses.value.toMutableMap().apply {
+                    put(song.id, 0.01f)
+                }
+                repository.downloadTrack(song) { progress ->
+                    _downloadProgresses.value = _downloadProgresses.value.toMutableMap().apply {
+                        put(song.id, progress)
+                    }
+                }
+                _downloadProgresses.value = _downloadProgresses.value.toMutableMap().apply {
+                    remove(song.id)
+                }
+            }
+            _transientMessage.value = "دانلود آلبوم به پایان رسید"
+        }
+    }
+
     fun deleteDownload(songId: String) {
         viewModelScope.launch {
             repository.deleteDownload(songId)
@@ -523,6 +586,12 @@ class MusicViewModel(
         prefs.edit().putString("user_name", name).apply()
     }
 
+    fun setProfilePhotoUri(uri: String) {
+        _profilePhotoUri.value = uri
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("profile_photo_uri", uri).apply()
+    }
+
     fun setIntroShown(shown: Boolean) {
         _introShown.value = shown
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
@@ -552,8 +621,16 @@ class MusicViewModel(
 
     fun setAudioQuality(quality: String) {
         _audioQuality.value = quality
+        repository.setStreamQuality(quality)
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("audio_quality", quality).apply()
+    }
+
+    fun setDownloadQuality(quality: String) {
+        _downloadQuality.value = quality
+        repository.setDownloadQuality(quality)
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putString("download_quality", quality).apply()
     }
 
     fun setCacheSizeMb(sizeMb: Int) {

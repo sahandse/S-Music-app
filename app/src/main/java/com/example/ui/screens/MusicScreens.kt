@@ -10,14 +10,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -66,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
+import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
 import com.example.data.local.DownloadedTrack
 import com.example.data.local.LocalPlaylist
@@ -1246,7 +1250,27 @@ fun HomeScreen(
     val favoriteArtists by viewModel.favoriteArtists.collectAsStateWithLifecycle()
     val recentPlays by viewModel.recentPlays.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingHome.collectAsStateWithLifecycle()
+    val favoriteTracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
+    val favoriteAlbums by viewModel.favoriteAlbums.collectAsStateWithLifecycle()
+    val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    val newestTracks = remember(randomSongs) {
+        randomSongs.filter { it.year != null }.sortedByDescending { it.year }.take(10)
+    }
+
+    val tasteMixSongs = remember(randomSongs, favoriteTracks, favoriteAlbums) {
+        val favoriteArtistNames = (favoriteTracks.map { it.artist } + favoriteAlbums.map { it.artist })
+            .filter { it.isNotBlank() }
+            .toSet()
+        if (favoriteArtistNames.isEmpty()) {
+            emptyList()
+        } else {
+            randomSongs.filter { song ->
+                song.artist != null && favoriteArtistNames.any { fav -> song.artist.equals(fav, ignoreCase = true) }
+            }
+        }
+    }
 
     val genreCovers = remember(newestAlbums, randomSongs) {
         val map = linkedMapOf<String, String>()
@@ -1287,6 +1311,17 @@ fun HomeScreen(
         }
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
+        if (currentTrack != null) {
+            AsyncImage(
+                model = viewModel.getCoverArtUrl(currentTrack!!.coverArt),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(100.dp)
+                    .graphicsLayer(alpha = 0.18f),
+                contentScale = ContentScale.Crop
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1576,6 +1611,42 @@ fun HomeScreen(
                 }
             }
 
+            // Newest Tracks (by release year, distinct from album-level New Albums)
+            if (newestTracks.isNotEmpty()) {
+                SectionTitle(title = translate("تازه‌ترین آهنگ‌ها", "Newest Tracks", viewModel))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(newestTracks) { song ->
+                        VerticalBigCard(
+                            title = song.title,
+                            subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            onClick = { viewModel.playSongDirectly(song, newestTracks) }
+                        )
+                    }
+                }
+            }
+
+            // Taste-based Mix (built from artists the user has favorited)
+            if (tasteMixSongs.isNotEmpty()) {
+                SectionTitle(title = translate("میکس مخصوص شما", "Mix For You", viewModel))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(tasteMixSongs) { song ->
+                        VerticalBigCard(
+                            title = song.title,
+                            subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            onClick = { viewModel.playSongDirectly(song, tasteMixSongs) }
+                        )
+                    }
+                }
+            }
+
             // Hot Remixes section (Remix)
             if (remixSongs.isNotEmpty()) {
                 SectionTitle(title = translate("ریمیکس‌های داغ", "Hot Remixes", viewModel))
@@ -1717,7 +1788,10 @@ fun VerticalBigCard(
 fun ArtistCircleCard(
     name: String,
     imageUrl: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    albumCount: Int? = null,
+    isFavorite: Boolean? = null,
+    onToggleFavorite: (() -> Unit)? = null
 ) {
     Column(
         modifier = Modifier
@@ -1726,15 +1800,35 @@ fun ArtistCircleCard(
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = name,
-            modifier = Modifier
-                .size(90.dp)
-                .clip(CircleShape)
-                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), CircleShape),
-            contentScale = ContentScale.Crop
-        )
+        Box(modifier = Modifier.size(90.dp)) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = name,
+                modifier = Modifier
+                    .size(90.dp)
+                    .clip(CircleShape)
+                    .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), CircleShape),
+                contentScale = ContentScale.Crop
+            )
+            if (onToggleFavorite != null) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface)
+                        .clickable { onToggleFavorite() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isFavorite == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = null,
+                        tint = AppleRed,
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = name,
@@ -1745,6 +1839,15 @@ fun ArtistCircleCard(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+        if (albumCount != null) {
+            Text(
+                text = "$albumCount آلبوم",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+        }
     }
 }
 
@@ -2152,6 +2255,8 @@ fun SearchScreen(
     val isSearching by viewModel.isSearching.collectAsStateWithLifecycle()
     val trendingAlbums by viewModel.trendingAlbums.collectAsStateWithLifecycle()
     var activeFilter by remember { mutableStateOf("همه") }
+    var selectedGenre by remember { mutableStateOf<String?>(null) }
+    var selectedYear by remember { mutableStateOf<Int?>(null) }
 
     val context = LocalContext.current
 
@@ -2289,6 +2394,68 @@ fun SearchScreen(
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = LocalAppFontFamily.current
                             )
+                        }
+                    }
+                }
+
+                // Genre / Year filter chips, derived from current search results
+                val availableGenres = remember(searchResults) {
+                    ((searchResults.album ?: emptyList()).mapNotNull { it.genre } +
+                        (searchResults.song ?: emptyList()).mapNotNull { it.genre })
+                        .distinct().sorted()
+                }
+                val availableYears = remember(searchResults) {
+                    ((searchResults.album ?: emptyList()).mapNotNull { it.year } +
+                        (searchResults.song ?: emptyList()).mapNotNull { it.year })
+                        .distinct().sortedDescending()
+                }
+                if (availableGenres.isNotEmpty() || availableYears.isNotEmpty()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        availableGenres.forEach { genre ->
+                            val isSelected = selectedGenre == genre
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) AppleRed.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                    .border(1.dp, if (isSelected) AppleRed else Color.Transparent, RoundedCornerShape(14.dp))
+                                    .clickable { selectedGenre = if (isSelected) null else genre }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = genre,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                        }
+                        availableYears.forEach { year ->
+                            val isSelected = selectedYear == year
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) AppleRed.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                    .border(1.dp, if (isSelected) AppleRed else Color.Transparent, RoundedCornerShape(14.dp))
+                                    .clickable { selectedYear = if (isSelected) null else year }
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = year.toString(),
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
                         }
                     }
                 }
@@ -2450,8 +2617,12 @@ fun SearchScreen(
             } else {
                 // Unified, Minimalist Search Results Panel ordered: Artists -> Albums -> Songs
                 val artists = searchResults.artist ?: emptyList()
-                val albums = searchResults.album ?: emptyList()
-                val songs = searchResults.song ?: emptyList()
+                val albums = (searchResults.album ?: emptyList()).filter { a ->
+                    (selectedGenre == null || a.genre == selectedGenre) && (selectedYear == null || a.year == selectedYear)
+                }
+                val songs = (searchResults.song ?: emptyList()).filter { s ->
+                    (selectedGenre == null || s.genre == selectedGenre) && (selectedYear == null || s.year == selectedYear)
+                }
 
                 val showArtists = activeFilter == "همه" || activeFilter == "هنرمندان"
                 val showAlbums = activeFilter == "همه" || activeFilter == "آلبوم‌ها"
@@ -2879,10 +3050,21 @@ fun SubLibraryItemsView(
                 }
                 "all_artists" -> {
                     val allArtists by viewModel.artistsList.collectAsStateWithLifecycle()
+                    val favArtists by viewModel.favoriteArtists.collectAsStateWithLifecycle()
                     var query by remember { mutableStateOf("") }
                     val filteredSorted = remember(allArtists, query) {
                         allArtists.filter { it.name.contains(query, ignoreCase = true) }
                             .sortedBy { it.name.lowercase() }
+                    }
+                    val gridState = rememberLazyGridState()
+                    val coroutineScope = rememberCoroutineScope()
+                    val letterIndex = remember(filteredSorted) {
+                        val map = linkedMapOf<String, Int>()
+                        filteredSorted.forEachIndexed { index, artist ->
+                            val letter = artist.name.firstOrNull()?.uppercaseChar()?.toString() ?: "#"
+                            if (!map.containsKey(letter)) map[letter] = index
+                        }
+                        map
                     }
                     Column(modifier = Modifier.fillMaxSize()) {
                         OutlinedTextField(
@@ -2899,18 +3081,50 @@ fun SubLibraryItemsView(
                         if (filteredSorted.isEmpty()) {
                             EmptyStateView(message = translate("هنرمندی یافت نشد.", "No artists found.", viewModel))
                         } else {
-                            LazyVerticalGrid(
-                                columns = GridCells.Fixed(3),
-                                contentPadding = PaddingValues(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                items(filteredSorted) { artist ->
-                                    ArtistCircleCard(
-                                        name = artist.name,
-                                        imageUrl = viewModel.getCoverArtUrl(artist.coverArt),
-                                        onClick = { onArtistClick(artist) }
-                                    )
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                LazyVerticalGrid(
+                                    state = gridState,
+                                    columns = GridCells.Fixed(3),
+                                    contentPadding = PaddingValues(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    items(filteredSorted) { artist ->
+                                        val isFav = favArtists.any { it.id == artist.id }
+                                        ArtistCircleCard(
+                                            name = artist.name,
+                                            imageUrl = viewModel.getCoverArtUrl(artist.coverArt),
+                                            onClick = { onArtistClick(artist) },
+                                            albumCount = artist.albumCount,
+                                            isFavorite = isFav,
+                                            onToggleFavorite = { viewModel.toggleFavoriteArtist(artist) }
+                                        )
+                                    }
+                                }
+                                if (letterIndex.size > 1) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxHeight()
+                                            .width(24.dp)
+                                            .padding(vertical = 8.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.SpaceEvenly
+                                    ) {
+                                        letterIndex.forEach { (letter, index) ->
+                                            Text(
+                                                text = letter,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = AppleRed,
+                                                modifier = Modifier
+                                                    .clickable {
+                                                        coroutineScope.launch { gridState.scrollToItem(index) }
+                                                    }
+                                                    .padding(2.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -4350,6 +4564,14 @@ fun AlbumDetailView(
                                 Text("پخش همه")
                             }
 
+                            IconButton(onClick = { viewModel.shufflePlayAllSongsInQueue(songs) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Shuffle,
+                                    contentDescription = translate("پخش تصادفی", "Shuffle play", viewModel),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
                             OutlinedButton(
                                 onClick = { viewModel.toggleFavoriteAlbum(album) },
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed)
@@ -4365,6 +4587,14 @@ fun AlbumDetailView(
                                 Icon(
                                     imageVector = Icons.Default.QueueMusic,
                                     contentDescription = translate("افزودن به صف پخش", "Add to queue", viewModel),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            IconButton(onClick = { viewModel.startDownloadAll(songs) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = translate("دانلود کل آلبوم", "Download whole album", viewModel),
                                     tint = MaterialTheme.colorScheme.onSurface
                                 )
                             }
@@ -4520,18 +4750,54 @@ fun PlaylistDetailView(
 @Composable
 fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
     val userName by viewModel.userName.collectAsStateWithLifecycle()
+    val profilePhotoUri by viewModel.profilePhotoUri.collectAsStateWithLifecycle()
     val favoriteArtists by viewModel.favoriteArtists.collectAsStateWithLifecycle()
     val favoriteTracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
     val favoriteAlbums by viewModel.favoriteAlbums.collectAsStateWithLifecycle()
     val localPlaylists by viewModel.localPlaylists.collectAsStateWithLifecycle()
     val estimatedMinutes by viewModel.estimatedListeningMinutes.collectAsStateWithLifecycle()
     val allServers by viewModel.allServers.collectAsStateWithLifecycle()
+    val recentPlays by viewModel.recentPlays.collectAsStateWithLifecycle()
+    val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
+    val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
 
     var showEditNameDialog by remember { mutableStateOf(false) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) viewModel.setProfilePhotoUri(uri.toString()) }
 
     val favoritedCount = favoriteArtists.size + favoriteTracks.size + favoriteAlbums.size
     val listeningHours = estimatedMinutes / 60
     val listeningMinutesRemainder = estimatedMinutes % 60
+
+    val topGenres = remember(favoriteTracks, favoriteAlbums, randomSongs, newestAlbums) {
+        val favArtistNames = (favoriteTracks.map { it.artist } + favoriteAlbums.map { it.artist })
+            .filter { it.isNotBlank() }.toSet()
+        val genreCounts = mutableMapOf<String, Int>()
+        randomSongs.forEach { song ->
+            if (!song.genre.isNullOrBlank() && song.artist != null && favArtistNames.any { it.equals(song.artist, ignoreCase = true) }) {
+                genreCounts[song.genre] = (genreCounts[song.genre] ?: 0) + 1
+            }
+        }
+        newestAlbums.forEach { album ->
+            if (!album.genre.isNullOrBlank() && album.artist != null && favArtistNames.any { it.equals(album.artist, ignoreCase = true) }) {
+                genreCounts[album.genre] = (genreCounts[album.genre] ?: 0) + 1
+            }
+        }
+        genreCounts.toList().sortedByDescending { it.second }.take(5).map { it.first }
+    }
+
+    val weeklyPlayCounts = remember(recentPlays) {
+        val counts = IntArray(7)
+        val calendar = Calendar.getInstance()
+        recentPlays.forEach { play ->
+            calendar.timeInMillis = play.timestamp
+            val dayIndex = (calendar.get(Calendar.DAY_OF_WEEK) + 5) % 7 // 0=Saturday ... 6=Friday
+            counts[dayIndex] = counts[dayIndex] + 1
+        }
+        counts.toList()
+    }
 
     Column(
         modifier = Modifier
@@ -4579,16 +4845,32 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                         .size(72.dp)
                         .clip(CircleShape)
                         .background(AppleRed.copy(alpha = 0.15f))
-                        .border(2.dp, AppleRed, CircleShape),
+                        .border(2.dp, AppleRed, CircleShape)
+                        .clickable {
+                            photoPickerLauncher.launch(
+                                androidx.activity.result.PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = (userName.firstOrNull() ?: 'S').uppercaseChar().toString(),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AppleRed,
-                        fontFamily = LocalAppFontFamily.current
-                    )
+                    if (profilePhotoUri.isNotBlank()) {
+                        AsyncImage(
+                            model = profilePhotoUri,
+                            contentDescription = translate("عکس پروفایل", "Profile Photo", viewModel),
+                            modifier = Modifier.fillMaxSize().clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Text(
+                            text = (userName.firstOrNull() ?: 'S').uppercaseChar().toString(),
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AppleRed,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                    }
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -4641,6 +4923,100 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                 value = if (listeningHours > 0) "${listeningHours}h ${listeningMinutesRemainder}m" else "${listeningMinutesRemainder}m",
                 label = translate("زمان گوش دادن", "Listening", viewModel)
             )
+        }
+
+        // Top Genres (derived from genre tags of favorited artists' tracks/albums)
+        if (topGenres.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = translate("ژانرهای محبوب شما", "Your Top Genres", viewModel),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        topGenres.forEach { genre ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(AppleRed.copy(alpha = 0.12f))
+                                    .border(1.dp, AppleRed.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(text = genre, fontSize = 12.sp, color = AppleRed, fontFamily = LocalAppFontFamily.current)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Weekly Listening Chart
+        if (weeklyPlayCounts.any { it > 0 }) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = translate("گوش دادن هفتگی", "Weekly Listening", viewModel),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val dayLabels = listOf(
+                        translate("ش", "Sat", viewModel),
+                        translate("ی", "Sun", viewModel),
+                        translate("د", "Mon", viewModel),
+                        translate("س", "Tue", viewModel),
+                        translate("چ", "Wed", viewModel),
+                        translate("پ", "Thu", viewModel),
+                        translate("ج", "Fri", viewModel)
+                    )
+                    val maxCount = (weeklyPlayCounts.maxOrNull() ?: 1).coerceAtLeast(1)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(90.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        weeklyPlayCounts.forEachIndexed { index, count ->
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Bottom
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(14.dp)
+                                        .height((60.dp * count / maxCount).coerceAtLeast(4.dp))
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(if (count > 0) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = dayLabels[index],
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Logout
@@ -4805,13 +5181,16 @@ fun AddServerDialog(
 @Composable
 fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val themeAccent by viewModel.themeAccent.collectAsStateWithLifecycle()
     val audioQuality by viewModel.audioQuality.collectAsStateWithLifecycle()
+    val downloadQuality by viewModel.downloadQuality.collectAsStateWithLifecycle()
     val cacheSize by viewModel.cacheSizeMb.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
     val bassLevel by viewModel.bassLevel.collectAsStateWithLifecycle()
     val trebleLevel by viewModel.trebleLevel.collectAsStateWithLifecycle()
     val crossfadeEnabled by viewModel.crossfadeEnabled.collectAsStateWithLifecycle()
     val wifiOnlyDownload by viewModel.wifiOnlyDownload.collectAsStateWithLifecycle()
+    val autoBackupEnabled by viewModel.autoBackupEnabled.collectAsStateWithLifecycle()
     val transientMessage by viewModel.transientMessage.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
@@ -4974,6 +5353,67 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     }
                 }
 
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+
+                // Accent Color
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ColorLens,
+                        contentDescription = null,
+                        tint = AppleRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = translate("رنگ اصلی برنامه", "Accent Color", viewModel),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    val accents = listOf(
+                        "red" to Color(0xFFFA2D48),
+                        "blue" to Color(0xFF007AFF),
+                        "green" to Color(0xFF34C759),
+                        "orange" to Color(0xFFFF9500),
+                        "purple" to Color(0xFFAF52DE),
+                        "pink" to Color(0xFFFF2D55)
+                    )
+                    accents.forEach { (key, color) ->
+                        val isSelected = themeAccent == key
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(color)
+                                .border(
+                                    width = if (isSelected) 2.dp else 0.dp,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    shape = CircleShape
+                                )
+                                .clickable { viewModel.setThemeAccent(key) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
             }
         }
 
@@ -5032,6 +5472,66 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                     shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable { viewModel.setAudioQuality(q.first) }
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = q.second,
+                                fontSize = 11.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                fontFamily = LocalAppFontFamily.current,
+                                color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+
+                // Download Quality
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Download,
+                        contentDescription = null,
+                        tint = AppleRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = translate("کیفیت دانلود", "Download Quality", viewModel),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    val downloadQualities = listOf(
+                        "low" to translate("پایین", "Low", viewModel),
+                        "medium" to translate("متوسط", "Medium", viewModel),
+                        "high" to translate("عالی", "High", viewModel),
+                        "lossless" to translate("شفاف", "FLAC", viewModel)
+                    )
+                    downloadQualities.forEach { q ->
+                        val isSelected = downloadQuality == q.first
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isSelected) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { viewModel.setDownloadQuality(q.first) }
                                 .padding(vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -5246,6 +5746,35 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         Text(translate("بازیابی", "Restore", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                 }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = translate("پشتیبان‌گیری خودکار", "Auto Backup", viewModel),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = translate("هر ۶ ساعت یک‌بار پلی‌لیست‌ها به صورت خودکار ذخیره می‌شوند.", "Automatically saves a playlist backup every 6 hours.", viewModel),
+                            fontSize = 11.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                    Switch(
+                        checked = autoBackupEnabled,
+                        onCheckedChange = { viewModel.setAutoBackupEnabled(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                    )
+                }
             }
         }
 
@@ -5440,7 +5969,21 @@ fun FullscreenPlayer(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp),
+                    .padding(vertical = 16.dp)
+                    .pointerInput(song.id) {
+                        var totalDrag = 0f
+                        detectHorizontalDragGestures(
+                            onDragStart = { totalDrag = 0f },
+                            onHorizontalDrag = { _, dragAmount -> totalDrag += dragAmount },
+                            onDragEnd = {
+                                if (totalDrag < -120f) {
+                                    viewModel.playbackConnection.skipToNext()
+                                } else if (totalDrag > 120f) {
+                                    viewModel.playbackConnection.skipToPrevious()
+                                }
+                            }
+                        )
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 if (playerTab == 0) {

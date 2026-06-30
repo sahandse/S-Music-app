@@ -173,7 +173,25 @@ class MusicRepository(
     }
 
     // --- Core Media & Streaming ---
-    suspend fun getStreamUrl(song: SubsonicSong): String = withContext(Dispatchers.IO) {
+    private var streamQuality: String = "high"
+    private var downloadQuality: String = "high"
+
+    fun setStreamQuality(quality: String) {
+        streamQuality = quality
+    }
+
+    fun setDownloadQuality(quality: String) {
+        downloadQuality = quality
+    }
+
+    private fun qualityToBitRate(quality: String): Int = when (quality) {
+        "low" -> 64
+        "medium" -> 128
+        "high" -> 256
+        else -> 0 // lossless / unknown: no cap
+    }
+
+    suspend fun getStreamUrl(song: SubsonicSong, forDownload: Boolean = false): String = withContext(Dispatchers.IO) {
         // If it's a demo song, return its mock stream url
         if (song.id.startsWith("demo_")) {
             return@withContext DemoData.getDemoAudioUrl(song.id)
@@ -193,7 +211,9 @@ class MusicRepository(
             ?: return@withContext DemoData.getDemoAudioUrl(song.id)
 
         val cleanUrl = server.url.trimEnd('/')
-        "$cleanUrl/rest/stream.view?id=${song.id}&u=${server.username}&t=${server.token}&s=${server.salt}&v=1.16.1&c=smusic&f=json"
+        val bitRate = qualityToBitRate(if (forDownload) downloadQuality else streamQuality)
+        val bitRateParam = if (bitRate > 0) "&maxBitRate=$bitRate" else ""
+        "$cleanUrl/rest/stream.view?id=${song.id}&u=${server.username}&t=${server.token}&s=${server.salt}&v=1.16.1&c=smusic&f=json$bitRateParam"
     }
 
     fun getCoverArtUrl(coverArtId: String?): String {
@@ -507,7 +527,7 @@ class MusicRepository(
 
         // Fetch streaming binary from network
         try {
-            val url = getStreamUrl(song)
+            val url = getStreamUrl(song, forDownload = true)
             val request = Request.Builder().url(url).build()
             val client = if (song.id.startsWith("demo_")) OkHttpClient() else okHttpClient
             val response = client.newCall(request).execute()
