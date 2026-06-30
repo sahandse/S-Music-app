@@ -121,16 +121,15 @@ class MusicPlaybackService : MediaLibraryService() {
         )
     }
 
-    @Suppress("UNCHECKED_CAST")
-    private suspend fun <T> safeLibraryResult(block: suspend () -> LibraryResult<T>): LibraryResult<T> {
+    private suspend fun <T : Any> safeLibraryResult(block: suspend () -> LibraryResult<T>): LibraryResult<T> {
         try {
             return block()
         } catch (e: Exception) {
-            return LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN) as LibraryResult<T>
+            return LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
         }
     }
 
-    private fun <T> futureResult(block: suspend () -> LibraryResult<T>): ListenableFuture<LibraryResult<T>> {
+    private fun <T : Any> futureResult(block: suspend () -> LibraryResult<T>): ListenableFuture<LibraryResult<T>> {
         val future = SettableFuture.create<LibraryResult<T>>()
         serviceScope.launch {
             future.set(safeLibraryResult(block))
