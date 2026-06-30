@@ -6149,81 +6149,89 @@ fun FullscreenPlayer(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Progress slider track
-                val sliderPosition = if (duration > 0) progress.toFloat() / duration else 0f
-                Slider(
-                    value = sliderPosition,
-                    onValueChange = {
-                        viewModel.playbackConnection.seekTo((it * duration).toLong())
-                    },
-                    colors = SliderDefaults.colors(
-                        activeTrackColor = Color.White,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.24f),
-                        thumbColor = Color.White
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // Progress slider, time labels and transport controls are kept in a fixed
+                // left-to-right direction regardless of app language, matching the convention
+                // used by Spotify/Apple Music/YouTube Music: timelines and skip-track icons
+                // (which point a fixed visual direction) are never mirrored for RTL locales.
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        // Progress slider track
+                        val sliderPosition = if (duration > 0) progress.toFloat() / duration else 0f
+                        Slider(
+                            value = sliderPosition,
+                            onValueChange = {
+                                viewModel.playbackConnection.seekTo((it * duration).toLong())
+                            },
+                            colors = SliderDefaults.colors(
+                                activeTrackColor = Color.White,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.24f),
+                                thumbColor = Color.White
+                            ),
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = formatTime(progress), color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
-                    Text(text = formatTime(duration), color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
-                }
-            }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = formatTime(progress), color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+                            Text(text = formatTime(duration), color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+                        }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
-            // Main playback buttons row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = { viewModel.playbackConnection.toggleShuffle() }) {
-                    Icon(
-                        imageVector = Icons.Default.Shuffle,
-                        contentDescription = "تصادفی",
-                        tint = if (isShuffle) AppleRed else Color.White.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                        // Main playback buttons row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { viewModel.playbackConnection.toggleShuffle() }) {
+                                Icon(
+                                    imageVector = Icons.Default.Shuffle,
+                                    contentDescription = "تصادفی",
+                                    tint = if (isShuffle) AppleRed else Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
 
-                IconButton(onClick = { viewModel.playbackConnection.skipToPrevious() }) {
-                    Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "قبلی", tint = Color.White, modifier = Modifier.size(36.dp))
-                }
+                            IconButton(onClick = { viewModel.playbackConnection.skipToPrevious() }) {
+                                Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "قبلی", tint = Color.White, modifier = Modifier.size(36.dp))
+                            }
 
-                // Giant centered play/pause trigger with background ripple accent
-                IconButton(
-                    onClick = { viewModel.playbackConnection.togglePlayPause() },
-                    modifier = Modifier
-                        .size(72.dp)
-                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = "پخش/توقف",
-                        tint = Color.White,
-                        modifier = Modifier.size(44.dp)
-                    )
-                }
+                            // Giant centered play/pause trigger with background ripple accent
+                            IconButton(
+                                onClick = { viewModel.playbackConnection.togglePlayPause() },
+                                modifier = Modifier
+                                    .size(72.dp)
+                                    .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                            ) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                    contentDescription = "پخش/توقف",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(44.dp)
+                                )
+                            }
 
-                IconButton(onClick = { viewModel.playbackConnection.skipToNext() }) {
-                    Icon(imageVector = Icons.Default.SkipNext, contentDescription = "بعدی", tint = Color.White, modifier = Modifier.size(36.dp))
-                }
+                            IconButton(onClick = { viewModel.playbackConnection.skipToNext() }) {
+                                Icon(imageVector = Icons.Default.SkipNext, contentDescription = "بعدی", tint = Color.White, modifier = Modifier.size(36.dp))
+                            }
 
-                IconButton(onClick = { viewModel.playbackConnection.toggleRepeatMode() }) {
-                    val icon = when (repeatMode) {
-                        Player.REPEAT_MODE_ONE -> Icons.Default.RepeatOne
-                        else -> Icons.Default.Repeat
+                            IconButton(onClick = { viewModel.playbackConnection.toggleRepeatMode() }) {
+                                val icon = when (repeatMode) {
+                                    Player.REPEAT_MODE_ONE -> Icons.Default.RepeatOne
+                                    else -> Icons.Default.Repeat
+                                }
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = "تکرار",
+                                    tint = if (repeatMode != Player.REPEAT_MODE_OFF) AppleRed else Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                        }
                     }
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = "تکرار",
-                        tint = if (repeatMode != Player.REPEAT_MODE_OFF) AppleRed else Color.White.copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
-                    )
                 }
             }
 
