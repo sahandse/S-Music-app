@@ -1274,7 +1274,8 @@ fun HomeScreen(
     onArtistClick: (SubsonicArtist) -> Unit,
     onAlbumClick: (SubsonicAlbum) -> Unit,
     onDownloadClick: () -> Unit,
-    onGenreClick: (String) -> Unit
+    onGenreClick: (String) -> Unit,
+    onSettingsClick: () -> Unit = {}
 ) {
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
@@ -1327,17 +1328,30 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Top Left: Download Icon
-                IconButton(
-                    onClick = onDownloadClick,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DownloadForOffline,
-                        contentDescription = "دانلودها",
-                        tint = AppleRed,
-                        modifier = Modifier.size(32.dp)
-                    )
+                // Top Left: Download and Settings Icons
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(
+                        onClick = onDownloadClick,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DownloadForOffline,
+                            contentDescription = "دانلودها",
+                            tint = AppleRed,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onSettingsClick,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "تنظیمات",
+                            tint = AppleRed,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
 
                 // Top Right: Time-based Smart Greeting using user's onboarding name
@@ -1647,7 +1661,7 @@ fun HomeScreen(
                     items(favoriteArtists) { favArtist ->
                         ArtistCircleCard(
                             name = favArtist.name,
-                            imageUrl = favArtist.coverArtUrl,
+                            imageUrl = favArtist.coverArtUrl ?: "",
                             onClick = {
                                 onArtistClick(
                                     SubsonicArtist(
@@ -4775,7 +4789,7 @@ fun AddServerDialog(
 
 // --- Settings Screen ---
 @Composable
-fun SettingsScreen(viewModel: MusicViewModel) {
+fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val audioQuality by viewModel.audioQuality.collectAsStateWithLifecycle()
     val cacheSize by viewModel.cacheSizeMb.collectAsStateWithLifecycle()
@@ -4804,13 +4818,25 @@ fun SettingsScreen(viewModel: MusicViewModel) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         // Main Title
-        Text(
-            text = translate("تنظیمات", "Settings", viewModel), 
-            fontSize = 32.sp, 
-            fontWeight = FontWeight.Bold, 
-            modifier = Modifier.padding(bottom = 4.dp),
-            fontFamily = LocalAppFontFamily.current
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(bottom = 4.dp)
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = translate("بازگشت", "Back", viewModel),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Text(
+                text = translate("تنظیمات", "Settings", viewModel),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = LocalAppFontFamily.current
+            )
+        }
 
         // 1. Theme and Language Card
         Card(
