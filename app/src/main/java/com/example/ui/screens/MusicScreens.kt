@@ -422,29 +422,6 @@ fun AppNavigation(viewModel: MusicViewModel) {
 }
 
 // --- Login & Server Configuration ---
-val RANDOM_ALBUM_COVERS = listOf(
-    "https://upload.wikimedia.org/wikipedia/en/f/f8/Taylor_Swift_-_1989_%28Taylor%27s_Version%29.png",
-    "https://upload.wikimedia.org/wikipedia/en/c/c1/The_Weeknd_-_After_Hours.png",
-    "https://upload.wikimedia.org/wikipedia/en/a/a7/Random_Access_Memories.jpg",
-    "https://upload.wikimedia.org/wikipedia/en/3/38/When_We_All_Fall_Asleep%2C_Where_Do_We_Go%3F.png",
-    "https://upload.wikimedia.org/wikipedia/en/5/55/Michael_Jackson_-_Thriller.png",
-    "https://upload.wikimedia.org/wikipedia/en/3/3b/Dark_Side_of_the_Moon.png",
-    "https://upload.wikimedia.org/wikipedia/en/1/1b/Adele_-_21.png",
-    "https://upload.wikimedia.org/wikipedia/en/7/79/Drake_-_Certified_Lover_Boy.png",
-    "https://upload.wikimedia.org/wikipedia/en/2/2b/Bruno_Mars_-_24K_Magic_.png",
-    "https://upload.wikimedia.org/wikipedia/en/3/3d/Coldplay_-_A_Head_Full_of_Dreams.png"
-)
-
-val IRANIAN_ARTISTS = listOf(
-    "Haydeh",
-    "Ebi",
-    "Dariush",
-    "Mahasti",
-    "Moein",
-    "Mohsen Yeganeh",
-    "Shadmehr Aghili"
-)
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(viewModel: MusicViewModel) {
@@ -531,47 +508,12 @@ fun LoginScreen(viewModel: MusicViewModel) {
         )
     }
 
-    var backgroundCoverIndex by remember { mutableStateOf(0) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(8000) // rotate every 8 seconds
-            backgroundCoverIndex = (backgroundCoverIndex + 1) % RANDOM_ALBUM_COVERS.size
-        }
-    }
-    val backgroundCoverUrl = RANDOM_ALBUM_COVERS[backgroundCoverIndex]
-
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
         contentAlignment = Alignment.Center
     ) {
-        // Full screen background cover art with smooth crossfade
-        androidx.compose.animation.Crossfade(
-            targetState = backgroundCoverUrl,
-            animationSpec = androidx.compose.animation.core.tween(2000),
-            label = "cover_crossfade"
-        ) { url ->
-            AsyncImage(
-                model = url,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-                alpha = 0.45f
-            )
-        }
-        // Dark overlay and subtle blur-like glass backdrop
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color.Black.copy(alpha = 0.82f),
-                            Color.Black.copy(alpha = 0.95f)
-                        )
-                    )
-                )
-        )
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1306,11 +1248,21 @@ fun HomeScreen(
     val isLoading by viewModel.isLoadingHome.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    val genres = remember(newestAlbums, randomSongs) {
-        (newestAlbums.mapNotNull { it.genre } + randomSongs.mapNotNull { it.genre })
-            .filter { it.isNotBlank() }
-            .distinct()
-            .take(12)
+    val genreCovers = remember(newestAlbums, randomSongs) {
+        val map = linkedMapOf<String, String>()
+        newestAlbums.forEach { album ->
+            val g = album.genre
+            if (!g.isNullOrBlank() && !map.containsKey(g)) {
+                map[g] = viewModel.getCoverArtUrl(album.coverArt)
+            }
+        }
+        randomSongs.forEach { song ->
+            val g = song.genre
+            if (!g.isNullOrBlank() && !map.containsKey(g)) {
+                map[g] = viewModel.getCoverArtUrl(song.coverArt)
+            }
+        }
+        map.toList().take(12)
     }
 
     val remixSongs = remember(randomSongs) {
@@ -1559,56 +1511,24 @@ fun HomeScreen(
                 }
             }
 
-            // Genre Quick-Browse Chips
-            if (genres.isNotEmpty()) {
+            // Genre Quick-Browse (Big Cards, matching New Albums style)
+            if (genreCovers.isNotEmpty()) {
                 SectionTitle(title = translate("ژانرها", "Genres", viewModel))
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(genres) { genre ->
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                                .border(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
-                                    shape = RoundedCornerShape(20.dp)
-                                )
-                                .clickable {
-                                    viewModel.updateSearchQuery(genre)
-                                    onGenreClick(genre)
-                                }
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = genre,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontFamily = LocalAppFontFamily.current
-                            )
-                        }
+                    items(genreCovers) { (genre, coverUrl) ->
+                        VerticalBigCard(
+                            title = genre,
+                            subtitle = translate("ژانر", "Genre", viewModel),
+                            imageUrl = coverUrl,
+                            onClick = {
+                                viewModel.updateSearchQuery(genre)
+                                onGenreClick(genre)
+                            }
+                        )
                     }
-                }
-            }
-
-            // Iranian Artists Spotlight Row
-            SectionTitle(title = translate("هنرمندان ایرانی", "Iranian Artists", viewModel))
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(IRANIAN_ARTISTS) { artistName ->
-                    ArtistCircleCard(
-                        name = artistName,
-                        imageUrl = "",
-                        onClick = {
-                            viewModel.updateSearchQuery(artistName)
-                            onGenreClick(artistName)
-                        }
-                    )
                 }
             }
 
@@ -1732,24 +1652,6 @@ fun HomeScreen(
                         )
                     }
                 }
-            }
-        }
-
-        // Settings shortcut pinned to the true top-left corner of the screen
-        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-            IconButton(
-                onClick = onSettingsClick,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(start = 8.dp, top = 4.dp)
-                    .size(44.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = "تنظیمات",
-                    tint = AppleRed,
-                    modifier = Modifier.size(24.dp)
-                )
             }
         }
         }
@@ -4624,10 +4526,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
     val localPlaylists by viewModel.localPlaylists.collectAsStateWithLifecycle()
     val estimatedMinutes by viewModel.estimatedListeningMinutes.collectAsStateWithLifecycle()
     val allServers by viewModel.allServers.collectAsStateWithLifecycle()
-    val isAuthenticating by viewModel.isAuthenticating.collectAsStateWithLifecycle()
-    val loginError by viewModel.loginError.collectAsStateWithLifecycle()
 
-    var showAddServerDialog by remember { mutableStateOf(false) }
     var showEditNameDialog by remember { mutableStateOf(false) }
 
     val favoritedCount = favoriteArtists.size + favoriteTracks.size + favoriteAlbums.size
@@ -4744,75 +4643,6 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
             )
         }
 
-        // Multi-server management
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = translate("مدیریت سرورها", "Server Management", viewModel),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        fontFamily = LocalAppFontFamily.current,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    IconButton(onClick = { showAddServerDialog = true }, modifier = Modifier.size(28.dp)) {
-                        Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = AppleRed)
-                    }
-                }
-
-                if (allServers.isEmpty()) {
-                    Text(
-                        text = translate("سروری ثبت نشده است", "No servers saved", viewModel),
-                        fontSize = 12.sp,
-                        fontFamily = LocalAppFontFamily.current,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                } else {
-                    allServers.forEach { server ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(
-                                    imageVector = if (server.isActive) Icons.Default.CheckCircle else Icons.Outlined.Dns,
-                                    contentDescription = null,
-                                    tint = if (server.isActive) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = server.url,
-                                    fontSize = 13.sp,
-                                    fontFamily = LocalAppFontFamily.current,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.weight(1f).clickable { if (!server.isActive) viewModel.switchServer(server.url) }
-                                )
-                            }
-                            IconButton(onClick = { viewModel.removeServer(server.url) }, modifier = Modifier.size(28.dp)) {
-                                Icon(imageVector = Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         // Logout
         Box(
             modifier = Modifier
@@ -4831,18 +4661,6 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                 fontFamily = LocalAppFontFamily.current
             )
         }
-    }
-
-    if (showAddServerDialog) {
-        AddServerDialog(
-            isAuthenticating = isAuthenticating,
-            loginError = loginError,
-            viewModel = viewModel,
-            onDismiss = { showAddServerDialog = false },
-            onConfirm = { url, username, pass, isToken ->
-                viewModel.addAnotherServer(url, username, pass, isToken)
-            }
-        )
     }
 
     if (showEditNameDialog) {
