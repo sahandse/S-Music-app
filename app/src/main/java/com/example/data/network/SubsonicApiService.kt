@@ -88,9 +88,4 @@ interface SubsonicApiService {
         @Query("count") count: Int = 10
     ): SubsonicResponseWrapper
 
-    @GET("rest/createShare.view")
-    suspend fun createShare(
-        @Query("id") id: List<String>,
-        @Query("description") description: String? = null
-    ): SubsonicResponseWrapper
 }

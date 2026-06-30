@@ -76,28 +76,6 @@ class MusicRepository(
             .create(SubsonicApiService::class.java)
     }
 
-    // Radio Browser requires a descriptive User-Agent per its usage policy; uses its own
-    // OkHttp client since it's a fully independent public API, unrelated to the Subsonic server.
-    private val radioUserAgentInterceptor = Interceptor { chain ->
-        val request = chain.request().newBuilder()
-            .header("User-Agent", "SMusic/1.0")
-            .build()
-        chain.proceed(request)
-    }
-
-    private val radioOkHttpClient = OkHttpClient.Builder()
-        .addInterceptor(radioUserAgentInterceptor)
-        .build()
-
-    private val radioApiService: RadioBrowserApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://de1.api.radio-browser.info/")
-            .client(radioOkHttpClient)
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(RadioBrowserApiService::class.java)
-    }
-
     init {
         // Hydrate cache on startup
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launchSilently {
@@ -214,11 +192,6 @@ class MusicRepository(
     }
 
     suspend fun getStreamUrl(song: SubsonicSong, forDownload: Boolean = false): String = withContext(Dispatchers.IO) {
-        // Non-Subsonic sources (e.g. internet radio stations) carry their own playable URL
-        if (song.streamUrl != null) {
-            return@withContext song.streamUrl
-        }
-
         // If it's a demo song, return its mock stream url
         if (song.id.startsWith("demo_")) {
             return@withContext DemoData.getDemoAudioUrl(song.id)
@@ -386,35 +359,6 @@ class MusicRepository(
             apiService.getSimilarArtists2(artistId).response.similarArtists2?.artist ?: emptyList()
         } catch (e: Exception) {
             emptyList()
-        }
-    }
-
-    // --- Internet Radio (Radio Browser) ---
-    suspend fun getTopRadioStations(): List<RadioStation> = withContext(Dispatchers.IO) {
-        try {
-            radioApiService.getTopStations().filter { !it.playableUrl.isNullOrBlank() }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    suspend fun searchRadioStations(query: String): List<RadioStation> = withContext(Dispatchers.IO) {
-        if (query.isBlank()) return@withContext emptyList()
-        try {
-            radioApiService.searchStations(name = query).filter { !it.playableUrl.isNullOrBlank() }
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
-
-    suspend fun createShare(songIds: List<String>, description: String? = null): String? = withContext(Dispatchers.IO) {
-        if (songIds.any { it.startsWith("demo_") } || cachedServer == null) {
-            return@withContext "https://demo.smusic.app/share/${UUID.randomUUID().toString().take(8)}"
-        }
-        try {
-            apiService.createShare(songIds, description).response.shares?.share?.firstOrNull()?.url
-        } catch (e: Exception) {
-            null
         }
     }
 

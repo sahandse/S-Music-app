@@ -28,8 +28,7 @@ data class SubsonicResponse(
     val artistInfo: ArtistInfo? = null,
     val artistInfo2: ArtistInfo? = null,
     val topSongs: SongList? = null,
-    val similarArtists2: SimilarArtists2? = null,
-    val shares: Shares? = null
+    val similarArtists2: SimilarArtists2? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -127,8 +126,7 @@ data class SubsonicSong(
     val genre: String? = null,
     val playCount: Long? = 0,
     val starred: String? = null,
-    val type: String? = null,
-    val streamUrl: String? = null // Used for non-Subsonic sources (e.g. internet radio); bypasses Subsonic stream URL generation
+    val type: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -205,14 +203,3 @@ data class SimilarArtists2(
     val artist: List<SubsonicArtist>? = null
 )
 
-@JsonClass(generateAdapter = true)
-data class Shares(
-    val share: List<SubsonicShare>? = null
-)
-
-@JsonClass(generateAdapter = true)
-data class SubsonicShare(
-    val id: String,
-    val url: String,
-    val description: String? = null
-)

@@ -14,7 +14,6 @@ import com.example.data.network.SubsonicAlbum
 import com.example.data.network.SubsonicArtist
 import com.example.data.network.SubsonicSong
 import com.example.data.network.ArtistInfo
-import com.example.data.network.RadioStation
 import com.example.data.repository.MusicRepository
 import com.example.playback.PlaybackConnection
 import kotlinx.coroutines.Job
@@ -85,16 +84,6 @@ class MusicViewModel(
 
     private val _isSearching = MutableStateFlow(false)
     val isSearching: StateFlow<Boolean> = _isSearching.asStateFlow()
-
-    // --- Internet Radio State ---
-    private val _radioStations = MutableStateFlow<List<RadioStation>>(emptyList())
-    val radioStations: StateFlow<List<RadioStation>> = _radioStations.asStateFlow()
-
-    private val _radioSearchQuery = MutableStateFlow("")
-    val radioSearchQuery: StateFlow<String> = _radioSearchQuery.asStateFlow()
-
-    private val _isLoadingRadio = MutableStateFlow(false)
-    val isLoadingRadio: StateFlow<Boolean> = _isLoadingRadio.asStateFlow()
 
     // --- Library States ---
     val favoriteTracks: StateFlow<List<FavoriteTrack>> = repository.getFavoriteTracksFlow()
@@ -722,65 +711,6 @@ class MusicViewModel(
                 e.printStackTrace()
             }
         }
-    }
-
-    // --- Sharing ---
-    fun shareAlbumSongs(songIds: List<String>, description: String? = null, onResult: (String?) -> Unit) {
-        viewModelScope.launch {
-            val url = repository.createShare(songIds, description)
-            onResult(url)
-        }
-    }
-
-    fun sharePlaylist(playlistId: Long, playlistName: String, onResult: (String?) -> Unit) {
-        viewModelScope.launch {
-            val items = repository.getPlaylistItemsFlow(playlistId).firstOrNull() ?: emptyList()
-            val songIds = items.map { it.trackId }
-            if (songIds.isEmpty()) {
-                onResult(null)
-            } else {
-                val url = repository.createShare(songIds, playlistName)
-                onResult(url)
-            }
-        }
-    }
-
-    // --- Internet Radio (Radio Browser) ---
-    fun loadTopRadioStations() {
-        viewModelScope.launch {
-            _isLoadingRadio.value = true
-            _radioStations.value = repository.getTopRadioStations()
-            _isLoadingRadio.value = false
-        }
-    }
-
-    fun searchRadioStations(query: String) {
-        _radioSearchQuery.value = query
-        viewModelScope.launch {
-            _isLoadingRadio.value = true
-            _radioStations.value = if (query.isBlank()) {
-                repository.getTopRadioStations()
-            } else {
-                repository.searchRadioStations(query)
-            }
-            _isLoadingRadio.value = false
-        }
-    }
-
-    private fun RadioStation.toSong(): SubsonicSong = SubsonicSong(
-        id = "radio_$stationUuid",
-        title = name,
-        artist = tags?.split(",")?.firstOrNull()?.trim()?.takeIf { it.isNotBlank() } ?: country,
-        album = "رادیوی اینترنتی",
-        coverArt = favicon?.takeIf { it.isNotBlank() },
-        duration = 0,
-        streamUrl = playableUrl
-    )
-
-    fun playRadioStation(station: RadioStation) {
-        val queue = _radioStations.value.mapNotNull { s -> s.playableUrl?.let { s.toSong() } }
-        val song = station.toSong()
-        playbackConnection.playTrack(song, queue.ifEmpty { listOf(song) })
     }
 
     // --- Backup & Restore ---
