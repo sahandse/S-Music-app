@@ -14,7 +14,7 @@ class CastOptionsProvider : OptionsProvider {
             .setNotificationOptions(NotificationOptions.Builder().build())
             .build()
         return CastOptions.Builder()
-            .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APP_ID)
+            .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)
             .setCastMediaOptions(mediaOptions)
             .build()
     }

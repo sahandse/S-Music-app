@@ -127,7 +127,7 @@ class MusicPlaybackService : MediaLibraryService() {
             val result = try {
                 block()
             } catch (e: Exception) {
-                LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
+                LibraryResult.ofError<T>(LibraryResult.RESULT_ERROR_UNKNOWN)
             }
             future.set(result)
         }
