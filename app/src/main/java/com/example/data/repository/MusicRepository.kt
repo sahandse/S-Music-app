@@ -76,6 +76,22 @@ class MusicRepository(
             .create(SubsonicApiService::class.java)
     }
 
+    private val lrclibUserAgentInterceptor = Interceptor { chain ->
+        val request = chain.request().newBuilder()
+            .header("User-Agent", "S-Music-App (https://github.com/sahandse/S-Music-app)")
+            .build()
+        chain.proceed(request)
+    }
+
+    private val lrclibApiService: LrclibApiService by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://lrclib.net/")
+            .client(OkHttpClient.Builder().addInterceptor(lrclibUserAgentInterceptor).build())
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(LrclibApiService::class.java)
+    }
+
     init {
         // Hydrate cache on startup
         kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launchSilently {
@@ -324,17 +340,44 @@ class MusicRepository(
         }
     }
 
-    suspend fun getLyrics(artist: String, title: String): String? = withContext(Dispatchers.IO) {
+    suspend fun getLyrics(artist: String, title: String, album: String? = null, durationSeconds: Int = 0): String? = withContext(Dispatchers.IO) {
         // Try getting from DemoData first if it matches
         val demoSong = DemoData.songs.find { it.artist == artist && it.title == title }
         if (demoSong != null) {
             return@withContext DemoData.demoLyrics[demoSong.id]
         }
 
-        if (cachedServer == null) return@withContext null
+        val serverLyrics = if (cachedServer != null) {
+            try {
+                apiService.getLyrics(artist, title).response.lyricsList?.firstOrNull()?.value
+            } catch (e: Exception) {
+                null
+            }
+        } else null
+
+        if (!serverLyrics.isNullOrBlank()) return@withContext serverLyrics
+
+        getLrclibLyrics(artist, title, album, durationSeconds)
+    }
+
+    private suspend fun getLrclibLyrics(artist: String, title: String, album: String?, durationSeconds: Int): String? {
         try {
-            val response = apiService.getLyrics(artist, title).response
-            response.lyricsList?.firstOrNull()?.value
+            val exact = lrclibApiService.getLyrics(
+                artistName = artist,
+                trackName = title,
+                albumName = album,
+                durationSeconds = durationSeconds.takeIf { it > 0 }
+            )
+            val lyrics = exact.syncedLyrics ?: exact.plainLyrics
+            if (!lyrics.isNullOrBlank()) return lyrics
+        } catch (e: Exception) {
+            // No exact match, fall through to search
+        }
+
+        return try {
+            val results = lrclibApiService.searchLyrics(artistName = artist, trackName = title)
+            results.firstOrNull { !it.syncedLyrics.isNullOrBlank() }?.syncedLyrics
+                ?: results.firstOrNull { !it.plainLyrics.isNullOrBlank() }?.plainLyrics
         } catch (e: Exception) {
             null
         }

@@ -560,7 +560,7 @@ class MusicViewModel(
     private fun fetchLyricsForTrack(song: SubsonicSong) {
         viewModelScope.launch {
             _isLoadingLyrics.value = true
-            _currentLyrics.value = repository.getLyrics(song.artist ?: "", song.title)
+            _currentLyrics.value = repository.getLyrics(song.artist ?: "", song.title, song.album, song.duration ?: 0)
             _isLoadingLyrics.value = false
         }
     }
