@@ -133,274 +133,159 @@ fun translate(fa: String, en: String, viewModel: MusicViewModel): String {
 }
 
 @Composable
-fun IntroScreen(viewModel: MusicViewModel) {
+fun GenrePreferenceScreen(viewModel: MusicViewModel) {
     val lang by viewModel.language.collectAsStateWithLifecycle()
-    var currentPage by remember { mutableStateOf(0) }
-    var nameInput by remember { mutableStateOf("") }
-    val context = LocalContext.current
+    val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
+    val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
+    val artists by viewModel.artistsList.collectAsStateWithLifecycle()
+    val favoriteArtists by viewModel.favoriteArtists.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoadingHome.collectAsStateWithLifecycle()
+
+    var step by remember { mutableStateOf(0) } // 0 = genres, 1 = artists
+    var selectedGenres by remember { mutableStateOf(setOf<String>()) }
+
+    val availableGenres = remember(randomSongs, newestAlbums) {
+        val set = linkedSetOf<String>()
+        newestAlbums.forEach { album -> album.genre?.let { if (it.isNotBlank()) set.add(it) } }
+        randomSongs.forEach { song -> song.genre?.let { if (it.isNotBlank()) set.add(it) } }
+        set.toList()
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black)
-            .drawBehind {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color(0x3BFA2D48), Color.Transparent),
-                        center = androidx.compose.ui.geometry.Offset(size.width * 0.8f, size.height * 0.2f),
-                        radius = size.width * 1.0f
-                    )
-                )
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(Color(0x2BFA2D48), Color.Transparent),
-                        center = androidx.compose.ui.geometry.Offset(size.width * 0.2f, size.height * 0.8f),
-                        radius = size.width * 0.9f
-                    )
-                )
-            }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Bar with High Music Logo and Language Selection
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // High Music Logo (Small Header version)
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Brush.linearGradient(colors = listOf(AppleRed, Color(0xFFFF2D55)))),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MusicNote,
-                            contentDescription = "Logo",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Text(
-                        text = "High Music",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = LocalAppFontFamily.current
-                    )
-                }
-
-                // Language Toggle
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
-                        .clickable {
-                            viewModel.setLanguage(if (lang == "fa") "en" else "fa")
-                        }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Language,
-                        contentDescription = "Language",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = if (lang == "fa") "English" else "فارسی",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = LocalAppFontFamily.current
-                    )
-                }
-            }
-
-            // Image and Animated Content in the Center
             Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Beautiful Onboarding Feature Image (Using generated image)
-                Box(
-                    modifier = Modifier
-                        .padding(bottom = 24.dp)
-                        .size(260.dp)
-                        .clip(RoundedCornerShape(24.dp))
-                        .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
-                        .background(Color.DarkGray.copy(alpha = 0.2f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = com.example.R.drawable.img_intro_feature_1782566304995),
-                        contentDescription = "High Music Capabilities Onboarding Illustration",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                }
-
-                AnimatedContent(
-                    targetState = currentPage,
-                    transitionSpec = {
-                        slideInHorizontally { width -> if (targetState > initialState) width else -width } + fadeIn() togetherWith
-                        slideOutHorizontally { width -> if (targetState > initialState) -width else width } + fadeOut()
-                    },
-                    label = "IntroPager",
+                Text(
+                    text = if (step == 0)
+                        (if (lang == "fa") "چه ژانری دوست داری؟" else "What genres do you like?")
+                    else
+                        (if (lang == "fa") "هنرمندان مورد علاقه‌ات رو انتخاب کن" else "Choose your favorite artists"),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    fontFamily = LocalAppFontFamily.current,
+                    textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
-                ) { page ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                )
+                Text(
+                    text = if (step == 0)
+                        (if (lang == "fa") "چند مورد انتخاب کن تا تجربه‌ات شخصی‌سازی بشه" else "Pick a few to personalize your experience")
+                    else
+                        (if (lang == "fa") "این کمک می‌کنه پیشنهادهای بهتری بهت بدیم" else "This helps us give you better recommendations"),
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontFamily = LocalAppFontFamily.current,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                if (isLoading) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = AppleRed)
+                    }
+                } else if (step == 0) {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(availableGenres) { genre ->
+                            val isSelected = selectedGenres.contains(genre)
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) AppleRed.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f))
+                                    .border(1.dp, if (isSelected) AppleRed else Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        selectedGenres = if (isSelected) selectedGenres - genre else selectedGenres + genre
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = genre,
+                                    color = Color.White,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(3),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        when (page) {
-                            0 -> {
-                                Text(
-                                    text = if (lang == "fa") "خوش آمدید به High Music" else "Welcome to High Music",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    fontFamily = LocalAppFontFamily.current,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = if (lang == "fa") 
-                                        "تجربه پخشی بی‌نظیر و زیبا با استایل شیک اپل موزیک به همراه امکانات شخصی‌سازی بی‌نظیر." 
-                                        else "An unparalleled, beautiful music streaming experience styled like Apple Music with high fidelity sound.",
-                                    fontSize = 14.sp,
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontFamily = LocalAppFontFamily.current,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                            }
-                            1 -> {
-                                Text(
-                                    text = if (lang == "fa") "دانلود هوشمند و آفلاین" else "Smart Offline Downloads",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    fontFamily = LocalAppFontFamily.current,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = if (lang == "fa") 
-                                        "آهنگ‌های خود را با کیفیت بالا ذخیره کنید و به صورت کاملاً آفلاین بشنوید. شما می‌توانید مکان دانلود فایل‌ها را به دلخواه مشخص کنید." 
-                                        else "Download tracks to your device and play them offline. You can choose where downloads are stored seamlessly.",
-                                    fontSize = 14.sp,
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontFamily = LocalAppFontFamily.current,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
-                                )
-                            }
-                            2 -> {
-                                Text(
-                                    text = if (lang == "fa") "ورود بسیار آسان" else "Simple & Easy Login",
-                                    fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White,
-                                    fontFamily = LocalAppFontFamily.current,
-                                    textAlign = TextAlign.Center
-                                )
-                                Text(
-                                    text = if (lang == "fa") 
-                                        "برای شروع، لطفاً نام خود را وارد کنید تا محیط برنامه برای شما شخصی‌سازی شود." 
-                                        else "To begin, please enter your name so we can personalize your experience.",
-                                    fontSize = 14.sp,
-                                    color = Color.White.copy(alpha = 0.7f),
-                                    fontFamily = LocalAppFontFamily.current,
-                                    textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(horizontal = 16.dp)
-                                )
-                                Spacer(modifier = Modifier.height(6.dp))
-                                OutlinedTextField(
-                                    value = nameInput,
-                                    onValueChange = { nameInput = it },
-                                    label = { Text(if (lang == "fa") "نام شما" else "Your Name", fontFamily = LocalAppFontFamily.current) },
-                                    singleLine = true,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = AppleRed,
-                                        focusedLabelColor = AppleRed,
-                                        unfocusedBorderColor = Color.White.copy(alpha = 0.3f),
-                                        unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
-                                        focusedTextColor = Color.White,
-                                        unfocusedTextColor = Color.White
-                                    )
-                                )
-                            }
+                        items(artists) { artist ->
+                            val isFav = favoriteArtists.any { it.id == artist.id }
+                            ArtistCircleCard(
+                                name = artist.name,
+                                imageUrl = viewModel.getCoverArtUrl(artist.coverArt),
+                                onClick = { viewModel.toggleFavoriteArtist(artist) },
+                                isFavorite = isFav,
+                                onToggleFavorite = { viewModel.toggleFavoriteArtist(artist) }
+                            )
                         }
                     }
                 }
             }
 
-            // Bottom Navigation Controls
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Dot Indicator
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    repeat(3) { index ->
+                    repeat(2) { index ->
                         Box(
                             modifier = Modifier
-                                .size(if (currentPage == index) 10.dp else 8.dp)
+                                .size(if (step == index) 10.dp else 8.dp)
                                 .clip(CircleShape)
-                                .background(if (currentPage == index) AppleRed else Color.White.copy(alpha = 0.3f))
+                                .background(if (step == index) AppleRed else Color.White.copy(alpha = 0.3f))
                         )
                     }
                 }
-
-                // Navigation Button
                 Button(
                     onClick = {
-                        if (currentPage < 2) {
-                            currentPage++
+                        if (step == 0) {
+                            viewModel.setPreferredGenres(selectedGenres)
+                            step = 1
                         } else {
-                            if (nameInput.isBlank()) {
-                                Toast.makeText(
-                                    context,
-                                    if (lang == "fa") "لطفاً نام خود را وارد کنید." else "Please enter your name.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            } else {
-                                viewModel.performOnboardingLogin(nameInput)
-                            }
+                            viewModel.setOnboardingPreferencesSet(true)
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(50.dp),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text(
-                        text = if (currentPage < 2) (if (lang == "fa") "بعدی" else "Next") else (if (lang == "fa") "شروع سفر موسیقی" else "Start Music Journey"),
+                        text = if (step == 0) (if (lang == "fa") "بعدی" else "Next") else (if (lang == "fa") "شروع سفر موسیقی" else "Start Music Journey"),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontFamily = LocalAppFontFamily.current,
                         fontSize = 15.sp
+                    )
+                }
+                TextButton(onClick = { viewModel.setOnboardingPreferencesSet(true) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = if (lang == "fa") "رد کردن" else "Skip",
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontFamily = LocalAppFontFamily.current
                     )
                 }
             }
@@ -412,13 +297,13 @@ fun IntroScreen(viewModel: MusicViewModel) {
 @Composable
 fun AppNavigation(viewModel: MusicViewModel) {
     val isConfigured by viewModel.isServerConfigured.collectAsStateWithLifecycle()
-    val introShown by viewModel.introShown.collectAsStateWithLifecycle()
+    val onboardingPreferencesSet by viewModel.onboardingPreferencesSet.collectAsStateWithLifecycle()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        if (!introShown) {
-            IntroScreen(viewModel = viewModel)
-        } else if (!isConfigured) {
+        if (!isConfigured) {
             LoginScreen(viewModel = viewModel)
+        } else if (!onboardingPreferencesSet) {
+            GenrePreferenceScreen(viewModel = viewModel)
         } else {
             MainMusicApp(viewModel = viewModel)
         }
@@ -1272,21 +1157,8 @@ fun HomeScreen(
         }
     }
 
-    val genreCovers = remember(newestAlbums, randomSongs) {
-        val map = linkedMapOf<String, String>()
-        newestAlbums.forEach { album ->
-            val g = album.genre
-            if (!g.isNullOrBlank() && !map.containsKey(g)) {
-                map[g] = viewModel.getCoverArtUrl(album.coverArt)
-            }
-        }
-        randomSongs.forEach { song ->
-            val g = song.genre
-            if (!g.isNullOrBlank() && !map.containsKey(g)) {
-                map[g] = viewModel.getCoverArtUrl(song.coverArt)
-            }
-        }
-        map.toList().take(12)
+    val topSongs = remember(randomSongs) {
+        randomSongs.sortedByDescending { it.playCount ?: 0 }.take(10)
     }
 
     val remixSongs = remember(randomSongs) {
@@ -1546,22 +1418,19 @@ fun HomeScreen(
                 }
             }
 
-            // Genre Quick-Browse (Big Cards, matching New Albums style)
-            if (genreCovers.isNotEmpty()) {
-                SectionTitle(title = translate("ژانرها", "Genres", viewModel))
+            // Top Songs (sorted by play count)
+            if (topSongs.isNotEmpty()) {
+                SectionTitle(title = translate("آهنگ‌های برتر", "Top Songs", viewModel))
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(genreCovers) { (genre, coverUrl) ->
+                    items(topSongs) { song ->
                         VerticalBigCard(
-                            title = genre,
-                            subtitle = translate("ژانر", "Genre", viewModel),
-                            imageUrl = coverUrl,
-                            onClick = {
-                                viewModel.updateSearchQuery(genre)
-                                onGenreClick(genre)
-                            }
+                            title = song.title,
+                            subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            onClick = { viewModel.playSongDirectly(song, topSongs) }
                         )
                     }
                 }

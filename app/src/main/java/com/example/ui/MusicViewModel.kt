@@ -135,8 +135,11 @@ class MusicViewModel(
     private val _profilePhotoUri = MutableStateFlow("")
     val profilePhotoUri: StateFlow<String> = _profilePhotoUri.asStateFlow()
 
-    private val _introShown = MutableStateFlow(false)
-    val introShown: StateFlow<Boolean> = _introShown.asStateFlow()
+    private val _onboardingPreferencesSet = MutableStateFlow(false)
+    val onboardingPreferencesSet: StateFlow<Boolean> = _onboardingPreferencesSet.asStateFlow()
+
+    private val _preferredGenres = MutableStateFlow<Set<String>>(emptySet())
+    val preferredGenres: StateFlow<Set<String>> = _preferredGenres.asStateFlow()
 
     private val _downloadLocation = MutableStateFlow("")
     val downloadLocation: StateFlow<String> = _downloadLocation.asStateFlow()
@@ -239,7 +242,8 @@ class MusicViewModel(
         _language.value = prefs.getString("app_language", "fa") ?: "fa"
         _userName.value = prefs.getString("user_name", "") ?: ""
         _profilePhotoUri.value = prefs.getString("profile_photo_uri", "") ?: ""
-        _introShown.value = prefs.getBoolean("intro_shown", false)
+        _onboardingPreferencesSet.value = prefs.getBoolean("onboarding_preferences_set", false)
+        _preferredGenres.value = prefs.getStringSet("preferred_genres", emptySet()) ?: emptySet()
         _downloadLocation.value = prefs.getString("download_location", "") ?: ""
         _audioQuality.value = prefs.getString("audio_quality", "high") ?: "high"
         _downloadQuality.value = prefs.getString("download_quality", "high") ?: "high"
@@ -592,31 +596,22 @@ class MusicViewModel(
         prefs.edit().putString("profile_photo_uri", uri).apply()
     }
 
-    fun setIntroShown(shown: Boolean) {
-        _introShown.value = shown
+    fun setOnboardingPreferencesSet(done: Boolean) {
+        _onboardingPreferencesSet.value = done
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("intro_shown", shown).apply()
+        prefs.edit().putBoolean("onboarding_preferences_set", done).apply()
+    }
+
+    fun setPreferredGenres(genres: Set<String>) {
+        _preferredGenres.value = genres
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putStringSet("preferred_genres", genres).apply()
     }
 
     fun setDownloadLocation(path: String) {
         _downloadLocation.value = path
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("download_location", path).apply()
-    }
-
-    fun performOnboardingLogin(name: String) {
-        viewModelScope.launch {
-            setUserName(name)
-            setIntroShown(true)
-            // Preconfigured credentials:
-            // Username: sahandse, Password: 09190159560, Server: https://soundtron.ir
-            login(
-                url = "https://soundtron.ir",
-                username = "sahandse",
-                passwordOrToken = "09190159560",
-                isTokenMode = false
-            )
-        }
     }
 
     fun setAudioQuality(quality: String) {
