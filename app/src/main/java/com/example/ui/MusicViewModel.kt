@@ -721,6 +721,19 @@ class MusicViewModel(
         }
     }
 
+    fun sharePlaylist(playlistId: Long, playlistName: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val items = repository.getPlaylistItemsFlow(playlistId).firstOrNull() ?: emptyList()
+            val songIds = items.map { it.trackId }
+            if (songIds.isEmpty()) {
+                onResult(null)
+            } else {
+                val url = repository.createShare(songIds, playlistName)
+                onResult(url)
+            }
+        }
+    }
+
     // --- Backup & Restore ---
     fun exportPlaylistsBackup() {
         viewModelScope.launch {

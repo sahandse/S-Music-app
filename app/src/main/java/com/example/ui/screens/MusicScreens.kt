@@ -1179,6 +1179,7 @@ fun HomeScreen(
     val isLoading by viewModel.isLoadingHome.collectAsStateWithLifecycle()
     val favoriteTracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
     val favoriteAlbums by viewModel.favoriteAlbums.collectAsStateWithLifecycle()
+    val preferredGenres by viewModel.preferredGenres.collectAsStateWithLifecycle()
     val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -1201,6 +1202,20 @@ fun HomeScreen(
 
     val topSongs = remember(randomSongs) {
         randomSongs.sortedByDescending { it.playCount ?: 0 }.take(10)
+    }
+
+    val discoverWeeklySongs = remember(randomSongs, preferredGenres, favoriteTracks, favoriteAlbums) {
+        val favoriteArtistNames = (favoriteTracks.map { it.artist } + favoriteAlbums.map { it.artist })
+            .filter { it.isNotBlank() }
+            .toSet()
+        val matchingPool = randomSongs.filter { song ->
+            (song.genre != null && preferredGenres.any { genre -> song.genre.equals(genre, ignoreCase = true) }) ||
+                (song.artist != null && favoriteArtistNames.any { fav -> song.artist.equals(fav, ignoreCase = true) })
+        }
+        val pool = if (matchingPool.isNotEmpty()) matchingPool else randomSongs
+        val calendar = Calendar.getInstance()
+        val weekSeed = calendar.get(Calendar.YEAR) * 100 + calendar.get(Calendar.WEEK_OF_YEAR)
+        pool.shuffled(kotlin.random.Random(weekSeed)).take(10)
     }
 
     val remixSongs = remember(randomSongs) {
@@ -1553,6 +1568,24 @@ fun HomeScreen(
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
                             imageUrl = viewModel.getCoverArtUrl(song.coverArt),
                             onClick = { viewModel.playSongDirectly(song, tasteMixSongs) }
+                        )
+                    }
+                }
+            }
+
+            // Discover Weekly (smart playlist based on onboarding genres + favorite artists, rotates weekly)
+            if (discoverWeeklySongs.isNotEmpty()) {
+                SectionTitle(title = translate("کشف هفته", "Discover Weekly", viewModel))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(discoverWeeklySongs) { song ->
+                        VerticalBigCard(
+                            title = song.title,
+                            subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            onClick = { viewModel.playSongDirectly(song, discoverWeeklySongs) }
                         )
                     }
                 }
@@ -4585,6 +4618,7 @@ fun PlaylistDetailView(
     onBack: () -> Unit
 ) {
     val items by viewModel.activePlaylistItems.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(playlist.id) {
         viewModel.loadPlaylistItems(playlist.id)
@@ -4597,6 +4631,25 @@ fun PlaylistDetailView(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "بازگشت")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        viewModel.sharePlaylist(playlist.id, playlist.name) { url ->
+                            if (url != null) {
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, url)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, playlist.name))
+                            }
+                        }
+                    }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = translate("اشتراک‌گذاری پلی‌لیست", "Share playlist", viewModel),
+                            tint = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 }
             )
