@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
@@ -432,6 +433,16 @@ val RANDOM_ALBUM_COVERS = listOf(
     "https://upload.wikimedia.org/wikipedia/en/7/79/Drake_-_Certified_Lover_Boy.png",
     "https://upload.wikimedia.org/wikipedia/en/2/2b/Bruno_Mars_-_24K_Magic_.png",
     "https://upload.wikimedia.org/wikipedia/en/3/3d/Coldplay_-_A_Head_Full_of_Dreams.png"
+)
+
+val IRANIAN_ARTISTS = listOf(
+    "Haydeh",
+    "Ebi",
+    "Dariush",
+    "Mahasti",
+    "Moein",
+    "Mohsen Yeganeh",
+    "Shadmehr Aghili"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -1583,6 +1594,24 @@ fun HomeScreen(
                 }
             }
 
+            // Iranian Artists Spotlight Row
+            SectionTitle(title = translate("هنرمندان ایرانی", "Iranian Artists", viewModel))
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(IRANIAN_ARTISTS) { artistName ->
+                    ArtistCircleCard(
+                        name = artistName,
+                        imageUrl = "",
+                        onClick = {
+                            viewModel.updateSearchQuery(artistName)
+                            onGenreClick(artistName)
+                        }
+                    )
+                }
+            }
+
             // Continue Play / Recent History
             if (recentPlays.isNotEmpty()) {
                 SectionTitle(title = "ادامه پخش")
@@ -2244,36 +2273,69 @@ fun SearchScreen(
                 .padding(bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Search Input Header
+            // Page Title
+            Text(
+                text = translate("جستجو", "Search", viewModel),
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = LocalAppFontFamily.current,
+                modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp)
+            )
+
+            // Search Input Header — modern pill-shaped search bar with embedded mic
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 16.dp, start = 16.dp, end = 16.dp),
+                    .padding(start = 16.dp, end = 16.dp)
+                    .height(54.dp)
+                    .clip(RoundedCornerShape(27.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                    .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(27.dp))
+                    .padding(horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                OutlinedTextField(
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = AppleRed,
+                    modifier = Modifier.padding(start = 10.dp).size(22.dp)
+                )
+                BasicTextField(
                     value = query,
                     onValueChange = { input ->
                         val englishOnly = input.filter { char -> char.code in 32..126 }
                         viewModel.updateSearchQuery(englishOnly)
                     },
-                    placeholder = { Text(translate("جستجو (فقط انگلیسی)...", "Search (English Only)...", viewModel), fontFamily = LocalAppFontFamily.current) },
                     singleLine = true,
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 15.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(AppleRed),
                     modifier = Modifier
                         .weight(1f)
                         .testTag("search_input"),
-                    leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
-                    trailingIcon = {
-                        if (query.isNotEmpty()) {
-                            IconButton(onClick = { viewModel.updateSearchQuery("") }) {
-                                Icon(imageVector = Icons.Default.Close, contentDescription = "Clear")
+                    decorationBox = { innerTextField ->
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            if (query.isEmpty()) {
+                                Text(
+                                    text = translate("جستجو (فقط انگلیسی)...", "Search (English Only)...", viewModel),
+                                    fontSize = 15.sp,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                                )
                             }
+                            innerTextField()
                         }
-                    },
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                    }
                 )
-
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { viewModel.updateSearchQuery("") }, modifier = Modifier.size(36.dp)) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Clear", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                    }
+                }
                 // Voice Search
                 IconButton(
                     onClick = {
@@ -2288,10 +2350,10 @@ fun SearchScreen(
                         }
                     },
                     modifier = Modifier
-                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                        .size(48.dp)
+                        .background(AppleRed, CircleShape)
+                        .size(40.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Mic, contentDescription = "Voice Search", tint = AppleRed)
+                    Icon(imageVector = Icons.Default.Mic, contentDescription = "Voice Search", tint = Color.White, modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -2300,6 +2362,7 @@ fun SearchScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -2314,13 +2377,13 @@ fun SearchScreen(
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(backgroundColor)
                                 .clickable { activeFilter = tab }
-                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                                .padding(horizontal = 14.dp, vertical = 7.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = tab,
                                 color = textColor,
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = LocalAppFontFamily.current
                             )
@@ -2497,12 +2560,20 @@ fun SearchScreen(
                                     (songs.isEmpty() || !showSongs)
 
                 if (isResultEmpty) {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(48.dp),
-                        contentAlignment = Alignment.Center
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
+                        Icon(
+                            imageVector = Icons.Default.SearchOff,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                            modifier = Modifier.size(56.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = translate("نتیجه‌ای یافت نشد", "No results found", viewModel),
                             color = Color.Gray,
@@ -3801,6 +3872,8 @@ fun ArtistDetailView(
     val isLoading by viewModel.isLoadingDetail.collectAsStateWithLifecycle()
     val topTracks by viewModel.artistTopTracks.collectAsStateWithLifecycle()
     val similarArtists by viewModel.artistSimilarArtists.collectAsStateWithLifecycle()
+    val allSongs by viewModel.artistAllSongs.collectAsStateWithLifecycle()
+    val isLoadingAllSongs by viewModel.isLoadingArtistAllSongs.collectAsStateWithLifecycle()
     val context = LocalContext.current
     
     val lang = viewModel.language.value
@@ -4078,7 +4151,7 @@ fun ArtistDetailView(
                         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                                 Text(
-                                    text = translate("آهنگ‌های برتر", "Top Tracks", viewModel),
+                                    text = translate("۵ آهنگ برتر", "Top 5 Songs", viewModel),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 18.sp,
                                     fontFamily = LocalAppFontFamily.current,
@@ -4135,7 +4208,7 @@ fun ArtistDetailView(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = translate("آلبوم‌ها", "Albums", viewModel),
+                                text = translate("همه آلبوم‌ها", "All Albums", viewModel),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
                                 fontFamily = LocalAppFontFamily.current
@@ -4189,6 +4262,46 @@ fun ArtistDetailView(
                                 AlbumGridCard(
                                     album = album,
                                     onClick = { onAlbumClick(album) },
+                                    viewModel = viewModel
+                                )
+                            }
+                        }
+                    }
+
+                    // All Songs section
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                        Text(
+                            text = translate("همه آهنگ‌ها", "All Songs", viewModel),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 12.dp, bottom = 8.dp)
+                        )
+                    }
+                    if (isLoadingAllSongs) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = AppleRed, modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    } else if (allSongs.isEmpty()) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = translate("هیچ آهنگی یافت نشد.", "No songs found.", viewModel),
+                                    color = Color.Gray,
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                        }
+                    } else {
+                        items(allSongs, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) { song ->
+                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
+                                TrackRowItem(
+                                    song = song,
+                                    onPlay = { viewModel.playSongDirectly(song, allSongs) },
                                     viewModel = viewModel
                                 )
                             }

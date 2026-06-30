@@ -175,6 +175,12 @@ class MusicViewModel(
     private val _artistSimilarArtists = MutableStateFlow<List<SubsonicArtist>>(emptyList())
     val artistSimilarArtists: StateFlow<List<SubsonicArtist>> = _artistSimilarArtists.asStateFlow()
 
+    private val _artistAllSongs = MutableStateFlow<List<SubsonicSong>>(emptyList())
+    val artistAllSongs: StateFlow<List<SubsonicSong>> = _artistAllSongs.asStateFlow()
+
+    private val _isLoadingArtistAllSongs = MutableStateFlow(false)
+    val isLoadingArtistAllSongs: StateFlow<Boolean> = _isLoadingArtistAllSongs.asStateFlow()
+
     // --- Album detail extras ---
     private val _relatedAlbums = MutableStateFlow<List<SubsonicAlbum>>(emptyList())
     val relatedAlbums: StateFlow<List<SubsonicAlbum>> = _relatedAlbums.asStateFlow()
@@ -293,17 +299,25 @@ class MusicViewModel(
         _selectedArtistBio.value = null
         _artistTopTracks.value = emptyList()
         _artistSimilarArtists.value = emptyList()
+        _artistAllSongs.value = emptyList()
         viewModelScope.launch {
             _isLoadingDetail.value = true
             val details = repository.getArtistDetails(artist.id)
+            val artistAlbums = details?.album ?: emptyList()
             if (details != null) {
-                _selectedArtistAlbums.value = details.album ?: emptyList()
+                _selectedArtistAlbums.value = artistAlbums
             }
             val bio = repository.getArtistInfo(artist.id)
             _selectedArtistBio.value = bio
             _artistTopTracks.value = repository.getTopSongs(artist.name, artist.id)
             _artistSimilarArtists.value = repository.getSimilarArtists(artist.id)
             _isLoadingDetail.value = false
+
+            _isLoadingArtistAllSongs.value = true
+            _artistAllSongs.value = artistAlbums.flatMap { album ->
+                repository.getAlbumDetails(album.id)?.song ?: emptyList()
+            }
+            _isLoadingArtistAllSongs.value = false
         }
     }
 
