@@ -152,6 +152,20 @@ class MusicRepository(
 
     fun getActiveServerFlow(): Flow<SavedServer?> = dao.getActiveServerFlow()
 
+    fun getAllServersFlow(): Flow<List<SavedServer>> = dao.getAllServersFlow()
+
+    suspend fun switchServer(url: String): Boolean = withContext(Dispatchers.IO) {
+        dao.deactivateAllServers()
+        dao.activateServer(url)
+        cachedServer = dao.getActiveServer()
+        cachedServer != null
+    }
+
+    suspend fun removeServer(url: String) = withContext(Dispatchers.IO) {
+        dao.deleteServer(url)
+        cachedServer = dao.getActiveServer()
+    }
+
     private fun md5(input: String): String {
         val md = MessageDigest.getInstance("MD5")
         val digest = md.digest(input.toByteArray())
@@ -303,6 +317,91 @@ class MusicRepository(
             response.lyricsList?.firstOrNull()?.value
         } catch (e: Exception) {
             null
+        }
+    }
+
+    suspend fun getTopSongs(artistName: String, artistId: String): List<SubsonicSong> = withContext(Dispatchers.IO) {
+        if (artistId.startsWith("demo_") || cachedServer == null) {
+            return@withContext DemoData.songs.filter { it.artistId == artistId }
+        }
+        try {
+            apiService.getTopSongs(artistName).response.topSongs?.song ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun getSimilarArtists(artistId: String): List<SubsonicArtist> = withContext(Dispatchers.IO) {
+        if (artistId.startsWith("demo_") || cachedServer == null) {
+            return@withContext DemoData.artists.filter { it.id != artistId }
+        }
+        try {
+            apiService.getSimilarArtists2(artistId).response.similarArtists2?.artist ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    suspend fun createShare(songIds: List<String>, description: String? = null): String? = withContext(Dispatchers.IO) {
+        if (songIds.any { it.startsWith("demo_") } || cachedServer == null) {
+            return@withContext "https://demo.smusic.app/share/${UUID.randomUUID().toString().take(8)}"
+        }
+        try {
+            apiService.createShare(songIds, description).response.shares?.share?.firstOrNull()?.url
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // --- Backup & Restore (local playlists) ---
+    suspend fun exportPlaylistsBackup(): String = withContext(Dispatchers.IO) {
+        val playlists = dao.getAllPlaylistsOnce()
+        val backupPlaylists = playlists.map { playlist ->
+            val items = dao.getPlaylistItemsOnce(playlist.id)
+            BackupPlaylist(
+                name = playlist.name,
+                description = playlist.description,
+                items = items.map {
+                    BackupItem(
+                        trackId = it.trackId,
+                        title = it.title,
+                        artist = it.artist,
+                        album = it.album,
+                        duration = it.duration,
+                        coverArtUrl = it.coverArtUrl
+                    )
+                }
+            )
+        }
+        val adapter = moshi.adapter(PlaylistsBackup::class.java)
+        adapter.toJson(PlaylistsBackup(backupPlaylists))
+    }
+
+    suspend fun importPlaylistsBackup(json: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val adapter = moshi.adapter(PlaylistsBackup::class.java)
+            val backup = adapter.fromJson(json) ?: return@withContext false
+            backup.playlists.forEach { backupPlaylist ->
+                val playlistId = dao.insertLocalPlaylist(
+                    LocalPlaylist(name = backupPlaylist.name, description = backupPlaylist.description)
+                )
+                backupPlaylist.items.forEach { item ->
+                    dao.insertPlaylistItem(
+                        LocalPlaylistItem(
+                            playlistId = playlistId,
+                            trackId = item.trackId,
+                            title = item.title,
+                            artist = item.artist,
+                            album = item.album,
+                            duration = item.duration,
+                            coverArtUrl = item.coverArtUrl
+                        )
+                    )
+                }
+            }
+            true
+        } catch (e: Exception) {
+            false
         }
     }
 

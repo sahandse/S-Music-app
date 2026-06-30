@@ -144,6 +144,50 @@ class MusicViewModel(
     private val _cacheSizeMb = MutableStateFlow(128)
     val cacheSizeMb: StateFlow<Int> = _cacheSizeMb.asStateFlow()
 
+    // --- Equalizer & Playback Enhancements ---
+    private val _bassLevel = MutableStateFlow(50) // 0..100, 50 = neutral
+    val bassLevel: StateFlow<Int> = _bassLevel.asStateFlow()
+
+    private val _trebleLevel = MutableStateFlow(50)
+    val trebleLevel: StateFlow<Int> = _trebleLevel.asStateFlow()
+
+    private val _crossfadeEnabled = MutableStateFlow(false)
+    val crossfadeEnabled: StateFlow<Boolean> = _crossfadeEnabled.asStateFlow()
+
+    private val _wifiOnlyDownload = MutableStateFlow(false)
+    val wifiOnlyDownload: StateFlow<Boolean> = _wifiOnlyDownload.asStateFlow()
+
+    // --- Multi-server management ---
+    val allServers: StateFlow<List<SavedServer>> = repository.getAllServersFlow()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    // --- Search filter & trending ---
+    private val _searchFilter = MutableStateFlow("all") // "all", "song", "album", "artist"
+    val searchFilter: StateFlow<String> = _searchFilter.asStateFlow()
+
+    private val _trendingAlbums = MutableStateFlow<List<SubsonicAlbum>>(emptyList())
+    val trendingAlbums: StateFlow<List<SubsonicAlbum>> = _trendingAlbums.asStateFlow()
+
+    // --- Artist detail extras ---
+    private val _artistTopTracks = MutableStateFlow<List<SubsonicSong>>(emptyList())
+    val artistTopTracks: StateFlow<List<SubsonicSong>> = _artistTopTracks.asStateFlow()
+
+    private val _artistSimilarArtists = MutableStateFlow<List<SubsonicArtist>>(emptyList())
+    val artistSimilarArtists: StateFlow<List<SubsonicArtist>> = _artistSimilarArtists.asStateFlow()
+
+    // --- Album detail extras ---
+    private val _relatedAlbums = MutableStateFlow<List<SubsonicAlbum>>(emptyList())
+    val relatedAlbums: StateFlow<List<SubsonicAlbum>> = _relatedAlbums.asStateFlow()
+
+    // --- Transient one-shot UI messages (toasts) ---
+    private val _transientMessage = MutableStateFlow<String?>(null)
+    val transientMessage: StateFlow<String?> = _transientMessage.asStateFlow()
+
+    // --- Profile stats ---
+    val estimatedListeningMinutes: StateFlow<Int> = recentPlays
+        .map { plays -> plays.sumOf { it.duration } / 60 }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
     private var searchJob: Job? = null
 
     init {
@@ -183,6 +227,12 @@ class MusicViewModel(
         _downloadLocation.value = prefs.getString("download_location", "") ?: ""
         _audioQuality.value = prefs.getString("audio_quality", "high") ?: "high"
         _cacheSizeMb.value = prefs.getInt("cache_size_mb", 128)
+        _bassLevel.value = prefs.getInt("bass_level", 50)
+        _trebleLevel.value = prefs.getInt("treble_level", 50)
+        _crossfadeEnabled.value = prefs.getBoolean("crossfade_enabled", false)
+        _wifiOnlyDownload.value = prefs.getBoolean("wifi_only_download", false)
+
+        loadTrendingContent()
     }
 
     // --- Server Auth Actions ---
@@ -241,6 +291,8 @@ class MusicViewModel(
         _selectedArtistDetails.value = artist
         _selectedArtistAlbums.value = emptyList()
         _selectedArtistBio.value = null
+        _artistTopTracks.value = emptyList()
+        _artistSimilarArtists.value = emptyList()
         viewModelScope.launch {
             _isLoadingDetail.value = true
             val details = repository.getArtistDetails(artist.id)
@@ -249,6 +301,8 @@ class MusicViewModel(
             }
             val bio = repository.getArtistInfo(artist.id)
             _selectedArtistBio.value = bio
+            _artistTopTracks.value = repository.getTopSongs(artist.name, artist.id)
+            _artistSimilarArtists.value = repository.getSimilarArtists(artist.id)
             _isLoadingDetail.value = false
         }
     }
@@ -256,11 +310,17 @@ class MusicViewModel(
     fun loadAlbumDetails(album: SubsonicAlbum) {
         _selectedAlbumDetails.value = album
         _selectedAlbumSongs.value = emptyList()
+        _relatedAlbums.value = emptyList()
         viewModelScope.launch {
             _isLoadingDetail.value = true
             val details = repository.getAlbumDetails(album.id)
             if (details != null) {
                 _selectedAlbumSongs.value = details.song ?: emptyList()
+            }
+            val artistId = album.artistId
+            if (artistId != null) {
+                val artistDetails = repository.getArtistDetails(artistId)
+                _relatedAlbums.value = artistDetails?.album?.filter { it.id != album.id } ?: emptyList()
             }
             _isLoadingDetail.value = false
         }
@@ -283,6 +343,12 @@ class MusicViewModel(
         if (songsList.isNotEmpty()) {
             playSongDirectly(songsList.first(), songsList)
         }
+    }
+
+    fun addToQueue(songs: List<SubsonicSong>) {
+        if (songs.isEmpty()) return
+        playbackConnection.addToQueue(songs)
+        _transientMessage.value = "به صف پخش اضافه شد"
     }
 
     // --- Favorite Liking Toggles ---
@@ -336,9 +402,22 @@ class MusicViewModel(
     }
 
     // --- Offline Downloads Management ---
+    private fun isOnWifi(): Boolean {
+        val cm = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+            ?: return false
+        val network = cm.activeNetwork ?: return false
+        val capabilities = cm.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+    }
+
     fun startDownload(song: SubsonicSong) {
         viewModelScope.launch {
             if (repository.isTrackDownloaded(song.id)) return@launch
+
+            if (_wifiOnlyDownload.value && !isOnWifi()) {
+                _transientMessage.value = "دانلود فقط در حالت وای‌فای فعال است"
+                return@launch
+            }
 
             _downloadProgresses.value = _downloadProgresses.value.toMutableMap().apply {
                 put(song.id, 0.01f)
@@ -486,6 +565,111 @@ class MusicViewModel(
 
     fun getCoverArtUrl(coverArtId: String?): String {
         return repository.getCoverArtUrl(coverArtId)
+    }
+
+    // --- Equalizer Controls (applied live by MusicPlaybackService via SharedPreferences) ---
+    fun setBassLevel(level: Int) {
+        val clamped = level.coerceIn(0, 100)
+        _bassLevel.value = clamped
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putInt("bass_level", clamped).apply()
+    }
+
+    fun setTrebleLevel(level: Int) {
+        val clamped = level.coerceIn(0, 100)
+        _trebleLevel.value = clamped
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putInt("treble_level", clamped).apply()
+    }
+
+    fun setCrossfadeEnabled(enabled: Boolean) {
+        _crossfadeEnabled.value = enabled
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("crossfade_enabled", enabled).apply()
+    }
+
+    fun setWifiOnlyDownload(enabled: Boolean) {
+        _wifiOnlyDownload.value = enabled
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("wifi_only_download", enabled).apply()
+    }
+
+    // --- Multi-server management ---
+    fun switchServer(url: String) {
+        viewModelScope.launch {
+            val success = repository.switchServer(url)
+            if (success) loadHomeContent()
+        }
+    }
+
+    fun removeServer(url: String) {
+        viewModelScope.launch {
+            repository.removeServer(url)
+        }
+    }
+
+    fun addAnotherServer(url: String, username: String, passwordOrToken: String, isTokenMode: Boolean = false) {
+        login(url, username, passwordOrToken, isTokenMode)
+    }
+
+    // --- Search filter & trending ---
+    fun setSearchFilter(filter: String) {
+        _searchFilter.value = filter
+    }
+
+    fun loadTrendingContent() {
+        viewModelScope.launch {
+            try {
+                _trendingAlbums.value = repository.getAlbumList("frequent")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // --- Sharing ---
+    fun shareAlbumSongs(songIds: List<String>, description: String? = null, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val url = repository.createShare(songIds, description)
+            onResult(url)
+        }
+    }
+
+    // --- Backup & Restore ---
+    fun exportPlaylistsBackup() {
+        viewModelScope.launch {
+            try {
+                val json = repository.exportPlaylistsBackup()
+                val backupDir = File(getApplication<Application>().filesDir, "backups")
+                if (!backupDir.exists()) backupDir.mkdirs()
+                val file = File(backupDir, "smusic_playlists_backup.json")
+                file.writeText(json)
+                _transientMessage.value = "پشتیبان‌گیری با موفقیت ذخیره شد"
+            } catch (e: Exception) {
+                _transientMessage.value = "خطا در پشتیبان‌گیری"
+            }
+        }
+    }
+
+    fun restorePlaylistsBackup() {
+        viewModelScope.launch {
+            try {
+                val file = File(File(getApplication<Application>().filesDir, "backups"), "smusic_playlists_backup.json")
+                if (!file.exists()) {
+                    _transientMessage.value = "فایل پشتیبان یافت نشد"
+                    return@launch
+                }
+                val json = file.readText()
+                val success = repository.importPlaylistsBackup(json)
+                _transientMessage.value = if (success) "پلی‌لیست‌ها با موفقیت بازیابی شدند" else "بازیابی ناموفق بود"
+            } catch (e: Exception) {
+                _transientMessage.value = "خطا در بازیابی"
+            }
+        }
+    }
+
+    fun consumeTransientMessage() {
+        _transientMessage.value = null
     }
 
     override fun onCleared() {

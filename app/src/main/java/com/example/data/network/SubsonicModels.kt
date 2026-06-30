@@ -26,7 +26,10 @@ data class SubsonicResponse(
     val albumList: AlbumList? = null, // Used for random/newest lists
     val albumList2: AlbumList? = null,
     val artistInfo: ArtistInfo? = null,
-    val artistInfo2: ArtistInfo? = null
+    val artistInfo2: ArtistInfo? = null,
+    val topSongs: SongList? = null,
+    val similarArtists2: SimilarArtists2? = null,
+    val shares: Shares? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -192,5 +195,23 @@ data class ArtistInfo(
     val lastFmUrl: String? = null,
     val smallImageUrl: String? = null,
     val mediumImageUrl: String? = null,
-    val largeImageUrl: String? = null
+    val largeImageUrl: String? = null,
+    val similarArtist: List<SubsonicArtist>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class SimilarArtists2(
+    val artist: List<SubsonicArtist>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class Shares(
+    val share: List<SubsonicShare>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class SubsonicShare(
+    val id: String,
+    val url: String,
+    val description: String? = null
 )

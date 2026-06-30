@@ -922,14 +922,16 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     artist = (currentSubScreen as SubScreen.ArtistDetail).artist,
                                     viewModel = viewModel,
                                     onBack = { currentSubScreen = null },
-                                    onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
+                                    onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
+                                    onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
                                 )
                             }
                             currentSubScreen is SubScreen.AlbumDetail -> {
                                 AlbumDetailView(
                                     album = (currentSubScreen as SubScreen.AlbumDetail).album,
                                     viewModel = viewModel,
-                                    onBack = { currentSubScreen = null }
+                                    onBack = { currentSubScreen = null },
+                                    onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
                                 )
                             }
                             currentSubScreen is SubScreen.PlaylistDetail -> {
@@ -974,7 +976,10 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onItemClick = { type -> currentSubScreen = SubScreen.SubLibraryItem(type) },
                                         onPlaylistClick = { currentSubScreen = SubScreen.PlaylistDetail(it) }
                                     )
-                                    3 -> ProfileScreen(viewModel = viewModel)
+                                    3 -> ProfileScreen(
+                                        viewModel = viewModel,
+                                        onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                    )
                                 }
                             }
                         }
@@ -1093,14 +1098,16 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 artist = (currentSubScreen as SubScreen.ArtistDetail).artist,
                                 viewModel = viewModel,
                                 onBack = { currentSubScreen = null },
-                                onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
+                                onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
+                                onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
                             )
                         }
                         currentSubScreen is SubScreen.AlbumDetail -> {
                             AlbumDetailView(
                                 album = (currentSubScreen as SubScreen.AlbumDetail).album,
                                 viewModel = viewModel,
-                                onBack = { currentSubScreen = null }
+                                onBack = { currentSubScreen = null },
+                                onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
                             )
                         }
                         currentSubScreen is SubScreen.PlaylistDetail -> {
@@ -1272,9 +1279,17 @@ fun HomeScreen(
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
     val artists by viewModel.artistsList.collectAsStateWithLifecycle()
+    val favoriteArtists by viewModel.favoriteArtists.collectAsStateWithLifecycle()
     val recentPlays by viewModel.recentPlays.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingHome.collectAsStateWithLifecycle()
     val context = LocalContext.current
+
+    val genres = remember(newestAlbums, randomSongs) {
+        (newestAlbums.mapNotNull { it.genre } + randomSongs.mapNotNull { it.genre })
+            .filter { it.isNotBlank() }
+            .distinct()
+            .take(12)
+    }
 
     val remixSongs = remember(randomSongs) {
         val existingRemixes = randomSongs.filter { it.title.contains("remix", ignoreCase = true) || it.title.contains("mix", ignoreCase = true) }
@@ -1508,6 +1523,41 @@ fun HomeScreen(
                 }
             }
 
+            // Genre Quick-Browse Chips
+            if (genres.isNotEmpty()) {
+                SectionTitle(title = translate("ژانرها", "Genres", viewModel))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(genres) { genre ->
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                                .border(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                .clickable {
+                                    viewModel.updateSearchQuery(genre)
+                                    onGenreClick(genre)
+                                }
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = genre,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontFamily = LocalAppFontFamily.current
+                            )
+                        }
+                    }
+                }
+            }
+
             // Continue Play / Recent History
             if (recentPlays.isNotEmpty()) {
                 SectionTitle(title = "ادامه پخش")
@@ -1582,6 +1632,32 @@ fun HomeScreen(
                             song = song,
                             onPlay = { viewModel.playSongDirectly(song, randomSongs) },
                             viewModel = viewModel
+                        )
+                    }
+                }
+            }
+
+            // Favorite Artists Circle List
+            if (favoriteArtists.isNotEmpty()) {
+                SectionTitle(title = translate("هنرمندان مورد علاقه", "Favorite Artists", viewModel))
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(favoriteArtists) { favArtist ->
+                        ArtistCircleCard(
+                            name = favArtist.name,
+                            imageUrl = favArtist.coverArtUrl,
+                            onClick = {
+                                onArtistClick(
+                                    SubsonicArtist(
+                                        id = favArtist.id,
+                                        name = favArtist.name,
+                                        coverArt = favArtist.coverArtUrl,
+                                        albumCount = favArtist.albumCount
+                                    )
+                                )
+                            }
                         )
                     }
                 }
@@ -2099,6 +2175,7 @@ fun SearchScreen(
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val history by viewModel.searchHistory.collectAsStateWithLifecycle()
     val isSearching by viewModel.isSearching.collectAsStateWithLifecycle()
+    val trendingAlbums by viewModel.trendingAlbums.collectAsStateWithLifecycle()
     var activeFilter by remember { mutableStateOf("همه") }
 
     val context = LocalContext.current
@@ -2224,6 +2301,28 @@ fun SearchScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
+                    if (trendingAlbums.isNotEmpty()) {
+                        Text(
+                            text = translate("پرطرفدار", "Trending", viewModel),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            items(trendingAlbums) { album ->
+                                VerticalBigCard(
+                                    title = album.name,
+                                    subtitle = album.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                                    imageUrl = viewModel.getCoverArtUrl(album.coverArt),
+                                    onClick = { onAlbumClick(album) }
+                                )
+                            }
+                        }
+                    }
+
                     if (history.isNotEmpty()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -2553,6 +2652,7 @@ fun LibraryScreen(
             Triple("songs", "آهنگ‌های من", Icons.Outlined.MusicNote),
             Triple("albums", "آلبوم‌های من", Icons.Outlined.Album),
             Triple("artists", "هنرمندان من", Icons.Outlined.People),
+            Triple("all_artists", "مرور همه هنرمندان", Icons.Outlined.Groups),
             Triple("downloads", "دانلودهای آفلاین", Icons.Outlined.OfflinePin)
         )
 
@@ -2686,6 +2786,7 @@ fun SubLibraryItemsView(
         "songs" -> "آهنگ‌های من"
         "albums" -> "آلبوم‌های من"
         "artists" -> "هنرمندان من"
+        "all_artists" -> "مرور همه هنرمندان"
         else -> "دانلودها"
     }
 
@@ -2755,6 +2856,45 @@ fun SubLibraryItemsView(
                             items(artists) { fav ->
                                 val artist = SubsonicArtist(id = fav.id, name = fav.name, coverArt = fav.coverArtUrl, albumCount = fav.albumCount)
                                 ArtistCircleCard(name = fav.name, imageUrl = fav.coverArtUrl ?: "", onClick = { onArtistClick(artist) })
+                            }
+                        }
+                    }
+                }
+                "all_artists" -> {
+                    val allArtists by viewModel.artistsList.collectAsStateWithLifecycle()
+                    var query by remember { mutableStateOf("") }
+                    val filteredSorted = remember(allArtists, query) {
+                        allArtists.filter { it.name.contains(query, ignoreCase = true) }
+                            .sortedBy { it.name.lowercase() }
+                    }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = { query = it },
+                            placeholder = { Text(translate("جستجوی هنرمند...", "Search artist...", viewModel)) },
+                            singleLine = true,
+                            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                        )
+                        if (filteredSorted.isEmpty()) {
+                            EmptyStateView(message = translate("هنرمندی یافت نشد.", "No artists found.", viewModel))
+                        } else {
+                            LazyVerticalGrid(
+                                columns = GridCells.Fixed(3),
+                                contentPadding = PaddingValues(16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                items(filteredSorted) { artist ->
+                                    ArtistCircleCard(
+                                        name = artist.name,
+                                        imageUrl = viewModel.getCoverArtUrl(artist.coverArt),
+                                        onClick = { onArtistClick(artist) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -3609,11 +3749,14 @@ fun ArtistDetailView(
     artist: SubsonicArtist,
     viewModel: MusicViewModel,
     onBack: () -> Unit,
-    onAlbumClick: (SubsonicAlbum) -> Unit
+    onAlbumClick: (SubsonicAlbum) -> Unit,
+    onArtistClick: (SubsonicArtist) -> Unit = {}
 ) {
     val albums by viewModel.selectedArtistAlbums.collectAsStateWithLifecycle()
     val bioState by viewModel.selectedArtistBio.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingDetail.collectAsStateWithLifecycle()
+    val topTracks by viewModel.artistTopTracks.collectAsStateWithLifecycle()
+    val similarArtists by viewModel.artistSimilarArtists.collectAsStateWithLifecycle()
     val context = LocalContext.current
     
     val lang = viewModel.language.value
@@ -3886,6 +4029,57 @@ fun ArtistDetailView(
                         }
                     }
 
+                    // Top Tracks section
+                    if (topTracks.isNotEmpty()) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                Text(
+                                    text = translate("آهنگ‌های برتر", "Top Tracks", viewModel),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    modifier = Modifier.padding(bottom = 8.dp)
+                                )
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    topTracks.take(5).forEach { song ->
+                                        TrackRowItem(
+                                            song = song,
+                                            onPlay = { viewModel.playSongDirectly(song, topTracks) },
+                                            viewModel = viewModel
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Similar Artists section
+                    if (similarArtists.isNotEmpty()) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Column {
+                                Text(
+                                    text = translate("هنرمندان مشابه", "Similar Artists", viewModel),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)
+                                )
+                                LazyRow(
+                                    contentPadding = PaddingValues(horizontal = 16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+                                    items(similarArtists) { simArtist ->
+                                        ArtistCircleCard(
+                                            name = simArtist.name,
+                                            imageUrl = viewModel.getCoverArtUrl(simArtist.coverArt),
+                                            onClick = { onArtistClick(simArtist) }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Albums Title Header + Sort options
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                         Row(
@@ -3987,10 +4181,13 @@ fun ArtistDetailView(
 fun AlbumDetailView(
     album: SubsonicAlbum,
     viewModel: MusicViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onAlbumClick: (SubsonicAlbum) -> Unit = {}
 ) {
     val songs by viewModel.selectedAlbumSongs.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingDetail.collectAsStateWithLifecycle()
+    val relatedAlbums by viewModel.relatedAlbums.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(album.id) {
         viewModel.loadAlbumDetails(album)
@@ -4104,6 +4301,32 @@ fun AlbumDetailView(
                                 }
                                 Text(if (isFav) "پسندیده شده" else "پسندیدن")
                             }
+
+                            IconButton(onClick = { viewModel.addToQueue(songs) }) {
+                                Icon(
+                                    imageVector = Icons.Default.QueueMusic,
+                                    contentDescription = translate("افزودن به صف پخش", "Add to queue", viewModel),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+
+                            IconButton(onClick = {
+                                viewModel.shareAlbumSongs(songs.map { it.id }, album.name) { url ->
+                                    if (url != null) {
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, url)
+                                        }
+                                        context.startActivity(Intent.createChooser(shareIntent, album.name))
+                                    }
+                                }
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = translate("اشتراک‌گذاری آلبوم", "Share album", viewModel),
+                                    tint = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }
@@ -4122,6 +4345,30 @@ fun AlbumDetailView(
                             viewModel = viewModel
                         )
                         HorizontalDivider()
+                    }
+                }
+
+                if (relatedAlbums.isNotEmpty()) {
+                    item {
+                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                            Text(
+                                text = translate("آلبوم‌های مرتبط", "Related Albums", viewModel),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = LocalAppFontFamily.current,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                items(relatedAlbums) { relatedAlbum ->
+                                    VerticalBigCard(
+                                        title = relatedAlbum.name,
+                                        subtitle = relatedAlbum.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                                        imageUrl = viewModel.getCoverArtUrl(relatedAlbum.coverArt),
+                                        onClick = { onAlbumClick(relatedAlbum) }
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4210,6 +4457,322 @@ fun PlaylistDetailView(
     }
 }
 
+// --- Profile Screen ---
+@Composable
+fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
+    val userName by viewModel.userName.collectAsStateWithLifecycle()
+    val favoriteArtists by viewModel.favoriteArtists.collectAsStateWithLifecycle()
+    val favoriteTracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
+    val favoriteAlbums by viewModel.favoriteAlbums.collectAsStateWithLifecycle()
+    val localPlaylists by viewModel.localPlaylists.collectAsStateWithLifecycle()
+    val estimatedMinutes by viewModel.estimatedListeningMinutes.collectAsStateWithLifecycle()
+    val allServers by viewModel.allServers.collectAsStateWithLifecycle()
+    val isAuthenticating by viewModel.isAuthenticating.collectAsStateWithLifecycle()
+    val loginError by viewModel.loginError.collectAsStateWithLifecycle()
+
+    var showAddServerDialog by remember { mutableStateOf(false) }
+
+    val favoritedCount = favoriteArtists.size + favoriteTracks.size + favoriteAlbums.size
+    val listeningHours = estimatedMinutes / 60
+    val listeningMinutesRemainder = estimatedMinutes % 60
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+            .padding(bottom = 80.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // Header Row: Title + Settings shortcut
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = translate("پروفایل", "Profile", viewModel),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = LocalAppFontFamily.current
+            )
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = translate("تنظیمات", "Settings", viewModel),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
+        // Avatar + Name Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(AppleRed.copy(alpha = 0.15f))
+                        .border(2.dp, AppleRed, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = (userName.firstOrNull() ?: 'S').uppercaseChar().toString(),
+                        fontSize = 28.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AppleRed,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+                Column {
+                    Text(
+                        text = userName.ifBlank { translate("کاربر مهمان", "Guest User", viewModel) },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = allServers.firstOrNull { it.isActive }?.url ?: translate("بدون سرور فعال", "No active server", viewModel),
+                        fontSize = 12.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+
+        // Stats Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            ProfileStatCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Favorite,
+                value = favoritedCount.toString(),
+                label = translate("علاقه‌مندی", "Favorites", viewModel)
+            )
+            ProfileStatCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.QueueMusic,
+                value = localPlaylists.size.toString(),
+                label = translate("پلی‌لیست", "Playlists", viewModel)
+            )
+            ProfileStatCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Headphones,
+                value = if (listeningHours > 0) "${listeningHours}h ${listeningMinutesRemainder}m" else "${listeningMinutesRemainder}m",
+                label = translate("زمان گوش دادن", "Listening", viewModel)
+            )
+        }
+
+        // Multi-server management
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = translate("مدیریت سرورها", "Server Management", viewModel),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(onClick = { showAddServerDialog = true }, modifier = Modifier.size(28.dp)) {
+                        Icon(imageVector = Icons.Default.Add, contentDescription = null, tint = AppleRed)
+                    }
+                }
+
+                if (allServers.isEmpty()) {
+                    Text(
+                        text = translate("سروری ثبت نشده است", "No servers saved", viewModel),
+                        fontSize = 12.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                } else {
+                    allServers.forEach { server ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Icon(
+                                    imageVector = if (server.isActive) Icons.Default.CheckCircle else Icons.Outlined.Dns,
+                                    contentDescription = null,
+                                    tint = if (server.isActive) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = server.url,
+                                    fontSize = 13.sp,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f).clickable { if (!server.isActive) viewModel.switchServer(server.url) }
+                                )
+                            }
+                            IconButton(onClick = { viewModel.removeServer(server.url) }, modifier = Modifier.size(28.dp)) {
+                                Icon(imageVector = Icons.Default.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Logout
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color.Red.copy(alpha = 0.1f))
+                .border(1.dp, Color.Red.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                .clickable { viewModel.logout() }
+                .padding(14.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = translate("خروج از حساب", "Log Out", viewModel),
+                color = Color.Red,
+                fontWeight = FontWeight.Bold,
+                fontFamily = LocalAppFontFamily.current
+            )
+        }
+    }
+
+    if (showAddServerDialog) {
+        AddServerDialog(
+            isAuthenticating = isAuthenticating,
+            loginError = loginError,
+            viewModel = viewModel,
+            onDismiss = { showAddServerDialog = false },
+            onConfirm = { url, username, pass, isToken ->
+                viewModel.addAnotherServer(url, username, pass, isToken)
+            }
+        )
+    }
+}
+
+@Composable
+fun ProfileStatCard(modifier: Modifier = Modifier, icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, label: String) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+            Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+            Text(text = label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+fun AddServerDialog(
+    isAuthenticating: Boolean,
+    loginError: String?,
+    viewModel: MusicViewModel,
+    onDismiss: () -> Unit,
+    onConfirm: (url: String, username: String, pass: String, isToken: Boolean) -> Unit
+) {
+    var url by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        ) {
+            Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(
+                    text = translate("افزودن سرور جدید", "Add New Server", viewModel),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = LocalAppFontFamily.current
+                )
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text(translate("آدرس سرور", "Server URL", viewModel)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = { Text(translate("نام کاربری", "Username", viewModel)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    label = { Text(translate("رمز عبور", "Password", viewModel)) },
+                    singleLine = true,
+                    visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (loginError != null) {
+                    Text(text = loginError, color = Color.Red, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isAuthenticating) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = AppleRed, strokeWidth = 2.dp)
+                    } else {
+                        TextButton(onClick = onDismiss) {
+                            Text(translate("انصراف", "Cancel", viewModel))
+                        }
+                        TextButton(
+                            onClick = { onConfirm(url.trim(), username.trim(), password, false) },
+                            enabled = url.isNotBlank() && username.isNotBlank() && password.isNotBlank()
+                        ) {
+                            Text(translate("اتصال", "Connect", viewModel), color = AppleRed, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 // --- Settings Screen ---
 @Composable
 fun SettingsScreen(viewModel: MusicViewModel) {
@@ -4217,8 +4780,20 @@ fun SettingsScreen(viewModel: MusicViewModel) {
     val audioQuality by viewModel.audioQuality.collectAsStateWithLifecycle()
     val cacheSize by viewModel.cacheSizeMb.collectAsStateWithLifecycle()
     val language by viewModel.language.collectAsStateWithLifecycle()
+    val bassLevel by viewModel.bassLevel.collectAsStateWithLifecycle()
+    val trebleLevel by viewModel.trebleLevel.collectAsStateWithLifecycle()
+    val crossfadeEnabled by viewModel.crossfadeEnabled.collectAsStateWithLifecycle()
+    val wifiOnlyDownload by viewModel.wifiOnlyDownload.collectAsStateWithLifecycle()
+    val transientMessage by viewModel.transientMessage.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
+
+    LaunchedEffect(transientMessage) {
+        transientMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.consumeTransientMessage()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -4474,6 +5049,161 @@ fun SettingsScreen(viewModel: MusicViewModel) {
                         border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
                     ) {
                         Text(translate("پاک کردن کش موقت", "Clear Temporary Cache", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                    }
+                }
+            }
+        }
+
+        // 2.5 Equalizer & Playback Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.GraphicEq,
+                        contentDescription = null,
+                        tint = AppleRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = translate("اکولایزر و پخش", "Equalizer & Playback", viewModel),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Text(
+                    text = translate("بیس", "Bass", viewModel) + ": $bassLevel",
+                    fontSize = 12.sp,
+                    fontFamily = LocalAppFontFamily.current,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Slider(
+                    value = bassLevel.toFloat(),
+                    onValueChange = { viewModel.setBassLevel(it.toInt()) },
+                    valueRange = 0f..100f,
+                    colors = SliderDefaults.colors(thumbColor = AppleRed, activeTrackColor = AppleRed)
+                )
+
+                Text(
+                    text = translate("تربل", "Treble", viewModel) + ": $trebleLevel",
+                    fontSize = 12.sp,
+                    fontFamily = LocalAppFontFamily.current,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+                Slider(
+                    value = trebleLevel.toFloat(),
+                    onValueChange = { viewModel.setTrebleLevel(it.toInt()) },
+                    valueRange = 0f..100f,
+                    colors = SliderDefaults.colors(thumbColor = AppleRed, activeTrackColor = AppleRed)
+                )
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = translate("افکت محو شدن بین آهنگ‌ها (کراس‌فید)", "Crossfade between tracks", viewModel),
+                        fontSize = 13.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(
+                        checked = crossfadeEnabled,
+                        onCheckedChange = { viewModel.setCrossfadeEnabled(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = translate("دانلود فقط با وای‌فای", "Download on Wi-Fi only", viewModel),
+                        fontSize = 13.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(
+                        checked = wifiOnlyDownload,
+                        onCheckedChange = { viewModel.setWifiOnlyDownload(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                    )
+                }
+            }
+        }
+
+        // 2.6 Backup & Restore Card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Backup,
+                        contentDescription = null,
+                        tint = AppleRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = translate("پشتیبان‌گیری پلی‌لیست‌ها", "Playlist Backup", viewModel),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { viewModel.exportPlaylistsBackup() },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                    ) {
+                        Text(translate("ذخیره پشتیبان", "Backup", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                    }
+                    OutlinedButton(
+                        onClick = { viewModel.restorePlaylistsBackup() },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                    ) {
+                        Text(translate("بازیابی", "Restore", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                 }
             }

@@ -75,4 +75,22 @@ interface SubsonicApiService {
         @Query("albumId") albumId: String? = null,
         @Query("artistId") artistId: String? = null
     ): SubsonicResponseWrapper
+
+    @GET("rest/getTopSongs.view")
+    suspend fun getTopSongs(
+        @Query("artist") artist: String,
+        @Query("count") count: Int = 10
+    ): SubsonicResponseWrapper
+
+    @GET("rest/getSimilarArtists2.view")
+    suspend fun getSimilarArtists2(
+        @Query("id") id: String,
+        @Query("count") count: Int = 10
+    ): SubsonicResponseWrapper
+
+    @GET("rest/createShare.view")
+    suspend fun createShare(
+        @Query("id") id: List<String>,
+        @Query("description") description: String? = null
+    ): SubsonicResponseWrapper
 }

@@ -12,11 +12,20 @@ interface MusicDao {
     @Query("SELECT * FROM saved_servers WHERE isActive = 1 LIMIT 1")
     suspend fun getActiveServer(): SavedServer?
 
+    @Query("SELECT * FROM saved_servers ORDER BY url ASC")
+    fun getAllServersFlow(): Flow<List<SavedServer>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertServer(server: SavedServer)
 
     @Query("UPDATE saved_servers SET isActive = 0")
     suspend fun deactivateAllServers()
+
+    @Query("UPDATE saved_servers SET isActive = 1 WHERE url = :url")
+    suspend fun activateServer(url: String)
+
+    @Query("DELETE FROM saved_servers WHERE url = :url")
+    suspend fun deleteServer(url: String)
 
     @Query("DELETE FROM saved_servers")
     suspend fun clearServers()
@@ -80,6 +89,9 @@ interface MusicDao {
     @Query("SELECT * FROM local_playlists ORDER BY timestamp DESC")
     fun getLocalPlaylistsFlow(): Flow<List<LocalPlaylist>>
 
+    @Query("SELECT * FROM local_playlists ORDER BY timestamp DESC")
+    suspend fun getAllPlaylistsOnce(): List<LocalPlaylist>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLocalPlaylist(playlist: LocalPlaylist): Long
 
@@ -92,6 +104,9 @@ interface MusicDao {
     // Local Playlist Items
     @Query("SELECT * FROM local_playlist_items WHERE playlistId = :playlistId ORDER BY timestamp ASC")
     fun getPlaylistItemsFlow(playlistId: Long): Flow<List<LocalPlaylistItem>>
+
+    @Query("SELECT * FROM local_playlist_items WHERE playlistId = :playlistId ORDER BY timestamp ASC")
+    suspend fun getPlaylistItemsOnce(playlistId: Long): List<LocalPlaylistItem>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPlaylistItem(item: LocalPlaylistItem)

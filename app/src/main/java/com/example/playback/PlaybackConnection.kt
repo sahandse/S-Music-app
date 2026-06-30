@@ -178,6 +178,38 @@ class PlaybackConnection(
         }
     }
 
+    fun addToQueue(songs: List<SubsonicSong>) {
+        if (songs.isEmpty()) return
+        connectionScope.launch {
+            val controller = mediaController ?: return@launch
+
+            if (controller.mediaItemCount == 0) {
+                // Nothing is queued yet, behave like a fresh play of the whole list
+                playTrack(songs.first(), songs)
+                return@launch
+            }
+
+            val mediaItems = songs.map { item ->
+                val streamUrl = repository.getStreamUrl(item)
+                val mediaMetadata = MediaMetadata.Builder()
+                    .setTitle(item.title)
+                    .setArtist(item.artist)
+                    .setAlbumTitle(item.album)
+                    .setArtworkUri(android.net.Uri.parse(repository.getCoverArtUrl(item.coverArt)))
+                    .build()
+
+                MediaItem.Builder()
+                    .setMediaId(item.id)
+                    .setUri(streamUrl)
+                    .setMediaMetadata(mediaMetadata)
+                    .build()
+            }
+
+            controller.addMediaItems(mediaItems)
+            _playbackQueue.value = _playbackQueue.value + songs
+        }
+    }
+
     fun togglePlayPause() {
         val controller = mediaController ?: return
         if (controller.isPlaying) {
