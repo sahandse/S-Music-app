@@ -143,12 +143,28 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
 
     var step by remember { mutableStateOf(0) } // 0 = genres, 1 = artists
     var selectedGenres by remember { mutableStateOf(setOf<String>()) }
+    var artistSearchQuery by remember { mutableStateOf("") }
 
-    val availableGenres = remember(randomSongs, newestAlbums) {
+    val curatedGenres = listOf(
+        translate("پاپ", "Pop", viewModel),
+        translate("راک", "Rock", viewModel),
+        translate("هیپ هاپ", "Hip-Hop", viewModel),
+        translate("سنتی", "Traditional", viewModel),
+        translate("الکترونیک", "Electronic", viewModel),
+        translate("جاز و کلاسیک", "Jazz & Classical", viewModel)
+    )
+
+    val availableGenres = remember(randomSongs, newestAlbums, lang) {
         val set = linkedSetOf<String>()
         newestAlbums.forEach { album -> album.genre?.let { if (it.isNotBlank()) set.add(it) } }
         randomSongs.forEach { song -> song.genre?.let { if (it.isNotBlank()) set.add(it) } }
-        set.toList()
+        curatedGenres.forEach { set.add(it) }
+        set.toList().take(6)
+    }
+
+    val filteredArtists = remember(artists, artistSearchQuery) {
+        if (artistSearchQuery.isBlank()) artists
+        else artists.filter { it.name.contains(artistSearchQuery, ignoreCase = true) }
     }
 
     Box(
@@ -226,13 +242,39 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                         }
                     }
                 } else {
+                    OutlinedTextField(
+                        value = artistSearchQuery,
+                        onValueChange = { artistSearchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = translate("جستجوی هنرمند...", "Search artists...", viewModel),
+                                color = Color.White.copy(alpha = 0.4f),
+                                fontFamily = LocalAppFontFamily.current
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
+                        },
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(fontFamily = LocalAppFontFamily.current),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = AppleRed,
+                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            cursorColor = AppleRed
+                        ),
+                        shape = RoundedCornerShape(14.dp)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(3),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(artists) { artist ->
+                        items(filteredArtists) { artist ->
                             val isFav = favoriteArtists.any { it.id == artist.id }
                             ArtistCircleCard(
                                 name = artist.name,
