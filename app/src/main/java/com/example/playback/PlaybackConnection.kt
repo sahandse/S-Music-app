@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -163,6 +164,7 @@ class PlaybackConnection(
                 MediaItem.Builder()
                     .setMediaId(item.id)
                     .setUri(streamUrl)
+                    .setMimeType(MimeTypes.AUDIO_MPEG)
                     .setMediaMetadata(mediaMetadata)
                     .build()
             }
@@ -201,6 +203,7 @@ class PlaybackConnection(
                 MediaItem.Builder()
                     .setMediaId(item.id)
                     .setUri(streamUrl)
+                    .setMimeType(MimeTypes.AUDIO_MPEG)
                     .setMediaMetadata(mediaMetadata)
                     .build()
             }
@@ -208,6 +211,15 @@ class PlaybackConnection(
             controller.addMediaItems(mediaItems)
             _playbackQueue.value = _playbackQueue.value + songs
         }
+    }
+
+    fun stopPlayback() {
+        val controller = mediaController ?: return
+        controller.stop()
+        controller.clearMediaItems()
+        _currentTrack.value = null
+        _playbackQueue.value = emptyList()
+        _playbackProgress.value = 0L
     }
 
     fun togglePlayPause() {

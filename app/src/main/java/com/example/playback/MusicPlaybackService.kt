@@ -1,26 +1,36 @@
 package com.example.playback
 
 import android.annotation.SuppressLint
+import android.app.PendingIntent
 import android.content.Intent
 import android.content.SharedPreferences
 import android.media.audiofx.Equalizer
+import android.net.Uri
 import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.cast.CastPlayer
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.CommandButton
+import androidx.media3.session.LibraryResult
+import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
-import androidx.media3.session.MediaSessionService
 import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
+import com.example.MainActivity
 import com.example.R
 import com.example.data.local.MusicDatabase
 import com.example.data.network.SubsonicSong
 import com.example.data.repository.MusicRepository
+import com.google.android.gms.cast.framework.CastContext
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,10 +39,11 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-class MusicPlaybackService : MediaSessionService() {
+class MusicPlaybackService : MediaLibraryService() {
 
     private var player: ExoPlayer? = null
-    private var mediaSession: MediaSession? = null
+    private var castPlayer: CastPlayer? = null
+    private var mediaSession: MediaLibrarySession? = null
     private var equalizer: Equalizer? = null
     private var prefs: SharedPreferences? = null
     private var fadeJob: Job? = null
@@ -47,6 +58,11 @@ class MusicPlaybackService : MediaSessionService() {
 
     companion object {
         private const val CUSTOM_COMMAND_TOGGLE_FAVORITE = "com.example.smusic.TOGGLE_FAVORITE"
+        private const val ROOT_ID = "root"
+        private const val SUGGESTED_ID = "suggested"
+        private const val FAVORITES_ID = "favorites"
+        private const val PLAYLISTS_ID = "playlists"
+        private const val PLAYLIST_PREFIX = "playlist_"
     }
 
     private fun favoriteButton(isFavorite: Boolean): CommandButton {
@@ -57,7 +73,68 @@ class MusicPlaybackService : MediaSessionService() {
             .build()
     }
 
-    private val sessionCallback = object : MediaSession.Callback {
+    private fun browsableItem(id: String, title: String): MediaItem {
+        val metadata = MediaMetadata.Builder()
+            .setTitle(title)
+            .setIsBrowsable(true)
+            .setIsPlayable(false)
+            .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
+            .build()
+        return MediaItem.Builder()
+            .setMediaId(id)
+            .setMediaMetadata(metadata)
+            .build()
+    }
+
+    private suspend fun playableMediaItem(
+        id: String,
+        title: String,
+        artist: String?,
+        album: String?,
+        coverArtUrl: String?
+    ): MediaItem {
+        val streamUrl = repository.getStreamUrl(SubsonicSong(id = id, title = title, artist = artist, album = album))
+        val metadata = MediaMetadata.Builder()
+            .setTitle(title)
+            .setArtist(artist)
+            .setAlbumTitle(album)
+            .setArtworkUri(coverArtUrl?.let { Uri.parse(it) })
+            .setIsBrowsable(false)
+            .setIsPlayable(true)
+            .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+            .build()
+        return MediaItem.Builder()
+            .setMediaId(id)
+            .setUri(streamUrl)
+            .setMimeType(MimeTypes.AUDIO_MPEG)
+            .setMediaMetadata(metadata)
+            .build()
+    }
+
+    private suspend fun playableMediaItem(song: SubsonicSong): MediaItem {
+        return playableMediaItem(
+            id = song.id,
+            title = song.title,
+            artist = song.artist,
+            album = song.album,
+            coverArtUrl = repository.getCoverArtUrl(song.coverArt)
+        )
+    }
+
+    private fun <T> futureResult(block: suspend () -> LibraryResult<T>): ListenableFuture<LibraryResult<T>> {
+        val future = SettableFuture.create<LibraryResult<T>>()
+        serviceScope.launch {
+            val result = try {
+                block()
+            } catch (e: Exception) {
+                LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN)
+            }
+            future.set(result)
+        }
+        return future
+    }
+
+    private val librarySessionCallback = object : MediaLibrarySession.Callback {
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo
@@ -101,6 +178,68 @@ class MusicPlaybackService : MediaSessionService() {
             }
             return super.onCustomCommand(session, controller, customCommand, args)
         }
+
+        override fun onGetLibraryRoot(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<MediaItem>> {
+            return Futures.immediateFuture(LibraryResult.ofItem(browsableItem(ROOT_ID, "S Music"), params))
+        }
+
+        override fun onGetItem(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            mediaId: String
+        ): ListenableFuture<LibraryResult<MediaItem>> = futureResult {
+            val item = when {
+                mediaId == ROOT_ID -> browsableItem(ROOT_ID, "S Music")
+                mediaId == SUGGESTED_ID -> browsableItem(SUGGESTED_ID, "پیشنهادی برای شما")
+                mediaId == FAVORITES_ID -> browsableItem(FAVORITES_ID, "علاقه‌مندی‌ها")
+                mediaId == PLAYLISTS_ID -> browsableItem(PLAYLISTS_ID, "پلی‌لیست‌های من")
+                mediaId.startsWith(PLAYLIST_PREFIX) -> {
+                    val playlistId = mediaId.removePrefix(PLAYLIST_PREFIX).toLongOrNull()
+                    val playlist = playlistId?.let { id -> repository.getLocalPlaylistsOnce().find { it.id == id } }
+                    playlist?.let { browsableItem(mediaId, it.name) }
+                }
+                else -> null
+            }
+            if (item != null) LibraryResult.ofItem(item, null) else LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE)
+        }
+
+        override fun onGetChildren(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            parentId: String,
+            page: Int,
+            pageSize: Int,
+            params: LibraryParams?
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = futureResult {
+            val children: List<MediaItem> = when {
+                parentId == ROOT_ID -> listOf(
+                    browsableItem(SUGGESTED_ID, "پیشنهادی برای شما"),
+                    browsableItem(FAVORITES_ID, "علاقه‌مندی‌ها"),
+                    browsableItem(PLAYLISTS_ID, "پلی‌لیست‌های من")
+                )
+                parentId == SUGGESTED_ID -> repository.getRandomSongs().take(25).map { playableMediaItem(it) }
+                parentId == FAVORITES_ID -> repository.getFavoriteTracksOnce().map { fav ->
+                    playableMediaItem(fav.id, fav.title, fav.artist, fav.album, fav.coverArtUrl)
+                }
+                parentId == PLAYLISTS_ID -> repository.getLocalPlaylistsOnce().map { playlist ->
+                    browsableItem("$PLAYLIST_PREFIX${playlist.id}", playlist.name)
+                }
+                parentId.startsWith(PLAYLIST_PREFIX) -> {
+                    val playlistId = parentId.removePrefix(PLAYLIST_PREFIX).toLongOrNull()
+                    if (playlistId != null) {
+                        repository.getPlaylistItemsOnce(playlistId).map { item ->
+                            playableMediaItem(item.trackId, item.title, item.artist, item.album, item.coverArtUrl)
+                        }
+                    } else emptyList()
+                }
+                else -> emptyList()
+            }
+            LibraryResult.ofItemList(ImmutableList.copyOf(children), params)
+        }
     }
 
     @SuppressLint("UnsafeOptInUsageError")
@@ -123,8 +262,16 @@ class MusicPlaybackService : MediaSessionService() {
             .build()
 
         player?.let { exoPlayer ->
-            mediaSession = MediaSession.Builder(this, exoPlayer)
-                .setCallback(sessionCallback)
+            val openAppIntent = Intent(this, MainActivity::class.java)
+            val sessionActivityPendingIntent = PendingIntent.getActivity(
+                this,
+                0,
+                openAppIntent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            mediaSession = MediaLibrarySession.Builder(this, exoPlayer, librarySessionCallback)
+                .setSessionActivity(sessionActivityPendingIntent)
                 .build()
 
             prefs = getSharedPreferences("smusic_prefs", MODE_PRIVATE)
@@ -138,7 +285,7 @@ class MusicPlaybackService : MediaSessionService() {
             prefs?.registerOnSharedPreferenceChangeListener(prefsListener)
 
             exoPlayer.addListener(object : Player.Listener {
-                override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                     if (prefs?.getBoolean("crossfade_enabled", false) == true) {
                         runFadeIn(exoPlayer)
                     }
@@ -151,7 +298,47 @@ class MusicPlaybackService : MediaSessionService() {
                     }
                 }
             })
+
+            setUpCastPlayer(exoPlayer)
         }
+    }
+
+    private fun setUpCastPlayer(localPlayer: ExoPlayer) {
+        try {
+            val newCastPlayer = CastPlayer(CastContext.getSharedInstance(this))
+            newCastPlayer.setSessionAvailabilityListener(object : androidx.media3.cast.SessionAvailabilityListener {
+                override fun onCastSessionAvailable() {
+                    switchToPlayer(newCastPlayer)
+                }
+
+                override fun onCastSessionUnavailable() {
+                    switchToPlayer(localPlayer)
+                }
+            })
+            castPlayer = newCastPlayer
+        } catch (e: Exception) {
+            // Google Play services / Cast framework unavailable on this device.
+            e.printStackTrace()
+        }
+    }
+
+    private fun switchToPlayer(newPlayer: Player) {
+        val session = mediaSession ?: return
+        val oldPlayer = session.player
+        if (oldPlayer === newPlayer) return
+
+        val mediaItems = (0 until oldPlayer.mediaItemCount).map { oldPlayer.getMediaItemAt(it) }
+        val currentIndex = oldPlayer.currentMediaItemIndex
+        val position = oldPlayer.currentPosition
+        val playWhenReady = oldPlayer.playWhenReady
+        oldPlayer.stop()
+
+        if (mediaItems.isNotEmpty()) {
+            newPlayer.setMediaItems(mediaItems, currentIndex.coerceIn(0, mediaItems.size - 1), position)
+            newPlayer.prepare()
+            newPlayer.playWhenReady = playWhenReady
+        }
+        session.player = newPlayer
     }
 
     private fun applyEqualizer(sp: SharedPreferences) {
@@ -188,7 +375,7 @@ class MusicPlaybackService : MediaSessionService() {
         }
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? {
         return mediaSession
     }
 
@@ -207,11 +394,12 @@ class MusicPlaybackService : MediaSessionService() {
         prefs?.unregisterOnSharedPreferenceChangeListener(prefsListener)
         equalizer?.release()
         equalizer = null
-        mediaSession?.run {
-            player.release()
-            release()
-            mediaSession = null
-        }
+        mediaSession?.release()
+        mediaSession = null
+        castPlayer?.setSessionAvailabilityListener(null)
+        castPlayer?.release()
+        castPlayer = null
+        player?.release()
         player = null
         super.onDestroy()
     }

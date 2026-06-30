@@ -7,6 +7,7 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -462,6 +463,10 @@ class MusicRepository(
     fun getFavoriteAlbumsFlow(): Flow<List<FavoriteAlbum>> = dao.getFavoriteAlbumsFlow()
     fun getFavoriteArtistsFlow(): Flow<List<FavoriteArtist>> = dao.getFavoriteArtistsFlow()
 
+    suspend fun getFavoriteTracksOnce(): List<FavoriteTrack> = withContext(Dispatchers.IO) {
+        dao.getFavoriteTracksFlow().first()
+    }
+
     suspend fun toggleFavoriteTrack(song: SubsonicSong) = withContext(Dispatchers.IO) {
         val isFavorite = dao.isTrackFavorite(song.id)
         if (isFavorite) {
@@ -644,6 +649,14 @@ class MusicRepository(
     fun getLocalPlaylistsFlow(): Flow<List<LocalPlaylist>> = dao.getLocalPlaylistsFlow()
 
     fun getPlaylistItemsFlow(playlistId: Long): Flow<List<LocalPlaylistItem>> = dao.getPlaylistItemsFlow(playlistId)
+
+    suspend fun getLocalPlaylistsOnce(): List<LocalPlaylist> = withContext(Dispatchers.IO) {
+        dao.getAllPlaylistsOnce()
+    }
+
+    suspend fun getPlaylistItemsOnce(playlistId: Long): List<LocalPlaylistItem> = withContext(Dispatchers.IO) {
+        dao.getPlaylistItemsOnce(playlistId)
+    }
 
     suspend fun createLocalPlaylist(name: String, description: String? = null): Long = withContext(Dispatchers.IO) {
         dao.insertLocalPlaylist(LocalPlaylist(name = name, description = description))

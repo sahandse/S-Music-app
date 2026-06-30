@@ -67,9 +67,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.Player
+import androidx.mediarouter.app.MediaRouteButton
+import com.google.android.gms.cast.framework.CastButtonFactory
 import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
 import com.example.data.local.DownloadedTrack
@@ -91,12 +94,15 @@ import androidx.compose.ui.unit.Dp
 @Composable
 fun Modifier.glassmorphic(
     cornerRadius: Dp = 16.dp,
-    borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
+    borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
 ): Modifier {
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val highlight = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
     return this
+        .shadow(elevation = 12.dp, shape = RoundedCornerShape(cornerRadius), clip = false)
         .clip(RoundedCornerShape(cornerRadius))
         .background(surfaceColor)
+        .background(Brush.verticalGradient(listOf(highlight, Color.Transparent)))
         .border(1.dp, borderColor, RoundedCornerShape(cornerRadius))
 }
 
@@ -903,6 +909,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 onPlayPause = { viewModel.playbackConnection.togglePlayPause() },
                                 onNext = { viewModel.playbackConnection.skipToNext() },
                                 onClick = { isPlayerExpanded = true },
+                                onClose = { viewModel.playbackConnection.stopPlayback() },
                                 viewModel = viewModel
                             )
                         }
@@ -926,6 +933,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     onPlayPause = { viewModel.playbackConnection.togglePlayPause() },
                                     onNext = { viewModel.playbackConnection.skipToNext() },
                                     onClick = { isPlayerExpanded = true },
+                                    onClose = { viewModel.playbackConnection.stopPlayback() },
                                     viewModel = viewModel
                                 )
                             }
@@ -1089,6 +1097,7 @@ fun MiniPlayer(
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onClick: () -> Unit,
+    onClose: () -> Unit = {},
     viewModel: MusicViewModel
 ) {
     Box(
@@ -1154,6 +1163,14 @@ fun MiniPlayer(
                         imageVector = Icons.Filled.SkipNext,
                         contentDescription = "آهنگ بعدی",
                         tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                IconButton(onClick = onClose) {
+                    Icon(
+                        imageVector = Icons.Filled.Close,
+                        contentDescription = "بستن پلیر",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
             }
@@ -5896,6 +5913,25 @@ fun WaveformSeekBar(
     }
 }
 
+@Composable
+private fun CastButton(modifier: Modifier = Modifier) {
+    AndroidView(
+        modifier = modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.12f)),
+        factory = { context ->
+            try {
+                MediaRouteButton(context).apply {
+                    CastButtonFactory.setUpMediaRouteButton(context, this)
+                }
+            } catch (e: Exception) {
+                android.view.View(context)
+            }
+        }
+    )
+}
+
 // --- Gorgeous Sliding Fullscreen Player Sheet ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -6040,6 +6076,8 @@ fun FullscreenPlayer(
                             )
                         }
                     }
+
+                    CastButton()
 
                     IconButton(onClick = { showTimerDialog = true }) {
                         Icon(
