@@ -121,11 +121,12 @@ class MusicPlaybackService : MediaLibraryService() {
         )
     }
 
+    @Suppress("UNCHECKED_CAST")
     private suspend fun <T> safeLibraryResult(block: suspend () -> LibraryResult<T>): LibraryResult<T> {
         try {
             return block()
         } catch (e: Exception) {
-            return LibraryResult.ofError<T>(LibraryResult.RESULT_ERROR_UNKNOWN)
+            return LibraryResult.ofError(LibraryResult.RESULT_ERROR_UNKNOWN) as LibraryResult<T>
         }
     }
 
