@@ -102,16 +102,12 @@ import coil.request.SuccessResult
 @Composable
 fun Modifier.glassmorphic(
     cornerRadius: Dp = 16.dp,
-    borderColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f)
+    borderColor: Color = Color.Unspecified
 ): Modifier {
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val highlight = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+    val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
     return this
-        .shadow(elevation = 12.dp, shape = RoundedCornerShape(cornerRadius), clip = false)
         .clip(RoundedCornerShape(cornerRadius))
-        .background(surfaceColor)
-        .background(Brush.verticalGradient(listOf(highlight, Color.Transparent)))
-        .border(1.dp, borderColor, RoundedCornerShape(cornerRadius))
+        .background(surfaceColor.copy(alpha = 0.38f))
 }
 
 @Composable
@@ -1634,67 +1630,52 @@ fun HomeScreen(
 
             // Weekly Mix hero banner
             if (discoverWeeklySongs.isNotEmpty()) {
-                Box(
+                Row(
                     modifier = Modifier
                         .padding(horizontal = 16.dp)
                         .fillMaxWidth()
-                        .height(100.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(Color(0xFF4527A0), Color(0xFF6A1B9A), Color(0xFFAD1457))
-                            )
-                        )
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                         .clickable { viewModel.playSongDirectly(discoverWeeklySongs.first(), discoverWeeklySongs) }
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Stacked mini covers on the right
-                    Row(
-                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
-                        horizontalArrangement = Arrangement.spacedBy((-18).dp)
-                    ) {
-                        discoverWeeklySongs.take(3).reversed().forEachIndexed { i, s ->
+                    // Stacked album covers
+                    Box(modifier = Modifier.size(56.dp)) {
+                        discoverWeeklySongs.take(3).take(3).forEachIndexed { i, s ->
                             AsyncImage(
                                 model = viewModel.getCoverArtUrl(s.coverArt),
                                 contentDescription = null,
                                 modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .border(2.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
+                                    .size(40.dp)
+                                    .offset(x = (i * 8).dp, y = (i * 4).dp)
+                                    .clip(RoundedCornerShape(6.dp)),
                                 contentScale = ContentScale.Crop
                             )
                         }
                     }
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.CenterStart)
-                            .padding(start = 18.dp, end = 130.dp)
-                    ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = translate("میکس هفتگی", "Weekly Mix", viewModel),
-                            color = Color.White,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            fontFamily = LocalAppFontFamily.current
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = translate("${discoverWeeklySongs.size} آهنگ بر اساس سلیقه شما", "${discoverWeeklySongs.size} songs picked for you", viewModel),
-                            color = Color.White.copy(alpha = 0.75f),
+                            text = translate("${discoverWeeklySongs.size} آهنگ", "${discoverWeeklySongs.size} songs", viewModel),
                             fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                             fontFamily = LocalAppFontFamily.current
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(Color.White.copy(alpha = 0.2f))
-                                .padding(horizontal = 14.dp, vertical = 5.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                Text(text = translate("پخش همه", "Play All", viewModel), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
-                            }
-                        }
                     }
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
@@ -2001,25 +1982,14 @@ fun HomeScreen(
 // --- Section Header Title ---
 @Composable
 fun SectionTitle(title: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(horizontal = 16.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .height(20.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(AppleRed)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = title,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-    }
+    Text(
+        text = title,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.onBackground,
+        fontFamily = LocalAppFontFamily.current,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+    )
 }
 
 // --- Big Vertical Artwork Card ---
@@ -2036,31 +2006,14 @@ fun VerticalBigCard(
             .tvFocusable(cornerRadius = 12.dp)
             .clickable(onClick = onClick)
     ) {
-        Box(
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = title,
             modifier = Modifier
                 .size(150.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
-        ) {
-            AsyncImage(
-                model = imageUrl,
-                contentDescription = title,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            // Gradient overlay at bottom for depth
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(60.dp)
-                    .align(Alignment.BottomCenter)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))
-                        )
-                    )
-            )
-        }
+                .clip(RoundedCornerShape(10.dp)),
+            contentScale = ContentScale.Crop
+        )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = title,
@@ -2102,9 +2055,8 @@ fun ArtistCircleCard(
                 model = imageUrl,
                 contentDescription = name,
                 modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .border(1.5.dp, AppleRed.copy(alpha = 0.3f), CircleShape),
+                    .size(96.dp)
+                    .clip(CircleShape),
                 contentScale = ContentScale.Crop
             )
             if (onToggleFavorite != null) {
@@ -2159,7 +2111,8 @@ fun QuickAccessCard(
     Row(
         modifier = modifier
             .height(52.dp)
-            .glassmorphic(cornerRadius = 10.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             .clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -2168,17 +2121,18 @@ fun QuickAccessCard(
             contentDescription = title,
             modifier = Modifier
                 .size(52.dp)
-                .clip(RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp)),
+                .clip(RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)),
             contentScale = ContentScale.Crop
         )
         Text(
             text = title,
             fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontWeight = FontWeight.Medium,
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 10.dp)
+            modifier = Modifier.padding(horizontal = 10.dp),
+            fontFamily = LocalAppFontFamily.current
         )
     }
 }
@@ -2196,24 +2150,24 @@ fun MoodCard(
     val playlist = if (songs.isNotEmpty()) songs else fallback.take(10)
     Box(
         modifier = Modifier
-            .size(140.dp, 88.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Brush.linearGradient(gradientColors))
+            .size(132.dp, 76.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(gradientColors.first().copy(alpha = 0.85f), gradientColors.last().copy(alpha = 0.95f))
+                )
+            )
             .clickable(enabled = playlist.isNotEmpty()) { onPlay(playlist) }
-            .padding(14.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Text(
-            text = emoji,
-            fontSize = 28.sp,
-            modifier = Modifier.align(Alignment.TopEnd)
-        )
-        Text(
-            text = label,
+            text = label.replace("\n", " "),
             color = Color.White,
             fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
+            fontWeight = FontWeight.SemiBold,
             lineHeight = 18.sp,
-            modifier = Modifier.align(Alignment.BottomStart)
+            fontFamily = LocalAppFontFamily.current,
+            modifier = Modifier.align(Alignment.CenterStart)
         )
     }
 }
@@ -2517,23 +2471,6 @@ fun TrackRowItem(
                                 fontSize = 9.sp,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                    if (!song.genre.isNullOrBlank()) {
-                        val gc = genreColor(song.genre!!)
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(gc.copy(alpha = 0.14f))
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                text = song.genre!!,
-                                fontSize = 9.sp,
-                                color = gc,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 1
                             )
                         }
                     }
@@ -3341,26 +3278,36 @@ fun LibraryScreen(
         )
 
         items(categories) { cat ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .glassmorphic(cornerRadius = 14.dp)
-                    .clickable { onItemClick(cat.first) }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
-                Box(
+            Column {
+                Row(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(AppleRed.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .clickable { onItemClick(cat.first) }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Icon(imageVector = cat.third, contentDescription = null, tint = AppleRed, modifier = Modifier.size(22.dp))
+                    Icon(
+                        imageVector = cat.third,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = cat.second,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                    Icon(
+                        imageVector = Icons.Default.ChevronLeft,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
-                Text(text = cat.second, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Icon(imageVector = Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f), thickness = 0.5.dp, modifier = Modifier.padding(start = 50.dp))
             }
         }
 
@@ -3386,33 +3333,38 @@ fun LibraryScreen(
             }
         } else {
             items(playlists) { playlist ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .glassmorphic(cornerRadius = 14.dp)
-                        .clickable { onPlaylistClick(playlist) }
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Box(
+                Column {
+                    Row(
                         modifier = Modifier
-                            .size(48.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(AppleRed.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .clickable { onPlaylistClick(playlist) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.QueueMusic, contentDescription = null, tint = AppleRed, modifier = Modifier.size(24.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QueueMusic,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(text = playlist.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current)
+                            Text(text = playlist.description ?: "", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f), fontFamily = LocalAppFontFamily.current)
+                        }
+                        IconButton(onClick = { viewModel.deletePlaylist(playlist.id) }) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "حذف", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+                        }
                     }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(text = playlist.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text(text = playlist.description ?: "بدون توضیح", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                    }
-
-                    IconButton(onClick = { viewModel.deletePlaylist(playlist.id) }) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "حذف", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
-                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f), thickness = 0.5.dp, modifier = Modifier.padding(start = 76.dp))
                 }
             }
         }
