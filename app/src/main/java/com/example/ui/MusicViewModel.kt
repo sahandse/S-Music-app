@@ -17,6 +17,11 @@ import com.example.data.network.SubsonicArtist
 import com.example.data.network.SubsonicSong
 import com.example.data.repository.MusicRepository
 import com.example.playback.PlaybackConnection
+import android.graphics.drawable.BitmapDrawable
+import androidx.palette.graphics.Palette
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
@@ -112,6 +117,10 @@ class MusicViewModel(
     // --- Download Progress tracker ---
     private val _downloadProgresses = MutableStateFlow<Map<String, Float>>(emptyMap())
     val downloadProgresses: StateFlow<Map<String, Float>> = _downloadProgresses.asStateFlow()
+
+    // --- Dynamic Accent Color (extracted from album art via Palette) ---
+    private val _dominantColorArgb = MutableStateFlow(0xFFFA2D48.toInt())
+    val dominantColorArgb: StateFlow<Int> = _dominantColorArgb.asStateFlow()
 
     // --- Lyrics State ---
     private val _currentLyrics = MutableStateFlow<String?>(null)
@@ -255,6 +264,35 @@ class MusicViewModel(
                 if (song != null) {
                     fetchLyricsForTrack(song)
                 }
+            }
+        }
+
+        // Extract dominant color from album art for dynamic app-wide accent
+        viewModelScope.launch {
+            playbackConnection.currentTrack.collect { song ->
+                if (song == null) {
+                    _dominantColorArgb.value = 0xFFFA2D48.toInt()
+                    return@collect
+                }
+                try {
+                    val ctx = getApplication<Application>()
+                    val req = ImageRequest.Builder(ctx)
+                        .data(getCoverArtUrl(song.coverArt))
+                        .allowHardware(false)
+                        .size(128)
+                        .build()
+                    val result = ctx.imageLoader.execute(req)
+                    if (result is SuccessResult) {
+                        val bmp = (result.drawable as? BitmapDrawable)?.bitmap
+                        bmp?.let {
+                            val palette = Palette.from(it).generate()
+                            val swatch = palette.vibrantSwatch
+                                ?: palette.dominantSwatch
+                                ?: palette.mutedSwatch
+                            swatch?.let { s -> _dominantColorArgb.value = s.rgb }
+                        }
+                    }
+                } catch (_: Exception) {}
             }
         }
 

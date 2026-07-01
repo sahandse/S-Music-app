@@ -710,6 +710,13 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val isPlaying by viewModel.playbackConnection.isPlaying.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
 
+    val dominantColorArgb by viewModel.dominantColorArgb.collectAsStateWithLifecycle()
+    val accentColor by animateColorAsState(
+        targetValue = Color(dominantColorArgb),
+        animationSpec = tween(durationMillis = 900),
+        label = "AppAccentColor"
+    )
+
     // Internal sub-navigation state (Artist / Album details)
     var currentSubScreen by remember { mutableStateOf<SubScreen?>(null) }
 
@@ -718,8 +725,10 @@ fun MainMusicApp(viewModel: MusicViewModel) {
 
     val isLight = themeMode == "light" || themeMode == "glass"
     val backgroundColor = if (themeMode == "glass") Color(0xFFF0F2F6) else if (isLight) Color.White else Color.Black
-    val ambientColor1 = if (themeMode == "glass") Color(0x60FA2D48) else if (isLight) Color(0x1BFA2D48) else Color(0x3BFA2D48)
-    val ambientColor2 = if (themeMode == "glass") Color(0x50007AFF) else if (isLight) Color(0x13FA2D48) else Color(0x28FA2D48)
+    val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x3B
+    val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x28
+    val ambientColor1 = accentColor.copy(alpha = ambientAlpha1 / 255f)
+    val ambientColor2 = accentColor.copy(alpha = ambientAlpha2 / 255f)
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -780,7 +789,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         onClick = { selectedTab = 0; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "خانه") },
                         label = { Text("خانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
-                        colors = NavigationRailItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent),
+                        colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -789,7 +798,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         onClick = { selectedTab = 1; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Search else Icons.Outlined.Search, contentDescription = "جستجو") },
                         label = { Text("جستجو", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
-                        colors = NavigationRailItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent),
+                        colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -798,7 +807,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         onClick = { selectedTab = 2; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 2) Icons.Filled.LibraryMusic else Icons.Outlined.LibraryMusic, contentDescription = "کتابخانه") },
                         label = { Text("کتابخانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
-                        colors = NavigationRailItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent),
+                        colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -807,7 +816,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         onClick = { selectedTab = 3; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 3) Icons.Filled.Person else Icons.Outlined.Person, contentDescription = "پروفایل") },
                         label = { Text("پروفایل", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
-                        colors = NavigationRailItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent),
+                        colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
                 }
@@ -926,6 +935,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 onClick = { isPlayerExpanded = true },
                                 onClose = { viewModel.playbackConnection.stopPlayback() },
                                 onCarMode = { showCarMode = true },
+                                accentColor = accentColor,
                                 viewModel = viewModel
                             )
                         }
@@ -968,28 +978,28 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 onClick = { selectedTab = 0; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "خانه") },
                                 label = { Text("خانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
-                                colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
+                                colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 1 && currentSubScreen == null,
                                 onClick = { selectedTab = 1; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Search else Icons.Outlined.Search, contentDescription = "جستجو") },
                                 label = { Text("جستجو", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
-                                colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
+                                colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 2 && currentSubScreen == null,
                                 onClick = { selectedTab = 2; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 2) Icons.Filled.LibraryMusic else Icons.Outlined.LibraryMusic, contentDescription = "کتابخانه") },
                                 label = { Text("کتابخانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
-                                colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
+                                colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 3 && currentSubScreen == null,
                                 onClick = { selectedTab = 3; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 3) Icons.Filled.Person else Icons.Outlined.Person, contentDescription = "پروفایل") },
                                 label = { Text("پروفایل", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
-                                colors = NavigationBarItemDefaults.colors(selectedIconColor = AppleRed, selectedTextColor = AppleRed, indicatorColor = Color.Transparent)
+                                colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                         }
                     }
@@ -1116,6 +1126,7 @@ fun MiniPlayer(
     onClick: () -> Unit,
     onClose: () -> Unit = {},
     onCarMode: () -> Unit = {},
+    accentColor: Color = AppleRed,
     viewModel: MusicViewModel
 ) {
     val playbackProgress by viewModel.playbackConnection.playbackProgress.collectAsStateWithLifecycle()
@@ -1186,7 +1197,7 @@ fun MiniPlayer(
                     Icon(
                         imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = "پخش/توقف",
-                        tint = AppleRed,
+                        tint = accentColor,
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -1216,8 +1227,8 @@ fun MiniPlayer(
                 .height(2.dp)
                 .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
                 .align(Alignment.BottomCenter),
-            color = AppleRed,
-            trackColor = AppleRed.copy(alpha = 0.15f)
+            color = accentColor,
+            trackColor = accentColor.copy(alpha = 0.15f)
         )
     }
 }
