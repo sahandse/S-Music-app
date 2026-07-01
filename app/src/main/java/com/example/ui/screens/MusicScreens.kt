@@ -1103,6 +1103,12 @@ fun MiniPlayer(
     onClose: () -> Unit = {},
     viewModel: MusicViewModel
 ) {
+    val playbackProgress by viewModel.playbackConnection.playbackProgress.collectAsStateWithLifecycle()
+    val progressFraction = remember(playbackProgress, song.duration) {
+        val dur = (song.duration ?: 0)
+        if (dur > 0) (playbackProgress / 1000f / dur).coerceIn(0f, 1f) else 0f
+    }
+
     Box(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1178,6 +1184,18 @@ fun MiniPlayer(
                 }
             }
         }
+
+        // Thin progress bar at the very bottom of the mini player
+        LinearProgressIndicator(
+            progress = { progressFraction },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+                .align(Alignment.BottomCenter),
+            color = AppleRed,
+            trackColor = AppleRed.copy(alpha = 0.15f)
+        )
     }
 }
 
@@ -1775,13 +1793,25 @@ fun HomeScreen(
 // --- Section Header Title ---
 @Composable
 fun SectionTitle(title: String) {
-    Text(
-        text = title,
-        fontSize = 20.sp,
-        fontWeight = FontWeight.Bold,
-        color = MaterialTheme.colorScheme.onBackground,
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.padding(horizontal = 16.dp)
-    )
+    ) {
+        Box(
+            modifier = Modifier
+                .width(3.dp)
+                .height(20.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(AppleRed)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = title,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+    }
 }
 
 // --- Big Vertical Artwork Card ---
@@ -1798,16 +1828,32 @@ fun VerticalBigCard(
             .tvFocusable(cornerRadius = 12.dp)
             .clickable(onClick = onClick)
     ) {
-        AsyncImage(
-            model = imageUrl,
-            contentDescription = title,
+        Box(
             modifier = Modifier
                 .size(150.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Spacer(modifier = Modifier.height(8.dp))
+                .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+        ) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            // Gradient overlay at bottom for depth
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp)
+                    .align(Alignment.BottomCenter)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))
+                        )
+                    )
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             text = title,
             fontSize = 14.sp,
@@ -1838,19 +1884,19 @@ fun ArtistCircleCard(
 ) {
     Column(
         modifier = Modifier
-            .width(90.dp)
-            .tvFocusable(cornerRadius = 45.dp)
+            .width(104.dp)
+            .tvFocusable(cornerRadius = 52.dp)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(modifier = Modifier.size(90.dp)) {
+        Box(modifier = Modifier.size(100.dp)) {
             AsyncImage(
                 model = imageUrl,
                 contentDescription = name,
                 modifier = Modifier
-                    .size(90.dp)
+                    .size(100.dp)
                     .clip(CircleShape)
-                    .border(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f), CircleShape),
+                    .border(1.5.dp, AppleRed.copy(alpha = 0.3f), CircleShape),
                 contentScale = ContentScale.Crop
             )
             if (onToggleFavorite != null) {
@@ -2089,8 +2135,10 @@ fun TrackRowItem(
 
     val favoriteTracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
+    val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
     val isFavorite = favoriteTracks.any { it.id == song.id }
     val isDownloaded = downloadedTracks.any { it.id == song.id }
+    val isCurrentlyPlaying = currentTrack?.id == song.id
 
     var showPlaylistDialog by remember { mutableStateOf(false) }
 
@@ -2098,6 +2146,7 @@ fun TrackRowItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
+            .background(if (isCurrentlyPlaying) AppleRed.copy(alpha = 0.08f) else Color.Transparent)
             .tvFocusable(cornerRadius = 8.dp)
             .clickable(onClick = onPlay)
             .padding(vertical = 8.dp, horizontal = 4.dp),
@@ -2108,21 +2157,39 @@ fun TrackRowItem(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            AsyncImage(
-                model = viewModel.getCoverArtUrl(song.coverArt),
-                contentDescription = song.title,
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(6.dp)),
-                contentScale = ContentScale.Crop
-            )
+            Box(modifier = Modifier.size(50.dp)) {
+                AsyncImage(
+                    model = viewModel.getCoverArtUrl(song.coverArt),
+                    contentDescription = song.title,
+                    modifier = Modifier
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(6.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                if (isCurrentlyPlaying) {
+                    Box(
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color.Black.copy(alpha = 0.35f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.VolumeUp,
+                            contentDescription = "در حال پخش",
+                            tint = AppleRed,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+            }
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
                     text = song.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    color = if (isCurrentlyPlaying) AppleRed else MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -2964,16 +3031,24 @@ fun LibraryScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .glassmorphic(cornerRadius = 14.dp)
                     .clickable { onItemClick(cat.first) }
-                    .padding(vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Icon(imageVector = cat.third, contentDescription = null, tint = AppleRed, modifier = Modifier.size(24.dp))
-                Text(text = cat.second, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Icon(imageVector = Icons.Default.ChevronLeft, contentDescription = null, tint = Color.Gray)
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(AppleRed.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(imageVector = cat.third, contentDescription = null, tint = AppleRed, modifier = Modifier.size(22.dp))
+                }
+                Text(text = cat.second, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Icon(imageVector = Icons.Default.ChevronLeft, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f), modifier = Modifier.size(18.dp))
             }
-            HorizontalDivider()
         }
 
         // Playlists Section
@@ -3001,32 +3076,31 @@ fun LibraryScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .glassmorphic(cornerRadius = 14.dp)
                         .clickable { onPlaylistClick(playlist) }
-                        .padding(vertical = 8.dp),
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Playlist dummy icon
                     Box(
                         modifier = Modifier
-                            .size(50.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(AppleRed.copy(alpha = 0.1f)),
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AppleRed.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.Default.QueueMusic, contentDescription = null, tint = AppleRed)
+                        Icon(imageVector = Icons.Default.QueueMusic, contentDescription = null, tint = AppleRed, modifier = Modifier.size(24.dp))
                     }
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = playlist.name, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        Text(text = playlist.description ?: "بدون توضیح", fontSize = 11.sp, color = Color.Gray)
+                        Text(text = playlist.description ?: "بدون توضیح", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                     }
 
                     IconButton(onClick = { viewModel.deletePlaylist(playlist.id) }) {
-                        Icon(imageVector = Icons.Default.Delete, contentDescription = "حذف", tint = Color.Gray)
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "حذف", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
                     }
                 }
-                HorizontalDivider()
             }
         }
     }
