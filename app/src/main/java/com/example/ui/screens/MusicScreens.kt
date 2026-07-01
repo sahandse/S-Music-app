@@ -1426,76 +1426,89 @@ fun HomeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(20.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.Bottom,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
                             Box(
                                 modifier = Modifier
                                     .padding(bottom = 6.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.25f))
-                                    .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(6.dp))
+                                    .background(AppleRed.copy(alpha = 0.85f))
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = translate("پیشنهاد امروز", "TODAY'S PICK", viewModel),
-                                    color = MaterialTheme.colorScheme.primary,
+                                    color = Color.White,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = LocalAppFontFamily.current
                                 )
                             }
-                            
+
                             Text(
                                 text = featuredSong.title,
                                 color = Color.White,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 fontFamily = LocalAppFontFamily.current
                             )
-                            
+
                             Text(
                                 text = featuredSong.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                                color = Color.White.copy(alpha = 0.7f),
+                                color = Color.White.copy(alpha = 0.75f),
                                 fontSize = 13.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 fontFamily = LocalAppFontFamily.current
                             )
-                        }
-                        
-                        // Play Button Pill
-                        Box(
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary)
-                                .clickable { viewModel.playSongDirectly(featuredSong, randomSongs) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            // Play Button
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(Color.White)
+                                    .clickable { viewModel.playSongDirectly(featuredSong, randomSongs) }
+                                    .padding(horizontal = 16.dp, vertical = 7.dp),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(
-                                    text = translate("پخش", "Play", viewModel),
-                                    color = Color.White,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    fontFamily = LocalAppFontFamily.current
-                                )
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        tint = Color.Black,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(
+                                        text = translate("پخش", "Play", viewModel),
+                                        color = Color.Black,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = LocalAppFontFamily.current
+                                    )
+                                }
                             }
                         }
+
+                        // Sharp cover art thumbnail on right side
+                        AsyncImage(
+                            model = viewModel.getCoverArtUrl(featuredSong.coverArt),
+                            contentDescription = featuredSong.title,
+                            modifier = Modifier
+                                .size(110.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .shadow(12.dp, RoundedCornerShape(16.dp))
+                                .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(16.dp)),
+                            contentScale = ContentScale.Crop
+                        )
                     }
                 }
             } else {
@@ -6671,7 +6684,7 @@ fun FullscreenPlayer(
                                 tint = AppleRed,
                                 modifier = Modifier.size(14.dp)
                             )
-                            
+
                             participatingArtists.forEachIndexed { index, artist ->
                                 Text(
                                     text = artist.name + (if (index < participatingArtists.size - 1) "، " else ""),
@@ -6679,8 +6692,30 @@ fun FullscreenPlayer(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     fontFamily = LocalAppFontFamily.current,
-                                    modifier = Modifier
-                                        .clickable { onArtistClick(artist) }
+                                    modifier = Modifier.clickable { onArtistClick(artist) }
+                                )
+                            }
+                        }
+
+                        if (!song.album.isNullOrBlank()) {
+                            Row(
+                                modifier = Modifier.padding(top = 3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Album,
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.45f),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                                Text(
+                                    text = song.album,
+                                    color = Color.White.copy(alpha = 0.45f),
+                                    fontSize = 12.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontFamily = LocalAppFontFamily.current
                                 )
                             }
                         }
@@ -6748,21 +6783,23 @@ fun FullscreenPlayer(
                                 Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "قبلی", tint = Color.White, modifier = Modifier.size(36.dp))
                             }
 
-                            // Giant centered play/pause trigger with background ripple accent
-                            IconButton(
-                                onClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    viewModel.playbackConnection.togglePlayPause()
-                                },
+                            // Giant centered play/pause trigger with AppleRed fill
+                            Box(
                                 modifier = Modifier
                                     .size(72.dp)
-                                    .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                                    .shadow(8.dp, CircleShape)
+                                    .background(AppleRed, CircleShape)
+                                    .clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        viewModel.playbackConnection.togglePlayPause()
+                                    },
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                     contentDescription = "پخش/توقف",
                                     tint = Color.White,
-                                    modifier = Modifier.size(44.dp)
+                                    modifier = Modifier.size(42.dp)
                                 )
                             }
 
@@ -6789,28 +6826,59 @@ fun FullscreenPlayer(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Lower accessories toolbar (Speed dial, Queue, equalizer trigger info)
+            // Lower accessories toolbar (Speed dial, Queue, equalizer)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = { showSpeedDialog = true }) {
-                    Text(text = "سرعت: ${speed}x", color = Color.White, fontSize = 13.sp)
+                // Speed chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = if (speed != 1f) 0.2f else 0.08f))
+                        .border(
+                            width = if (speed != 1f) 1.dp else 0.dp,
+                            color = if (speed != 1f) AppleRed else Color.Transparent,
+                            shape = RoundedCornerShape(20.dp)
+                        )
+                        .clickable { showSpeedDialog = true }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = if (speed != 1f) AppleRed else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                        Text(text = "${speed}x", color = if (speed != 1f) AppleRed else Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
 
-                IconButton(onClick = { showQueueSheet = true }) {
-                    Icon(
-                        imageVector = Icons.Default.QueueMusic,
-                        contentDescription = "صف پخش",
-                        tint = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.size(22.dp)
-                    )
+                // Queue chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .clickable { showQueueSheet = true }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Icon(imageVector = Icons.Default.QueueMusic, contentDescription = "صف پخش", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                        Text(text = "صف پخش", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(imageVector = Icons.Default.Equalizer, contentDescription = null, tint = Color.White.copy(alpha = 0.6f), modifier = Modifier.size(16.dp))
-                    Text(text = "اکولایزر فعال", color = Color.White.copy(alpha = 0.6f), fontSize = 12.sp)
+                // Equalizer chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.08f))
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Icon(imageVector = Icons.Default.Equalizer, contentDescription = null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
+                        Text(text = "EQ", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
