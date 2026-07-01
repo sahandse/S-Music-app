@@ -704,6 +704,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
 fun MainMusicApp(viewModel: MusicViewModel) {
     var selectedTab by remember { mutableStateOf(0) } // 0: Home, 1: Search, 2: Library, 3: Settings
     var isPlayerExpanded by remember { mutableStateOf(false) }
+    var showCarMode by remember { mutableStateOf(false) }
 
     val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by viewModel.playbackConnection.isPlaying.collectAsStateWithLifecycle()
@@ -747,6 +748,12 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                     )
                 }
         ) {
+        // Car Mode overlay
+        if (showCarMode) {
+            CarModeScreen(viewModel = viewModel, onClose = { showCarMode = false })
+            return@Box
+        }
+
         if (isLandscape) {
             Row(modifier = Modifier.fillMaxSize()) {
                 // Side Navigation Rail (TV / Landscape)
@@ -918,6 +925,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 onNext = { viewModel.playbackConnection.skipToNext() },
                                 onClick = { isPlayerExpanded = true },
                                 onClose = { viewModel.playbackConnection.stopPlayback() },
+                                onCarMode = { showCarMode = true },
                                 viewModel = viewModel
                             )
                         }
@@ -942,6 +950,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     onNext = { viewModel.playbackConnection.skipToNext() },
                                     onClick = { isPlayerExpanded = true },
                                     onClose = { viewModel.playbackConnection.stopPlayback() },
+                                    onCarMode = { showCarMode = true },
                                     viewModel = viewModel
                                 )
                             }
@@ -1106,6 +1115,7 @@ fun MiniPlayer(
     onNext: () -> Unit,
     onClick: () -> Unit,
     onClose: () -> Unit = {},
+    onCarMode: () -> Unit = {},
     viewModel: MusicViewModel
 ) {
     val playbackProgress by viewModel.playbackConnection.playbackProgress.collectAsStateWithLifecycle()
@@ -1164,6 +1174,14 @@ fun MiniPlayer(
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onCarMode) {
+                    Icon(
+                        imageVector = Icons.Default.DirectionsCar,
+                        contentDescription = "حالت خودرو",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
                 IconButton(onClick = onPlayPause) {
                     Icon(
                         imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
@@ -1599,6 +1617,72 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             fontFamily = LocalAppFontFamily.current
                         )
+                    }
+                }
+            }
+
+            // Weekly Mix hero banner
+            if (discoverWeeklySongs.isNotEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(Color(0xFF4527A0), Color(0xFF6A1B9A), Color(0xFFAD1457))
+                            )
+                        )
+                        .clickable { viewModel.playSongDirectly(discoverWeeklySongs.first(), discoverWeeklySongs) }
+                ) {
+                    // Stacked mini covers on the right
+                    Row(
+                        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy((-18).dp)
+                    ) {
+                        discoverWeeklySongs.take(3).reversed().forEachIndexed { i, s ->
+                            AsyncImage(
+                                model = viewModel.getCoverArtUrl(s.coverArt),
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(64.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .border(2.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(10.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 18.dp, end = 130.dp)
+                    ) {
+                        Text(
+                            text = translate("میکس هفتگی", "Weekly Mix", viewModel),
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                        Text(
+                            text = translate("${discoverWeeklySongs.size} آهنگ بر اساس سلیقه شما", "${discoverWeeklySongs.size} songs picked for you", viewModel),
+                            color = Color.White.copy(alpha = 0.75f),
+                            fontSize = 11.sp,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(Color.White.copy(alpha = 0.2f))
+                                .padding(horizontal = 14.dp, vertical = 5.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                Text(text = translate("پخش همه", "Play All", viewModel), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
+                            }
+                        }
                     }
                 }
             }
@@ -2305,6 +2389,24 @@ fun DownloadedTrackRow(
     }
 }
 
+// Maps genre name to a display color for the tag chip
+private fun genreColor(genre: String): Color = when {
+    genre.contains("rock", ignoreCase = true) -> Color(0xFFE53935)
+    genre.contains("pop", ignoreCase = true) || genre.contains("پاپ", ignoreCase = true) -> Color(0xFFE91E63)
+    genre.contains("jazz", ignoreCase = true) -> Color(0xFF1E88E5)
+    genre.contains("classical", ignoreCase = true) || genre.contains("کلاسیک", ignoreCase = true) -> Color(0xFFFFB300)
+    genre.contains("electronic", ignoreCase = true) || genre.contains("edm", ignoreCase = true) -> Color(0xFF00BCD4)
+    genre.contains("hip", ignoreCase = true) || genre.contains("rap", ignoreCase = true) || genre.contains("رپ", ignoreCase = true) -> Color(0xFFFF6F00)
+    genre.contains("r&b", ignoreCase = true) || genre.contains("soul", ignoreCase = true) -> Color(0xFF8E24AA)
+    genre.contains("country", ignoreCase = true) -> Color(0xFF795548)
+    genre.contains("folk", ignoreCase = true) -> Color(0xFF388E3C)
+    genre.contains("metal", ignoreCase = true) -> Color(0xFF546E7A)
+    genre.contains("alternative", ignoreCase = true) || genre.contains("indie", ignoreCase = true) -> Color(0xFF26A69A)
+    genre.contains("blues", ignoreCase = true) -> Color(0xFF1565C0)
+    genre.contains("ایرانی", ignoreCase = true) || genre.contains("persian", ignoreCase = true) || genre.contains("iran", ignoreCase = true) -> Color(0xFF00897B)
+    else -> Color(0xFF9E9E9E)
+}
+
 // --- Standard Song Row Component ---
 @Composable
 fun TrackRowItem(
@@ -2404,6 +2506,23 @@ fun TrackRowItem(
                                 fontSize = 9.sp,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                 fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    if (!song.genre.isNullOrBlank()) {
+                        val gc = genreColor(song.genre!!)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(gc.copy(alpha = 0.14f))
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                text = song.genre!!,
+                                fontSize = 9.sp,
+                                color = gc,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
                             )
                         }
                     }
@@ -5206,6 +5325,25 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
         counts.toList()
     }
 
+    val topPlayedSongs = remember(recentPlays) {
+        recentPlays.groupBy { it.trackId }
+            .mapValues { it.value.first() to it.value.size }
+            .toList()
+            .sortedByDescending { it.second.second }
+            .take(5)
+            .map { it.second.first }
+    }
+
+    val topArtists = remember(recentPlays) {
+        recentPlays.filter { !it.artist.isNullOrBlank() }
+            .groupBy { it.artist!! }
+            .mapValues { it.value.size }
+            .toList()
+            .sortedByDescending { it.second }
+            .take(3)
+            .map { it.first }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -5410,6 +5548,108 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                                     fontSize = 10.sp,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                                     fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Top Played Songs
+        if (topPlayedSongs.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = translate("پربازی‌ترین آهنگ‌ها", "Most Played", viewModel),
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    topPlayedSongs.forEachIndexed { idx, play ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "${idx + 1}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (idx == 0) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                modifier = Modifier.width(18.dp),
+                                textAlign = TextAlign.Center
+                            )
+                            AsyncImage(
+                                model = play.coverArtUrl,
+                                contentDescription = play.title,
+                                modifier = Modifier.size(36.dp).clip(RoundedCornerShape(6.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = play.title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                                Text(text = play.artist ?: "—", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f), maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Top Artists
+        if (topArtists.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = translate("هنرمندان پربازی", "Top Artists", viewModel),
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        topArtists.forEachIndexed { idx, artist ->
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(60.dp)
+                                        .clip(CircleShape)
+                                        .background(
+                                            Brush.linearGradient(
+                                                listOf(AppleRed.copy(alpha = 0.6f + idx * 0.13f), Color(0xFF8E24AA).copy(alpha = 0.5f))
+                                            )
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = (artist.firstOrNull() ?: "?").toString().uppercase(),
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = artist,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -7433,6 +7673,146 @@ fun parseLrc(lyricsText: String): List<LrcLine> {
         }
     }
     return list.sortedBy { it.timestampMs }
+}
+
+// --- Car Mode: simplified full-screen player for driving ---
+@Composable
+fun CarModeScreen(viewModel: MusicViewModel, onClose: () -> Unit) {
+    val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
+    val isPlaying by viewModel.playbackConnection.isPlaying.collectAsStateWithLifecycle()
+    val progress by viewModel.playbackConnection.playbackProgress.collectAsStateWithLifecycle()
+    val duration by viewModel.playbackConnection.trackDuration.collectAsStateWithLifecycle()
+
+    val progressFraction = remember(progress, duration) {
+        if (duration > 0) (progress.toFloat() / duration).coerceIn(0f, 1f) else 0f
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        // Blurred album art background
+        currentTrack?.let { track ->
+            AsyncImage(
+                model = viewModel.getCoverArtUrl(track.coverArt),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize().graphicsLayer(alpha = 0.18f),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 32.dp, vertical = 24.dp)
+                .windowInsetsPadding(WindowInsets.systemBars),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Top row: Car icon + Close
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(imageVector = Icons.Default.DirectionsCar, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+                    Text(text = "حالت خودرو", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = LocalAppFontFamily.current)
+                }
+                IconButton(onClick = onClose) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "بستن", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(26.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Album art
+            currentTrack?.let { track ->
+                AsyncImage(
+                    model = viewModel.getCoverArtUrl(track.coverArt),
+                    contentDescription = track.title,
+                    modifier = Modifier
+                        .size(220.dp)
+                        .clip(RoundedCornerShape(28.dp))
+                        .shadow(24.dp, RoundedCornerShape(28.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Song title + artist
+            Text(
+                text = currentTrack?.title ?: "—",
+                fontSize = 26.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                fontFamily = LocalAppFontFamily.current
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = currentTrack?.artist ?: "",
+                fontSize = 17.sp,
+                color = Color.White.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                fontFamily = LocalAppFontFamily.current
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Progress bar
+            LinearProgressIndicator(
+                progress = { progressFraction },
+                modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                color = AppleRed,
+                trackColor = Color.White.copy(alpha = 0.15f)
+            )
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            // Big playback controls
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(
+                    onClick = { viewModel.playbackConnection.skipToPrevious() },
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    Icon(imageVector = Icons.Filled.SkipPrevious, contentDescription = "قبلی", tint = Color.White, modifier = Modifier.size(60.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .shadow(12.dp, CircleShape)
+                        .background(AppleRed, CircleShape)
+                        .clickable { viewModel.playbackConnection.togglePlayPause() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (isPlaying) "توقف" else "پخش",
+                        tint = Color.White,
+                        modifier = Modifier.size(58.dp)
+                    )
+                }
+                IconButton(
+                    onClick = { viewModel.playbackConnection.skipToNext() },
+                    modifier = Modifier.size(80.dp)
+                ) {
+                    Icon(imageVector = Icons.Filled.SkipNext, contentDescription = "بعدی", tint = Color.White, modifier = Modifier.size(60.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
 }
 
 // --- Timing and formatting utilities ---
