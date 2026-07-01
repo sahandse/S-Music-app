@@ -93,6 +93,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import android.graphics.drawable.BitmapDrawable
+import androidx.palette.graphics.Palette
+import coil.imageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 
 @Composable
 fun Modifier.glassmorphic(
@@ -1293,6 +1298,16 @@ fun HomeScreen(
         randomSongs.filter { song -> keywords.any { kw -> song.genre?.contains(kw, ignoreCase = true) == true } }.take(10)
     }
 
+    val nightSongs = remember(randomSongs) {
+        val keywords = listOf("night", "dark", "شب", "lofi", "lo-fi", "sleep", "midnight", "deep")
+        randomSongs.filter { song ->
+            keywords.any { kw ->
+                song.genre?.contains(kw, ignoreCase = true) == true ||
+                song.title.contains(kw, ignoreCase = true)
+            }
+        }.take(10)
+    }
+
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = AppleRed)
@@ -1386,6 +1401,47 @@ fun HomeScreen(
             }
 
 
+
+            // Spotify-style 2×3 quick-access grid of recently played
+            if (recentPlays.isNotEmpty()) {
+                val quickItems = recentPlays.take(6)
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    for (i in quickItems.indices step 2) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val left = quickItems[i]
+                            QuickAccessCard(
+                                title = left.title,
+                                imageUrl = left.coverArtUrl ?: "",
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    val s = SubsonicSong(id = left.trackId, title = left.title, artist = left.artist, album = left.album, coverArt = left.coverArtUrl, duration = left.duration)
+                                    viewModel.playSongDirectly(s, listOf(s))
+                                }
+                            )
+                            if (i + 1 < quickItems.size) {
+                                val right = quickItems[i + 1]
+                                QuickAccessCard(
+                                    title = right.title,
+                                    imageUrl = right.coverArtUrl ?: "",
+                                    modifier = Modifier.weight(1f),
+                                    onClick = {
+                                        val s = SubsonicSong(id = right.trackId, title = right.title, artist = right.artist, album = right.album, coverArt = right.coverArtUrl, duration = right.duration)
+                                        viewModel.playSongDirectly(s, listOf(s))
+                                    }
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
 
             // Dynamic Featured Hero Banner
             val featuredSong = randomSongs.firstOrNull()
@@ -1544,6 +1600,50 @@ fun HomeScreen(
                             fontFamily = LocalAppFontFamily.current
                         )
                     }
+                }
+            }
+
+            // Mood & Vibes cards row (Spotify Browse-style)
+            SectionTitle(title = translate("حال‌وهوا", "Mood & Vibes", viewModel))
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    MoodCard(
+                        label = translate("تمرکز\nو مطالعه", "Focus &\nStudy", viewModel),
+                        emoji = "🎯",
+                        gradientColors = listOf(Color(0xFF1B5E20), Color(0xFF388E3C)),
+                        songs = instrumentalSongs, fallback = randomSongs,
+                        onPlay = { lst -> if (lst.isNotEmpty()) viewModel.playSongDirectly(lst.first(), lst) }
+                    )
+                }
+                item {
+                    MoodCard(
+                        label = translate("ورزش\nو انرژی", "Workout &\nEnergy", viewModel),
+                        emoji = "🏃",
+                        gradientColors = listOf(Color(0xFFB71C1C), Color(0xFFE53935)),
+                        songs = energeticSongs, fallback = randomSongs,
+                        onPlay = { lst -> if (lst.isNotEmpty()) viewModel.playSongDirectly(lst.first(), lst) }
+                    )
+                }
+                item {
+                    MoodCard(
+                        label = translate("آرامش\nو ریلکس", "Chill &\nRelax", viewModel),
+                        emoji = "🍃",
+                        gradientColors = listOf(Color(0xFF004D40), Color(0xFF00796B)),
+                        songs = chillSongs, fallback = randomSongs,
+                        onPlay = { lst -> if (lst.isNotEmpty()) viewModel.playSongDirectly(lst.first(), lst) }
+                    )
+                }
+                item {
+                    MoodCard(
+                        label = translate("شب\nو حال", "Night\nVibes", viewModel),
+                        emoji = "🌙",
+                        gradientColors = listOf(Color(0xFF1A237E), Color(0xFF4527A0)),
+                        songs = nightSongs, fallback = randomSongs,
+                        onPlay = { lst -> if (lst.isNotEmpty()) viewModel.playSongDirectly(lst.first(), lst) }
+                    )
                 }
             }
 
@@ -1950,6 +2050,76 @@ fun ArtistCircleCard(
                 maxLines = 1
             )
         }
+    }
+}
+
+// --- Spotify-style Quick Access Card (2×3 recent grid) ---
+@Composable
+fun QuickAccessCard(
+    title: String,
+    imageUrl: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier
+            .height(52.dp)
+            .glassmorphic(cornerRadius = 10.dp)
+            .clickable(onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = title,
+            modifier = Modifier
+                .size(52.dp)
+                .clip(RoundedCornerShape(topStart = 10.dp, bottomStart = 10.dp)),
+            contentScale = ContentScale.Crop
+        )
+        Text(
+            text = title,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 10.dp)
+        )
+    }
+}
+
+// --- Spotify Browse-style Mood Card ---
+@Composable
+fun MoodCard(
+    label: String,
+    emoji: String,
+    gradientColors: List<Color>,
+    songs: List<SubsonicSong>,
+    fallback: List<SubsonicSong>,
+    onPlay: (List<SubsonicSong>) -> Unit
+) {
+    val playlist = if (songs.isNotEmpty()) songs else fallback.take(10)
+    Box(
+        modifier = Modifier
+            .size(140.dp, 88.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Brush.linearGradient(gradientColors))
+            .clickable(enabled = playlist.isNotEmpty()) { onPlay(playlist) }
+            .padding(14.dp)
+    ) {
+        Text(
+            text = emoji,
+            fontSize = 28.sp,
+            modifier = Modifier.align(Alignment.TopEnd)
+        )
+        Text(
+            text = label,
+            color = Color.White,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 18.sp,
+            modifier = Modifier.align(Alignment.BottomStart)
+        )
     }
 }
 
@@ -6326,6 +6496,7 @@ fun FullscreenPlayer(
     val sleepTimerLeft by viewModel.playbackConnection.sleepTimerMinutesLeft.collectAsStateWithLifecycle()
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
     val downloadProgresses by viewModel.downloadProgresses.collectAsStateWithLifecycle()
+    val queue by viewModel.playbackConnection.playbackQueue.collectAsStateWithLifecycle()
 
     var showTimerDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
@@ -6344,10 +6515,36 @@ fun FullscreenPlayer(
 
     val song = currentTrack!!
 
+    // Palette-based dominant color that animates on track change (like Spotify/Apple Music)
+    val context = LocalContext.current
+    var dominantColor by remember(song.id) { mutableStateOf(Color(0xFF121212)) }
+    val dominantColorAnimated by animateColorAsState(
+        targetValue = dominantColor,
+        animationSpec = tween(durationMillis = 900),
+        label = "DominantColor"
+    )
+    LaunchedEffect(song.id) {
+        try {
+            val req = ImageRequest.Builder(context)
+                .data(viewModel.getCoverArtUrl(song.coverArt))
+                .allowHardware(false)
+                .build()
+            val result = context.imageLoader.execute(req)
+            if (result is SuccessResult) {
+                val bitmap = (result.drawable as? BitmapDrawable)?.bitmap
+                bitmap?.let { bmp ->
+                    val palette = Palette.from(bmp).generate()
+                    val swatch = palette.dominantSwatch ?: palette.vibrantSwatch
+                    swatch?.let { dominantColor = Color(it.rgb) }
+                }
+            }
+        } catch (_: Exception) {}
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black) // Premium dark background for player always!
+            .background(Color.Black)
     ) {
         // Dynamic Blur cover artwork background
         AsyncImage(
@@ -6360,16 +6557,21 @@ fun FullscreenPlayer(
             contentScale = ContentScale.Crop
         )
 
-        // Dark Overlay to keep text perfectly high-contrast, with frosted glass highlight gradient
+        // Dynamic dominant-color gradient overlay (Spotify/Apple Music style)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.4f))
+                .background(
+                    Brush.verticalGradient(
+                        0f to dominantColorAnimated.copy(alpha = 0.72f),
+                        0.55f to dominantColorAnimated.copy(alpha = 0.25f),
+                        1f to Color.Black.copy(alpha = 0.90f)
+                    )
+                )
                 .drawBehind {
-                    // White frosted glass highlight from top left
                     drawRect(
                         brush = Brush.radialGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.08f), Color.Transparent),
+                            colors = listOf(Color.White.copy(alpha = 0.06f), Color.Transparent),
                             center = androidx.compose.ui.geometry.Offset(0f, 0f),
                             radius = size.width * 1.1f
                         )
@@ -6878,6 +7080,78 @@ fun FullscreenPlayer(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(imageVector = Icons.Default.Equalizer, contentDescription = null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
                         Text(text = "EQ", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+
+            // Up Next — show next 3 tracks from the queue (Spotify style)
+            val currentIdx = remember(queue, song.id) { queue.indexOfFirst { it.id == song.id } }
+            val upNextSongs = remember(currentIdx, queue) {
+                if (currentIdx >= 0) queue.drop(currentIdx + 1).take(3) else emptyList()
+            }
+            if (upNextSongs.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "بعدی در صف",
+                        color = Color.White.copy(alpha = 0.5f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                    Text(
+                        text = "${upNextSongs.size} آهنگ",
+                        color = Color.White.copy(alpha = 0.3f),
+                        fontSize = 10.sp
+                    )
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                upNextSongs.forEach { nextSong ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.White.copy(alpha = 0.06f))
+                            .clickable { viewModel.playbackConnection.playTrack(nextSong, queue) }
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        AsyncImage(
+                            model = viewModel.getCoverArtUrl(nextSong.coverArt),
+                            contentDescription = nextSong.title,
+                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = nextSong.title,
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontFamily = LocalAppFontFamily.current
+                            )
+                            Text(
+                                text = nextSong.artist ?: "—",
+                                color = Color.White.copy(alpha = 0.45f),
+                                fontSize = 11.sp,
+                                maxLines = 1,
+                                fontFamily = LocalAppFontFamily.current
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Default.DragHandle,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.25f),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
