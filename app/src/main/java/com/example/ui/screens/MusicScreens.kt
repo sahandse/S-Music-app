@@ -762,8 +762,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
 
     val isLight = themeMode == "light" || themeMode == "glass"
     val backgroundColor = if (themeMode == "glass") Color(0xFFF0F2F6) else if (isLight) Color.White else Color.Black
-    val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x3B
-    val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x28
+    val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x55
+    val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x38
     val ambientColor1 = accentColor.copy(alpha = ambientAlpha1 / 255f)
     val ambientColor2 = accentColor.copy(alpha = ambientAlpha2 / 255f)
 
@@ -865,71 +865,99 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         .weight(1f)
                 ) {
                     Box(modifier = Modifier.weight(1f)) {
-                        when {
-                            currentSubScreen is SubScreen.ArtistDetail -> {
-                                ArtistDetailView(
-                                    artist = (currentSubScreen as SubScreen.ArtistDetail).artist,
-                                    viewModel = viewModel,
-                                    onBack = { currentSubScreen = null },
-                                    onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
-                                    onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
-                                )
-                            }
-                            currentSubScreen is SubScreen.AlbumDetail -> {
-                                AlbumDetailView(
-                                    album = (currentSubScreen as SubScreen.AlbumDetail).album,
-                                    viewModel = viewModel,
-                                    onBack = { currentSubScreen = null },
-                                    onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
-                                )
-                            }
-                            currentSubScreen is SubScreen.PlaylistDetail -> {
-                                PlaylistDetailView(
-                                    playlist = (currentSubScreen as SubScreen.PlaylistDetail).playlist,
-                                    viewModel = viewModel,
-                                    onBack = { currentSubScreen = null }
-                                )
-                            }
-                            currentSubScreen is SubScreen.SubLibraryItem -> {
-                                SubLibraryItemsView(
-                                    type = (currentSubScreen as SubScreen.SubLibraryItem).type,
-                                    viewModel = viewModel,
-                                    onBack = { currentSubScreen = null },
-                                    onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
-                                    onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
-                                )
-                            }
-                            currentSubScreen is SubScreen.Settings -> {
-                                SettingsScreen(
-                                    viewModel = viewModel,
-                                    onBack = { currentSubScreen = null }
-                                )
-                            }
-                            else -> {
-                                when (selectedTab) {
-                                    0 -> HomeScreen(
+                        AnimatedContent(
+                            targetState = Pair(currentSubScreen, selectedTab),
+                            transitionSpec = {
+                                val wasOnSubScreen = initialState.first != null
+                                val isOnSubScreen = targetState.first != null
+                                when {
+                                    !wasOnSubScreen && isOnSubScreen ->
+                                        (slideInHorizontally { -it / 3 } + fadeIn(tween(280))) togetherWith
+                                        (slideOutHorizontally { it / 3 } + fadeOut(tween(220)))
+                                    wasOnSubScreen && !isOnSubScreen ->
+                                        (slideInHorizontally { it / 3 } + fadeIn(tween(280))) togetherWith
+                                        (slideOutHorizontally { -it / 3 } + fadeOut(tween(220)))
+                                    else ->
+                                        fadeIn(tween(220)) togetherWith fadeOut(tween(180))
+                                }
+                            },
+                            label = "navContentTablet"
+                        ) { (subScreen, tab) ->
+                            when {
+                                subScreen is SubScreen.ArtistDetail -> {
+                                    ArtistDetailView(
+                                        artist = (subScreen as SubScreen.ArtistDetail).artist,
                                         viewModel = viewModel,
-                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                        onBack = { currentSubScreen = null },
                                         onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
-                                        onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
-                                        onGenreClick = { selectedTab = 1 },
-                                        onProfileClick = { selectedTab = 3; currentSubScreen = null },
-                                        onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
                                     )
-                                    1 -> SearchScreen(
+                                }
+                                subScreen is SubScreen.AlbumDetail -> {
+                                    AlbumDetailView(
+                                        album = (subScreen as SubScreen.AlbumDetail).album,
                                         viewModel = viewModel,
-                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                        onBack = { currentSubScreen = null },
                                         onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
                                     )
-                                    2 -> LibraryScreen(
+                                }
+                                subScreen is SubScreen.PlaylistDetail -> {
+                                    PlaylistDetailView(
+                                        playlist = (subScreen as SubScreen.PlaylistDetail).playlist,
                                         viewModel = viewModel,
-                                        onItemClick = { type -> currentSubScreen = SubScreen.SubLibraryItem(type) },
-                                        onPlaylistClick = { currentSubScreen = SubScreen.PlaylistDetail(it) }
+                                        onBack = { currentSubScreen = null }
                                     )
-                                    3 -> ProfileScreen(
+                                }
+                                subScreen is SubScreen.SubLibraryItem -> {
+                                    SubLibraryItemsView(
+                                        type = (subScreen as SubScreen.SubLibraryItem).type,
                                         viewModel = viewModel,
-                                        onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                        onBack = { currentSubScreen = null },
+                                        onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
+                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
                                     )
+                                }
+                                subScreen is SubScreen.Settings -> {
+                                    SettingsScreen(
+                                        viewModel = viewModel,
+                                        onBack = { currentSubScreen = null }
+                                    )
+                                }
+                                else -> {
+                                    when (tab) {
+                                        0 -> HomeScreen(
+                                            viewModel = viewModel,
+                                            onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                            onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
+                                            onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
+                                            onGenreClick = { selectedTab = 1 },
+                                            onProfileClick = { selectedTab = 3; currentSubScreen = null },
+                                            onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                        )
+                                        1 -> SearchScreen(
+                                            viewModel = viewModel,
+                                            onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                            onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
+                                        )
+                                        2 -> LibraryScreen(
+                                            viewModel = viewModel,
+                                            onItemClick = { type -> currentSubScreen = SubScreen.SubLibraryItem(type) },
+                                            onPlaylistClick = { currentSubScreen = SubScreen.PlaylistDetail(it) }
+                                        )
+                                        3 -> ProfileScreen(
+                                            viewModel = viewModel,
+                                            onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                        )
+                                        else -> HomeScreen(
+                                            viewModel = viewModel,
+                                            onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                            onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
+                                            onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
+                                            onGenreClick = { selectedTab = 1 },
+                                            onProfileClick = { selectedTab = 3; currentSubScreen = null },
+                                            onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1047,71 +1075,99 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
-                    when {
-                        currentSubScreen is SubScreen.ArtistDetail -> {
-                            ArtistDetailView(
-                                artist = (currentSubScreen as SubScreen.ArtistDetail).artist,
-                                viewModel = viewModel,
-                                onBack = { currentSubScreen = null },
-                                onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
-                                onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
-                            )
-                        }
-                        currentSubScreen is SubScreen.AlbumDetail -> {
-                            AlbumDetailView(
-                                album = (currentSubScreen as SubScreen.AlbumDetail).album,
-                                viewModel = viewModel,
-                                onBack = { currentSubScreen = null },
-                                onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
-                            )
-                        }
-                        currentSubScreen is SubScreen.PlaylistDetail -> {
-                            PlaylistDetailView(
-                                playlist = (currentSubScreen as SubScreen.PlaylistDetail).playlist,
-                                viewModel = viewModel,
-                                onBack = { currentSubScreen = null }
-                            )
-                        }
-                        currentSubScreen is SubScreen.SubLibraryItem -> {
-                            SubLibraryItemsView(
-                                type = (currentSubScreen as SubScreen.SubLibraryItem).type,
-                                viewModel = viewModel,
-                                onBack = { currentSubScreen = null },
-                                onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
-                                onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
-                            )
-                        }
-                        currentSubScreen is SubScreen.Settings -> {
-                            SettingsScreen(
-                                viewModel = viewModel,
-                                onBack = { currentSubScreen = null }
-                            )
-                        }
-                        else -> {
-                            when (selectedTab) {
-                                0 -> HomeScreen(
+                    AnimatedContent(
+                        targetState = Pair(currentSubScreen, selectedTab),
+                        transitionSpec = {
+                            val wasOnSubScreen = initialState.first != null
+                            val isOnSubScreen = targetState.first != null
+                            when {
+                                !wasOnSubScreen && isOnSubScreen ->
+                                    (slideInHorizontally { -it / 3 } + fadeIn(tween(280))) togetherWith
+                                    (slideOutHorizontally { it / 3 } + fadeOut(tween(220)))
+                                wasOnSubScreen && !isOnSubScreen ->
+                                    (slideInHorizontally { it / 3 } + fadeIn(tween(280))) togetherWith
+                                    (slideOutHorizontally { -it / 3 } + fadeOut(tween(220)))
+                                else ->
+                                    fadeIn(tween(220)) togetherWith fadeOut(tween(180))
+                            }
+                        },
+                        label = "navContent"
+                    ) { (subScreen, tab) ->
+                        when {
+                            subScreen is SubScreen.ArtistDetail -> {
+                                ArtistDetailView(
+                                    artist = (subScreen as SubScreen.ArtistDetail).artist,
                                     viewModel = viewModel,
-                                    onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                    onBack = { currentSubScreen = null },
                                     onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
-                                    onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
-                                    onGenreClick = { selectedTab = 1 },
-                                    onProfileClick = { selectedTab = 3; currentSubScreen = null },
-                                    onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                    onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
                                 )
-                                1 -> SearchScreen(
+                            }
+                            subScreen is SubScreen.AlbumDetail -> {
+                                AlbumDetailView(
+                                    album = (subScreen as SubScreen.AlbumDetail).album,
                                     viewModel = viewModel,
-                                    onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                    onBack = { currentSubScreen = null },
                                     onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
                                 )
-                                2 -> LibraryScreen(
+                            }
+                            subScreen is SubScreen.PlaylistDetail -> {
+                                PlaylistDetailView(
+                                    playlist = (subScreen as SubScreen.PlaylistDetail).playlist,
                                     viewModel = viewModel,
-                                    onItemClick = { type -> currentSubScreen = SubScreen.SubLibraryItem(type) },
-                                    onPlaylistClick = { currentSubScreen = SubScreen.PlaylistDetail(it) }
+                                    onBack = { currentSubScreen = null }
                                 )
-                                3 -> ProfileScreen(
+                            }
+                            subScreen is SubScreen.SubLibraryItem -> {
+                                SubLibraryItemsView(
+                                    type = (subScreen as SubScreen.SubLibraryItem).type,
                                     viewModel = viewModel,
-                                    onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                    onBack = { currentSubScreen = null },
+                                    onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
+                                    onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) }
                                 )
+                            }
+                            subScreen is SubScreen.Settings -> {
+                                SettingsScreen(
+                                    viewModel = viewModel,
+                                    onBack = { currentSubScreen = null }
+                                )
+                            }
+                            else -> {
+                                when (tab) {
+                                    0 -> HomeScreen(
+                                        viewModel = viewModel,
+                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                        onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
+                                        onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
+                                        onGenreClick = { selectedTab = 1 },
+                                        onProfileClick = { selectedTab = 3; currentSubScreen = null },
+                                        onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                    )
+                                    1 -> SearchScreen(
+                                        viewModel = viewModel,
+                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                        onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
+                                    )
+                                    2 -> LibraryScreen(
+                                        viewModel = viewModel,
+                                        onItemClick = { type -> currentSubScreen = SubScreen.SubLibraryItem(type) },
+                                        onPlaylistClick = { currentSubScreen = SubScreen.PlaylistDetail(it) }
+                                    )
+                                    3 -> ProfileScreen(
+                                        viewModel = viewModel,
+                                        onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                    )
+                                    else -> HomeScreen(
+                                        viewModel = viewModel,
+                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                        onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
+                                        onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
+                                        onGenreClick = { selectedTab = 1 },
+                                        onProfileClick = { selectedTab = 3; currentSubScreen = null },
+                                        onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                    )
+                                }
                             }
                         }
                     }
@@ -1391,10 +1447,22 @@ fun HomeScreen(
                 contentScale = ContentScale.Crop
             )
         }
+        val homeScrollState = rememberScrollState()
+        val scrolledFraction = (homeScrollState.value / 300f).coerceIn(0f, 1f)
+        val greetingFontSize by animateFloatAsState(
+            targetValue = 20f - (6f * scrolledFraction),
+            animationSpec = tween(150),
+            label = "greetingSize"
+        )
+        val greetingAlpha by animateFloatAsState(
+            targetValue = 1f - scrolledFraction * 0.7f,
+            animationSpec = tween(150),
+            label = "greetingAlpha"
+        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(homeScrollState)
                 .padding(bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
@@ -1459,10 +1527,11 @@ fun HomeScreen(
                 
                 Text(
                     text = greetingText,
-                    fontSize = 20.sp,
+                    fontSize = greetingFontSize.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = LocalAppFontFamily.current,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.graphicsLayer { alpha = greetingAlpha }
                 )
 
                 val musicRecommendation = when (hour) {
@@ -1479,7 +1548,7 @@ fun HomeScreen(
                     fontSize = 12.sp,
                     fontFamily = LocalAppFontFamily.current,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                    modifier = Modifier.padding(top = 2.dp)
+                    modifier = Modifier.padding(top = 2.dp).graphicsLayer { alpha = greetingAlpha }
                 )
             }
 
@@ -2451,6 +2520,7 @@ fun TrackRowItem(
     val isCurrentlyPlaying = currentTrack?.id == song.id
 
     var showPlaylistDialog by remember { mutableStateOf(false) }
+    var showHeartAnim by remember(song.id) { mutableStateOf(false) }
 
     Row(
         modifier = Modifier
@@ -2566,13 +2636,34 @@ fun TrackRowItem(
                 }
             }
 
-            IconButton(onClick = { viewModel.toggleFavoriteTrack(song) }) {
-                Icon(
-                    imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "مورد علاقه",
-                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
-                    modifier = Modifier.size(22.dp)
-                )
+            Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                IconButton(onClick = {
+                    viewModel.toggleFavoriteTrack(song)
+                    if (!isFavorite) showHeartAnim = true
+                }) {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "مورد علاقه",
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                AnimatedVisibility(
+                    visible = showHeartAnim,
+                    enter = scaleIn(tween(200)) + fadeIn(tween(200)),
+                    exit = scaleOut(tween(300)) + fadeOut(tween(300))
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = null,
+                        tint = AppleRed,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    LaunchedEffect(showHeartAnim) {
+                        delay(400)
+                        showHeartAnim = false
+                    }
+                }
             }
 
             IconButton(onClick = { showPlaylistDialog = true }) {
@@ -5843,6 +5934,51 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
             }
         }
 
+        // Album Mosaic Wall
+        if (favoriteAlbums.isNotEmpty()) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+            ) {
+                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = translate("دیوار آلبوم‌ها", "Album Wall", viewModel),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    val mosaicAlbums = favoriteAlbums.take(9)
+                    for (rowIdx in 0 until ((mosaicAlbums.size + 2) / 3)) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            for (colIdx in 0 until 3) {
+                                val albumIdx = rowIdx * 3 + colIdx
+                                if (albumIdx < mosaicAlbums.size) {
+                                    val mosAlbum = mosaicAlbums[albumIdx]
+                                    AsyncImage(
+                                        model = viewModel.getCoverArtUrl(mosAlbum.coverArt),
+                                        contentDescription = mosAlbum.name,
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .clip(RoundedCornerShape(8.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Logout
         Box(
             modifier = Modifier
@@ -7410,23 +7546,51 @@ fun FullscreenPlayer(
                             }
 
                             // Giant centered play/pause trigger with AppleRed fill
-                            Box(
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .shadow(8.dp, CircleShape)
-                                    .background(AppleRed, CircleShape)
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        viewModel.playbackConnection.togglePlayPause()
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                    contentDescription = "پخش/توقف",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(42.dp)
-                                )
+                            Box(contentAlignment = Alignment.Center) {
+                                if (isPlaying) {
+                                    val pulseAnim = rememberInfiniteTransition(label = "pulse")
+                                    val pulseScale by pulseAnim.animateFloat(
+                                        initialValue = 1f, targetValue = 1.35f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(900, easing = FastOutSlowInEasing),
+                                            repeatMode = RepeatMode.Reverse
+                                        ),
+                                        label = "pulseScale"
+                                    )
+                                    val pulseAlpha by pulseAnim.animateFloat(
+                                        initialValue = 0.4f, targetValue = 0f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(900, easing = FastOutSlowInEasing),
+                                            repeatMode = RepeatMode.Reverse
+                                        ),
+                                        label = "pulseAlpha"
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(72.dp)
+                                            .scale(pulseScale)
+                                            .clip(CircleShape)
+                                            .background(dominantColorAnimated.copy(alpha = pulseAlpha))
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .size(72.dp)
+                                        .shadow(8.dp, CircleShape)
+                                        .background(AppleRed, CircleShape)
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            viewModel.playbackConnection.togglePlayPause()
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = "پخش/توقف",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(42.dp)
+                                    )
+                                }
                             }
 
                             IconButton(onClick = { viewModel.playbackConnection.skipToNext() }) {
