@@ -4840,9 +4840,22 @@ fun ArtistDetailView(
     val artistMbDetail by viewModel.artistMbDetail.collectAsStateWithLifecycle()
 
     var sortBy by remember { mutableStateOf("year") } // "year", "title"
+    var videoPlayerUrl by remember { mutableStateOf<String?>(null) }
+    val artistMusicVideos by viewModel.artistMusicVideos.collectAsStateWithLifecycle()
+
+    val songVideoMap = remember(allSongs, artistMusicVideos) {
+        allSongs.associateWith { song ->
+            artistMusicVideos.firstOrNull { v ->
+                v.title.equals(song.title, ignoreCase = true) ||
+                v.title.contains(song.title, ignoreCase = true) ||
+                song.title.contains(v.title, ignoreCase = true)
+            }
+        }.filterValues { it != null }.mapValues { it.value!! }
+    }
 
     LaunchedEffect(artist.id) {
         viewModel.loadArtistDetails(artist)
+        viewModel.fetchArtistMusicVideos(artist.name)
     }
 
     // Fetch MusicBrainz detail when bioState has an mbid
@@ -5386,41 +5399,99 @@ fun ArtistDetailView(
                         }
                     } else {
                         items(allSongs, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) { song ->
-                            Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
-                                TrackRowItem(
-                                    song = song,
-                                    onPlay = { viewModel.playSongDirectly(song, allSongs) },
-                                    viewModel = viewModel,
-                                    backgroundTint = artistTrackTint
-                                )
+                            val videoForSong = songVideoMap[song]
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    TrackRowItem(
+                                        song = song,
+                                        onPlay = { viewModel.playSongDirectly(song, allSongs) },
+                                        viewModel = viewModel,
+                                        backgroundTint = artistTrackTint
+                                    )
+                                }
+                                if (videoForSong != null) {
+                                    IconButton(
+                                        onClick = { videoPlayerUrl = videoForSong.previewUrl },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayCircleOutline,
+                                            contentDescription = "موزیک ویدیو",
+                                            tint = AppleRed,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                } else {
+                                    Spacer(Modifier.width(40.dp))
+                                }
                             }
                         }
                     }
 
-                    // Apple Music Videos section
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                        Text(
-                            text = translate("موزیک ویدیو", "Music Videos", viewModel),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            fontFamily = LocalAppFontFamily.current,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .padding(top = 20.dp, bottom = 8.dp)
-                        )
-                    }
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .height(420.dp)
-                        ) {
-                            AppleMusicArtistVideos(
-                                artistName = artist.name,
-                                modifier = Modifier.fillMaxSize()
+                    // Music Videos section — iTunes API thumbnails
+                    if (artistMusicVideos.isNotEmpty()) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Text(
+                                text = translate("موزیک ویدیو", "Music Videos", viewModel),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                fontFamily = LocalAppFontFamily.current,
+                                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 20.dp, bottom = 10.dp)
                             )
+                        }
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            LazyRow(
+                                contentPadding = PaddingValues(horizontal = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                items(artistMusicVideos) { video ->
+                                    Column(
+                                        modifier = Modifier
+                                            .width(160.dp)
+                                            .clickable { videoPlayerUrl = video.previewUrl },
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .aspectRatio(16f / 9f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                        ) {
+                                            AsyncImage(
+                                                model = video.thumbnailUrl,
+                                                contentDescription = null,
+                                                modifier = Modifier.fillMaxSize(),
+                                                contentScale = ContentScale.Crop
+                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(32.dp)
+                                                    .align(Alignment.Center)
+                                                    .background(Color.Black.copy(0.55f), CircleShape),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.PlayArrow,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = video.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            fontFamily = LocalAppFontFamily.current,
+                                            maxLines = 2,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
@@ -5708,6 +5779,46 @@ fun AlbumDetailView(
                 tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
+        }
+
+        // Full-screen video player overlay
+        val currentVideoUrl = videoPlayerUrl
+        if (currentVideoUrl != null) {
+            val videoPlayer = remember(currentVideoUrl) {
+                ExoPlayer.Builder(context).build().apply {
+                    setMediaItem(MediaItem.fromUri(currentVideoUrl))
+                    prepare()
+                    playWhenReady = true
+                }
+            }
+            DisposableEffect(videoPlayer) { onDispose { videoPlayer.release() } }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .zIndex(20f)
+            ) {
+                AndroidView(
+                    factory = { ctx ->
+                        android.view.SurfaceView(ctx).also { sv -> videoPlayer.setVideoSurfaceView(sv) }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+                IconButton(
+                    onClick = { videoPlayerUrl = null },
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(12.dp)
+                        .align(Alignment.TopEnd)
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "بستن",
+                        tint = Color.White
+                    )
+                }
+            }
         }
     }
 }

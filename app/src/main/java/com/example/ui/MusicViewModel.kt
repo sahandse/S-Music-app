@@ -893,6 +893,38 @@ class MusicViewModel(
     private val _discoverMusicVideos = MutableStateFlow<List<MusicVideoItem>>(emptyList())
     val discoverMusicVideos: StateFlow<List<MusicVideoItem>> = _discoverMusicVideos.asStateFlow()
 
+    private val _artistMusicVideos = MutableStateFlow<List<MusicVideoItem>>(emptyList())
+    val artistMusicVideos: StateFlow<List<MusicVideoItem>> = _artistMusicVideos.asStateFlow()
+
+    fun fetchArtistMusicVideos(artistName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _artistMusicVideos.value = emptyList()
+            try {
+                val encoded = java.net.URLEncoder.encode(artistName, "UTF-8")
+                val url = "https://itunes.apple.com/search?term=$encoded&media=musicVideo&limit=20&country=us"
+                val client = okhttp3.OkHttpClient()
+                val request = okhttp3.Request.Builder().url(url).build()
+                val body = client.newCall(request).execute().use { it.body?.string() } ?: return@launch
+                val arr = org.json.JSONObject(body).getJSONArray("results")
+                val items = mutableListOf<MusicVideoItem>()
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    val preview = obj.optString("previewUrl", "")
+                    if (preview.isBlank()) continue
+                    val thumb = obj.optString("artworkUrl100", "").replace("100x100bb", "600x600bb")
+                    items.add(MusicVideoItem(
+                        id = obj.optLong("trackId", i.toLong()),
+                        title = obj.optString("trackName", ""),
+                        artistName = obj.optString("artistName", ""),
+                        thumbnailUrl = thumb,
+                        previewUrl = preview
+                    ))
+                }
+                _artistMusicVideos.value = items
+            } catch (_: Exception) {}
+        }
+    }
+
     fun fetchMusicVideos(query: String = "music video") {
         viewModelScope.launch(Dispatchers.IO) {
             try {
