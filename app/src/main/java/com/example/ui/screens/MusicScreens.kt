@@ -38,6 +38,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -137,6 +138,44 @@ fun Modifier.tvFocusable(
             color = if (isFocused) AppleRed.copy(alpha = borderAlpha) else Color.Transparent,
             shape = RoundedCornerShape(cornerRadius)
         )
+}
+
+@Composable
+fun Modifier.coloredShadow(
+    color: Color,
+    borderRadius: Dp = 12.dp,
+    blurRadius: Dp = 16.dp,
+    offsetY: Dp = 8.dp,
+    alpha: Float = 0.28f
+): Modifier {
+    return this.drawBehind {
+        this.drawIntoCanvas {
+            val paint = androidx.compose.ui.graphics.Paint()
+            val frameworkPaint = paint.asFrameworkPaint()
+            val spreadPixel = blurRadius.toPx()
+            frameworkPaint.color = android.graphics.Color.TRANSPARENT
+            frameworkPaint.setShadowLayer(
+                spreadPixel,
+                0f,
+                offsetY.toPx(),
+                android.graphics.Color.argb(
+                    (255 * alpha).toInt(),
+                    (color.red * 255).toInt(),
+                    (color.green * 255).toInt(),
+                    (color.blue * 255).toInt()
+                )
+            )
+            it.drawRoundRect(
+                left = 0f,
+                top = 0f,
+                right = this.size.width,
+                bottom = this.size.height,
+                radiusX = borderRadius.toPx(),
+                radiusY = borderRadius.toPx(),
+                paint = paint
+            )
+        }
+    }
 }
 
 @Composable
@@ -2030,6 +2069,7 @@ fun VerticalBigCard(
             contentDescription = title,
             modifier = Modifier
                 .size(150.dp)
+                .coloredShadow(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), borderRadius = 10.dp)
                 .clip(RoundedCornerShape(10.dp)),
             contentScale = ContentScale.Crop
         )

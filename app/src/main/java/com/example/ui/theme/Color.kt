@@ -6,7 +6,7 @@ val AppleRed = Color(0xFFFA2D48)
 val AppleRedDark = Color(0xFF9B1D2D)
 val LightGray = Color(0xFFF2F3F5)
 val CardDark = Color(0xFF1C1C1E)
-val BackgroundDark = Color(0xFF000000)
+val BackgroundDark = Color(0xFF0F0F0F)
 val BackgroundAmoled = Color(0xFF000000)
 
 // Glassmorphism translucent surfaces
