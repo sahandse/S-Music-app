@@ -918,7 +918,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
 
                     // Docked Mini Player docked below main area in landscape
                     androidx.compose.animation.AnimatedVisibility(
-                        visible = currentTrack != null,
+                        visible = currentTrack != null && !isPlayerExpanded,
                         enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                         exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                     ) {
@@ -944,7 +944,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                 bottomBar = {
                     Column {
                         AnimatedVisibility(
-                            visible = currentTrack != null,
+                            visible = currentTrack != null && !isPlayerExpanded,
                             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                             exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
                         ) {
@@ -6755,6 +6755,14 @@ fun FullscreenPlayer(
 
     val song = currentTrack!!
 
+    // Brief "Now Playing" toast when track changes
+    var showTrackToast by remember(song.id) { mutableStateOf(true) }
+    LaunchedEffect(song.id) {
+        showTrackToast = true
+        delay(2800)
+        showTrackToast = false
+    }
+
     // Palette-based dominant color that animates on track change (Apple Music style)
     val context = LocalContext.current
     var dominantColor by remember(song.id) { mutableStateOf(Color(0xFF0D0D0D)) }
@@ -6826,6 +6834,47 @@ fun FullscreenPlayer(
                     )
                 }
         )
+
+        // Track-change toast: appears briefly when a new song starts, then fades out
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showTrackToast,
+            enter = fadeIn(tween(400)) + slideInVertically(initialOffsetY = { -it / 2 }),
+            exit = fadeOut(tween(700)),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 56.dp)
+                .zIndex(10f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(Color.White.copy(alpha = 0.13f))
+                    .border(0.5.dp, Color.White.copy(0.18f), RoundedCornerShape(24.dp))
+                    .padding(horizontal = 24.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = song.title,
+                        color = Color.White,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (!song.artist.isNullOrBlank()) {
+                        Text(
+                            text = song.artist,
+                            color = Color.White.copy(alpha = 0.65f),
+                            fontSize = 12.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
 
         // Actual content column
         Column(
@@ -6920,9 +6969,9 @@ fun FullscreenPlayer(
             // Central Area (either big artwork or lyrics list)
             Box(
                 modifier = Modifier
-                    .weight(1f)
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp)
+                    .heightIn(min = 260.dp)
+                    .padding(vertical = 8.dp)
                     .pointerInput(song.id) {
                         var totalDrag = 0f
                         detectHorizontalDragGestures(
@@ -6942,42 +6991,23 @@ fun FullscreenPlayer(
                 if (playerTab == 0) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(20.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // Huge Cover Artwork with sleek animations
+                        // Cover artwork — Apple Music square style
                         val scale by animateFloatAsState(
-                            targetValue = if (isPlaying) 1.0f else 0.88f,
+                            targetValue = if (isPlaying) 1.0f else 0.92f,
                             animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
                             label = "ArtworkScale"
                         )
-
-                        // Slow turntable-style rotation while the track is playing,
-                        // pausing (and resuming from the same angle) when paused.
-                        val rotationDegrees = remember { mutableFloatStateOf(0f) }
-                        LaunchedEffect(isPlaying) {
-                            if (isPlaying) {
-                                var lastFrameTime = withFrameNanos { it }
-                                while (true) {
-                                    val frameTime = withFrameNanos { it }
-                                    val deltaSeconds = (frameTime - lastFrameTime) / 1_000_000_000f
-                                    lastFrameTime = frameTime
-                                    rotationDegrees.floatValue = (rotationDegrees.floatValue + deltaSeconds * 18f) % 360f
-                                }
-                            }
-                        }
 
                         AsyncImage(
                             model = viewModel.getCoverArtUrl(song.coverArt),
                             contentDescription = song.title,
                             modifier = Modifier
-                                .size(280.dp)
-                                .graphicsLayer(
-                                    scaleX = scale,
-                                    scaleY = scale,
-                                    rotationZ = rotationDegrees.floatValue
-                                )
-                                .clip(CircleShape)
-                                .shadow(16.dp, CircleShape)
+                                .size(270.dp)
+                                .graphicsLayer(scaleX = scale, scaleY = scale)
+                                .clip(RoundedCornerShape(20.dp))
+                                .shadow(elevation = 24.dp, shape = RoundedCornerShape(20.dp), clip = false)
                                 .pointerInput(song.id) {
                                     detectTapGestures(
                                         onLongPress = {
@@ -7099,6 +7129,7 @@ fun FullscreenPlayer(
                 }
             }
 
+            if (playerTab == 0) {
             // Track metadata details
             Column(
                 modifier = Modifier.fillMaxWidth(),
@@ -7402,6 +7433,26 @@ fun FullscreenPlayer(
                         )
                     }
                 }
+            }
+            } else {
+                Spacer(modifier = Modifier.height(32.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                            .clickable { viewModel.playbackConnection.togglePlayPause() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
