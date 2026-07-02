@@ -1425,6 +1425,23 @@ fun HomeScreen(
                     fontFamily = LocalAppFontFamily.current,
                     color = MaterialTheme.colorScheme.onSurface
                 )
+
+                val musicRecommendation = when (hour) {
+                    in 5..8 -> translate("بهترین موسیقی برای شروع روز ☕", "Best music to start your day ☕", viewModel)
+                    in 9..11 -> translate("موسیقی برای تمرکز و کار ⚡", "Focus music for productive work ⚡", viewModel)
+                    in 12..14 -> translate("موسیقی ناهار — آرام و دلنشین 🎶", "Chill lunch vibes 🎶", viewModel)
+                    in 15..17 -> translate("انرژی بعد از ظهر با موسیقی 🔥", "Energetic afternoon beats 🔥", viewModel)
+                    in 18..21 -> translate("موسیقی غروب آفتاب 🌇", "Sunset mood tunes 🌇", viewModel)
+                    in 22..23 -> translate("آرامش شب با موسیقی 🌃", "Chill night music 🌃", viewModel)
+                    else -> translate("موسیقی دیروقت شب 🌙", "Late night tunes 🌙", viewModel)
+                }
+                Text(
+                    text = musicRecommendation,
+                    fontSize = 12.sp,
+                    fontFamily = LocalAppFontFamily.current,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
 
 
@@ -2379,7 +2396,8 @@ private fun genreColor(genre: String): Color = when {
 fun TrackRowItem(
     song: SubsonicSong,
     onPlay: () -> Unit,
-    viewModel: MusicViewModel
+    viewModel: MusicViewModel,
+    backgroundTint: Color = Color.Transparent
 ) {
     val progressFlow = viewModel.downloadProgresses.collectAsStateWithLifecycle()
     val isDownloading = progressFlow.value.containsKey(song.id)
@@ -2398,7 +2416,7 @@ fun TrackRowItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isCurrentlyPlaying) AppleRed.copy(alpha = 0.08f) else Color.Transparent)
+            .background(if (isCurrentlyPlaying) AppleRed.copy(alpha = 0.08f) else backgroundTint)
             .tvFocusable(cornerRadius = 8.dp)
             .clickable(onClick = onPlay)
             .padding(vertical = 8.dp, horizontal = 4.dp),
@@ -4480,6 +4498,14 @@ fun ArtistDetailView(
         }
     }
 
+    val artistGridState = rememberLazyGridState()
+    val artistParallaxOffset by remember {
+        derivedStateOf {
+            if (artistGridState.firstVisibleItemIndex > 0) 310f
+            else artistGridState.firstVisibleItemScrollOffset * 0.45f
+        }
+    }
+
     Scaffold { padding ->
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
@@ -4489,6 +4515,7 @@ fun ArtistDetailView(
             Box(modifier = Modifier.fillMaxSize()) {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
+                    state = artistGridState,
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(bottom = 80.dp),
@@ -4502,13 +4529,14 @@ fun ArtistDetailView(
                                 .fillMaxWidth()
                                 .height(310.dp)
                         ) {
-                            // Blurred background banner of the artist cover art
+                            // Blurred background banner of the artist cover art (with parallax)
                             AsyncImage(
                                 model = viewModel.getCoverArtUrl(artist.coverArt),
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .blur(18.dp),
+                                    .blur(18.dp)
+                                    .graphicsLayer { translationY = -artistParallaxOffset },
                                 contentScale = ContentScale.Crop,
                                 alpha = 0.32f
                             )
@@ -4532,7 +4560,8 @@ fun ArtistDetailView(
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .padding(horizontal = 16.dp, vertical = 20.dp),
+                                    .padding(horizontal = 16.dp, vertical = 20.dp)
+                                    .graphicsLayer { translationY = -artistParallaxOffset * 0.3f },
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Bottom
                             ) {
@@ -4934,7 +4963,6 @@ fun ArtistDetailView(
 }
 
 // --- Album Detail Subscreen ---
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlbumDetailView(
     album: SubsonicAlbum,
@@ -4945,151 +4973,191 @@ fun AlbumDetailView(
     val songs by viewModel.selectedAlbumSongs.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoadingDetail.collectAsStateWithLifecycle()
     val relatedAlbums by viewModel.relatedAlbums.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     LaunchedEffect(album.id) {
         viewModel.loadAlbumDetails(album)
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(album.name, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "بازگشت")
+    // Extract dominant color from album cover for per-track tinting
+    var albumDominantColor by remember(album.id) { mutableStateOf<Color?>(null) }
+    LaunchedEffect(album.coverArt) {
+        if (!album.coverArt.isNullOrBlank()) {
+            try {
+                val req = ImageRequest.Builder(context)
+                    .data(viewModel.getCoverArtUrl(album.coverArt))
+                    .allowHardware(false)
+                    .size(128)
+                    .build()
+                val result = context.imageLoader.execute(req)
+                if (result is SuccessResult) {
+                    val bmp = (result.drawable as? BitmapDrawable)?.bitmap
+                    bmp?.let {
+                        val palette = Palette.from(it).generate()
+                        val swatch = palette.mutedSwatch ?: palette.dominantSwatch
+                        swatch?.let { s -> albumDominantColor = Color(s.rgb) }
                     }
                 }
-            )
+            } catch (_: Exception) {}
         }
-    ) { padding ->
+    }
+
+    val trackTint = albumDominantColor?.copy(alpha = 0.07f) ?: Color.Transparent
+
+    val listState = rememberLazyListState()
+    val headerHeightDp = 280.dp
+
+    // Parallax: how far we've scrolled through the header
+    val scrollFraction by remember {
+        derivedStateOf {
+            if (listState.firstVisibleItemIndex > 0) 1f
+            else listState.firstVisibleItemScrollOffset.toFloat() / (headerHeightDp.value * 3f)
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = AppleRed)
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(bottom = 80.dp),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(bottom = 80.dp)
             ) {
+                // Full-bleed collapsing album art header
                 item {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(headerHeightDp)
                     ) {
                         AsyncImage(
                             model = viewModel.getCoverArtUrl(album.coverArt),
                             contentDescription = album.name,
                             modifier = Modifier
-                                .size(180.dp)
-                                .clip(RoundedCornerShape(16.dp)),
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    translationY = scrollFraction * headerHeightDp.toPx() * 0.4f
+                                    alpha = 1f - scrollFraction * 0.5f
+                                },
                             contentScale = ContentScale.Crop
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(text = album.name, fontSize = 22.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                        Text(text = album.artist ?: "هنرمند ناشناس", fontSize = 14.sp, color = Color.Gray, modifier = Modifier.padding(vertical = 4.dp))
-                        
-                        // Beautiful aesthetic badges row for Year, Genre, Track Count, and Duration
+                        // Gradient scrim
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        colors = listOf(
+                                            Color.Black.copy(alpha = 0.2f),
+                                            Color.Transparent,
+                                            MaterialTheme.colorScheme.background.copy(alpha = 0.85f)
+                                        )
+                                    )
+                                )
+                        )
+                        // Album name + artist overlay at bottom
+                        Column(
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(horizontal = 20.dp, vertical = 16.dp)
+                        ) {
+                            Text(
+                                text = album.name,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = LocalAppFontFamily.current,
+                                color = Color.White
+                            )
+                            Text(
+                                text = album.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                                fontSize = 14.sp,
+                                fontFamily = LocalAppFontFamily.current,
+                                color = Color.White.copy(alpha = 0.75f)
+                            )
+                        }
+                    }
+                }
+
+                // Album metadata + action buttons
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(top = 8.dp, bottom = 8.dp)
+                    ) {
+                        // Info badges
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(vertical = 8.dp)
+                            modifier = Modifier.padding(bottom = 12.dp)
                         ) {
                             val yearVal = album.year
                             val genreVal = album.genre
                             val countVal = songs.size
                             val durVal = album.duration ?: 0
-                            
                             val details = mutableListOf<String>()
-                            if (yearVal != null && yearVal > 0) {
-                                details.add(translate("📅 $yearVal", "$yearVal", viewModel))
-                            }
-                            if (!genreVal.isNullOrBlank()) {
-                                details.add(translate("🎵 $genreVal", "$genreVal", viewModel))
-                            }
-                            if (countVal > 0) {
-                                details.add(translate("💿 $countVal آهنگ", "$countVal Tracks", viewModel))
-                            }
-                            if (durVal > 0) {
-                                val mins = durVal / 60
-                                details.add(translate("⏱️ $mins دقیقه", "$mins mins", viewModel))
-                            }
-                            
+                            if (yearVal != null && yearVal > 0) details.add("📅 $yearVal")
+                            if (!genreVal.isNullOrBlank()) details.add("🎵 $genreVal")
+                            if (countVal > 0) details.add(translate("💿 $countVal آهنگ", "💿 $countVal Tracks", viewModel))
+                            if (durVal > 0) details.add(translate("⏱️ ${durVal / 60} دقیقه", "⏱️ ${durVal / 60} min", viewModel))
                             details.forEach { detail ->
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
-                                    Text(
-                                        text = detail,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        fontFamily = LocalAppFontFamily.current,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                                    )
+                                    Text(text = detail, fontSize = 11.sp, fontWeight = FontWeight.Medium, fontFamily = LocalAppFontFamily.current, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                                 }
                             }
                         }
-                        
+
+                        // Action buttons
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.padding(top = 10.dp)
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             Button(
                                 onClick = { viewModel.playAllSongsInQueue(songs) },
-                                colors = ButtonDefaults.buttonColors(containerColor = AppleRed)
+                                colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                                shape = RoundedCornerShape(12.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                                Text("پخش همه")
+                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(translate("پخش همه", "Play All", viewModel), fontFamily = LocalAppFontFamily.current)
                             }
-
                             IconButton(onClick = { viewModel.shufflePlayAllSongsInQueue(songs) }) {
+                                Icon(imageVector = Icons.Default.Shuffle, contentDescription = translate("پخش تصادفی", "Shuffle", viewModel), tint = MaterialTheme.colorScheme.onSurface)
+                            }
+                            var isFav by remember { mutableStateOf(false) }
+                            LaunchedEffect(album.id) { isFav = viewModel.favoriteAlbums.value.any { it.id == album.id } }
+                            IconButton(onClick = { viewModel.toggleFavoriteAlbum(album); isFav = !isFav }) {
                                 Icon(
-                                    imageVector = Icons.Default.Shuffle,
-                                    contentDescription = translate("پخش تصادفی", "Shuffle play", viewModel),
-                                    tint = MaterialTheme.colorScheme.onSurface
+                                    imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                    contentDescription = null,
+                                    tint = if (isFav) AppleRed else MaterialTheme.colorScheme.onSurface
                                 )
                             }
-
-                            OutlinedButton(
-                                onClick = { viewModel.toggleFavoriteAlbum(album) },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed)
-                            ) {
-                                var isFav by remember { mutableStateOf(false) }
-                                LaunchedEffect(album.id) {
-                                    isFav = viewModel.favoriteAlbums.value.any { it.id == album.id }
-                                }
-                                Text(if (isFav) "پسندیده شده" else "پسندیدن")
-                            }
-
                             IconButton(onClick = { viewModel.addToQueue(songs) }) {
-                                Icon(
-                                    imageVector = Icons.Default.QueueMusic,
-                                    contentDescription = translate("افزودن به صف پخش", "Add to queue", viewModel),
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
+                                Icon(imageVector = Icons.Default.QueueMusic, contentDescription = translate("افزودن به صف", "Add to queue", viewModel), tint = MaterialTheme.colorScheme.onSurface)
                             }
-
                             IconButton(onClick = { viewModel.startDownloadAll(songs) }) {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = translate("دانلود کل آلبوم", "Download whole album", viewModel),
-                                    tint = MaterialTheme.colorScheme.onSurface
-                                )
+                                Icon(imageVector = Icons.Default.Download, contentDescription = translate("دانلود", "Download", viewModel), tint = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
                 }
 
+                // Track list
                 if (songs.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                            Text("آهنگی در این آلبوم یافت نشد.", color = Color.Gray)
+                            Text(translate("آهنگی در این آلبوم یافت نشد.", "No tracks found.", viewModel), color = Color.Gray)
                         }
                     }
                 } else {
@@ -5097,15 +5165,20 @@ fun AlbumDetailView(
                         TrackRowItem(
                             song = song,
                             onPlay = { viewModel.playSongDirectly(song, songs) },
-                            viewModel = viewModel
+                            viewModel = viewModel,
+                            backgroundTint = trackTint
                         )
-                        HorizontalDivider()
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
                     }
                 }
 
+                // Related albums
                 if (relatedAlbums.isNotEmpty()) {
                     item {
-                        Column(modifier = Modifier.padding(top = 16.dp)) {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 text = translate("آلبوم‌های مرتبط", "Related Albums", viewModel),
                                 fontSize = 18.sp,
@@ -5127,6 +5200,25 @@ fun AlbumDetailView(
                     }
                 }
             }
+        }
+
+        // Floating back button
+        Box(
+            modifier = Modifier
+                .padding(top = 48.dp, start = 16.dp)
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.45f))
+                .clickable(onClick = onBack)
+                .zIndex(10f),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "بازگشت",
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -5283,6 +5375,17 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
             .map { it.first }
     }
 
+    val nightOwlBadge = remember(recentPlays) {
+        recentPlays.count { play ->
+            val cal = Calendar.getInstance().apply { timeInMillis = play.timestamp }
+            cal.get(Calendar.HOUR_OF_DAY) in 0..4
+        } >= 3
+    }
+    val musicLoverBadge = favoriteTracks.size >= 10
+    val explorerBadge = favoriteArtists.size >= 5
+    val regularBadge = weeklyPlayCounts.count { it > 0 } >= 5
+    val veteranBadge = listeningHours >= 2
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -5399,6 +5502,109 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                 value = if (listeningHours > 0) "${listeningHours}h ${listeningMinutesRemainder}m" else "${listeningMinutesRemainder}m",
                 label = translate("زمان گوش دادن", "Listening", viewModel)
             )
+        }
+
+        // Achievement Badges
+        val earnedBadges = buildList {
+            if (nightOwlBadge) add("🌙" to translate("شب‌زنده‌دار", "Night Owl", viewModel))
+            if (musicLoverBadge) add("❤️" to translate("موسیقی‌باز", "Music Lover", viewModel))
+            if (explorerBadge) add("🎨" to translate("کشف‌کننده", "Explorer", viewModel))
+            if (regularBadge) add("📆" to translate("منظم", "Regular", viewModel))
+            if (veteranBadge) add("🏆" to translate("پیشکسوت", "Veteran", viewModel))
+        }
+        val unlockedCount = earnedBadges.size
+        val totalBadges = 5
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = translate("نشان‌های من", "My Badges", viewModel),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "$unlockedCount/$totalBadges",
+                        fontSize = 12.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = AppleRed,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                if (earnedBadges.isEmpty()) {
+                    Text(
+                        text = translate("هنوز نشانی کسب نکرده‌اید. به گوش دادن ادامه دهید!", "Keep listening to earn badges!", viewModel),
+                        fontSize = 12.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                } else {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.horizontalScroll(rememberScrollState())
+                    ) {
+                        earnedBadges.forEach { (emoji, label) ->
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                        .background(AppleRed.copy(alpha = 0.12f))
+                                        .border(1.5.dp, AppleRed.copy(alpha = 0.4f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(text = emoji, fontSize = 24.sp)
+                                }
+                                Text(
+                                    text = label,
+                                    fontSize = 10.sp,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                        // Locked badge placeholders
+                        repeat(totalBadges - unlockedCount) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+                                        .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(text = "🔒", fontSize = 22.sp)
+                                }
+                                Text(
+                                    text = translate("قفل", "Locked", viewModel),
+                                    fontSize = 10.sp,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // Top Genres (derived from genre tags of favorited artists' tracks/albums)
@@ -5954,11 +6160,8 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    val accents = listOf(
+                val accentColorMap = remember {
+                    mapOf(
                         "red" to Color(0xFFFA2D48),
                         "blue" to Color(0xFF007AFF),
                         "green" to Color(0xFF34C759),
@@ -5966,7 +6169,12 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         "purple" to Color(0xFFAF52DE),
                         "pink" to Color(0xFFFF2D55)
                     )
-                    accents.forEach { (key, color) ->
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    accentColorMap.forEach { (key, color) ->
                         val isSelected = themeAccent == key
                         Box(
                             modifier = Modifier
@@ -5989,6 +6197,77 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
+
+                // Live preview
+                val liveAccentColor by animateColorAsState(
+                    targetValue = accentColorMap[themeAccent] ?: Color(0xFFFA2D48),
+                    animationSpec = tween(300),
+                    label = "accentPreview"
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Visibility,
+                        contentDescription = null,
+                        tint = liveAccentColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = translate("پیش‌نمایش زنده", "Live Preview", viewModel),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
+                        .padding(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(liveAccentColor.copy(alpha = 0.18f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(imageVector = Icons.Default.MusicNote, contentDescription = null, tint = liveAccentColor, modifier = Modifier.size(22.dp))
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(translate("نام آهنگ", "Song Name", viewModel), fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current, color = liveAccentColor)
+                            Text(translate("هنرمند", "Artist", viewModel), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontFamily = LocalAppFontFamily.current)
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = null, tint = liveAccentColor, modifier = Modifier.size(20.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(liveAccentColor),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                            Icon(imageVector = Icons.Default.SkipNext, contentDescription = null, tint = liveAccentColor, modifier = Modifier.size(20.dp))
                         }
                     }
                 }
