@@ -8545,11 +8545,60 @@ fun DiscoverFeedScreen(
     onBack: () -> Unit = {},
     showBackButton: Boolean = true
 ) {
+    var showVideoFeed by remember { mutableStateOf(false) }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        if (showVideoFeed) {
+            AparatVideoFeed()
+        } else {
+            AudioDiscoverFeed(viewModel = viewModel, showBackButton = showBackButton, onBack = onBack)
+        }
+
+        // Tab toggle — always on top
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 52.dp)
+                .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(24.dp))
+                .padding(horizontal = 4.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            val activeColor = AppleRed
+            val inactiveColor = Color.White.copy(alpha = 0.55f)
+            listOf("موسیقی شما" to false, "موزیک ویدیو" to true).forEach { (label, isVideo) ->
+                val selected = showVideoFeed == isVideo
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (selected) activeColor else Color.Transparent)
+                        .clickable { showVideoFeed = isVideo }
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = if (selected) Color.White else inactiveColor,
+                        fontSize = 13.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AudioDiscoverFeed(
+    viewModel: MusicViewModel,
+    showBackButton: Boolean,
+    onBack: () -> Unit
+) {
     val songs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val shuffled = remember(songs) { if (songs.size > 1) songs.shuffled() else songs }
 
     if (shuffled.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = AppleRed)
         }
         return
@@ -8567,7 +8616,7 @@ fun DiscoverFeedScreen(
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
+    Box(Modifier.fillMaxSize()) {
         VerticalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
@@ -8585,7 +8634,6 @@ fun DiscoverFeedScreen(
             )
         }
 
-        // Back button overlay (only when not a root tab)
         if (showBackButton) {
             IconButton(
                 onClick = onBack,
@@ -8602,7 +8650,6 @@ fun DiscoverFeedScreen(
             }
         }
 
-        // Page counter
         Text(
             text = "${pagerState.currentPage + 1} / ${shuffled.size}",
             color = Color.White.copy(alpha = 0.6f),
@@ -8612,6 +8659,24 @@ fun DiscoverFeedScreen(
                 .padding(top = 56.dp, end = 20.dp)
         )
     }
+}
+
+@Composable
+private fun AparatVideoFeed() {
+    AndroidView(
+        factory = { context ->
+            android.webkit.WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                webViewClient = android.webkit.WebViewClient()
+                loadUrl("https://www.aparat.com/landing-music")
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @Composable
