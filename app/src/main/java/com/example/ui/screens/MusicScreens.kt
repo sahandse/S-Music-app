@@ -5298,6 +5298,36 @@ fun ArtistDetailView(
                             }
                         }
                     }
+
+                    // Apple Music Videos section
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                        Text(
+                            text = translate("موزیک ویدیو", "Music Videos", viewModel),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 20.dp, bottom = 8.dp)
+                        )
+                    }
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .height(420.dp)
+                        ) {
+                            AppleMusicArtistVideos(
+                                artistName = artist.name,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    }
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                        Spacer(Modifier.height(16.dp))
+                    }
                 }
 
                 // Minimal Glassmorphic Circular Overlaid Back Button
@@ -8545,13 +8575,14 @@ fun DiscoverFeedScreen(
     onBack: () -> Unit = {},
     showBackButton: Boolean = true
 ) {
-    var showVideoFeed by remember { mutableStateOf(false) }
+    // 0 = audio, 1 = aparat, 2 = apple music
+    var feedTab by remember { mutableStateOf(0) }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        if (showVideoFeed) {
-            AparatVideoFeed()
-        } else {
-            AudioDiscoverFeed(viewModel = viewModel, showBackButton = showBackButton, onBack = onBack)
+        when (feedTab) {
+            1 -> AparatVideoFeed()
+            2 -> AppleMusicVideoFeed()
+            else -> AudioDiscoverFeed(viewModel = viewModel, showBackButton = showBackButton, onBack = onBack)
         }
 
         // Tab toggle — always on top
@@ -8565,20 +8596,24 @@ fun DiscoverFeedScreen(
         ) {
             val activeColor = AppleRed
             val inactiveColor = Color.White.copy(alpha = 0.55f)
-            listOf("موسیقی شما" to false, "موزیک ویدیو" to true).forEach { (label, isVideo) ->
-                val selected = showVideoFeed == isVideo
+            listOf(
+                "موسیقی شما" to 0,
+                "موزیک ویدیو" to 1,
+                "اپل موزیک" to 2
+            ).forEach { (label, tabIndex) ->
+                val selected = feedTab == tabIndex
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(if (selected) activeColor else Color.Transparent)
-                        .clickable { showVideoFeed = isVideo }
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                        .clickable { feedTab = tabIndex }
+                        .padding(horizontal = 14.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = label,
                         color = if (selected) Color.White else inactiveColor,
-                        fontSize = 13.sp,
+                        fontSize = 12.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                         fontFamily = LocalAppFontFamily.current
                     )
@@ -8676,6 +8711,49 @@ private fun AparatVideoFeed() {
             }
         },
         modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Composable
+private fun AppleMusicVideoFeed() {
+    AndroidView(
+        factory = { context ->
+            android.webkit.WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                webViewClient = android.webkit.WebViewClient()
+                loadUrl("https://music.apple.com/us/grouping/34")
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+@Composable
+fun AppleMusicArtistVideos(artistName: String, modifier: Modifier = Modifier) {
+    val encodedName = remember(artistName) {
+        java.net.URLEncoder.encode(artistName, "UTF-8")
+    }
+    AndroidView(
+        factory = { context ->
+            android.webkit.WebView(context).apply {
+                settings.javaScriptEnabled = true
+                settings.domStorageEnabled = true
+                settings.mediaPlaybackRequiresUserGesture = false
+                settings.loadWithOverviewMode = true
+                settings.useWideViewPort = true
+                webViewClient = android.webkit.WebViewClient()
+                loadUrl("https://music.apple.com/us/search?term=$encodedName")
+            }
+        },
+        update = { webView ->
+            val url = "https://music.apple.com/us/search?term=$encodedName"
+            if (webView.url != url) webView.loadUrl(url)
+        },
+        modifier = modifier
     )
 }
 
