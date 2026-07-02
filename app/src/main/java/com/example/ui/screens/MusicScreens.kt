@@ -4452,14 +4452,10 @@ fun ArtistDetailView(
 
     val lang = viewModel.language.value
     val details = remember(artist.name, lang) { getArtistExtraDetails(artist.name, lang) }
-    val biographyToShow = remember(bioState, enrichedInfo, artist.name, details, lang) {
-        val enrichedBio = enrichedInfo?.lastFmBio
+    val biographyToShow = remember(bioState, artist.name, details, lang) {
         val bioText = bioState?.biography
-        when {
-            !enrichedBio.isNullOrBlank() -> enrichedBio
-            !bioText.isNullOrBlank() -> bioText
-            else -> getFallbackBiography(artist.name, details.country, details.birthYearOrActive, lang == "fa")
-        }
+        if (!bioText.isNullOrBlank()) bioText
+        else getFallbackBiography(artist.name, details.country, details.birthYearOrActive, lang == "fa")
     }
     
     var sortBy by remember { mutableStateOf("year") } // "year", "title"
@@ -4591,28 +4587,6 @@ fun ArtistDetailView(
                                         fontFamily = LocalAppFontFamily.current,
                                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
                                     )
-                                }
-
-                                // Last.fm listeners count chip
-                                enrichedInfo?.lastFmListeners?.let { listeners ->
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Row(
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Headphones,
-                                            contentDescription = null,
-                                            tint = Color(0xFFD51007),
-                                            modifier = Modifier.size(13.dp)
-                                        )
-                                        Text(
-                                            text = "${formatListenersCount(listeners)} ${if (lang == "fa") "شنونده در Last.fm" else "Last.fm listeners"}",
-                                            fontSize = 11.sp,
-                                            fontFamily = LocalAppFontFamily.current,
-                                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.55f)
-                                        )
-                                    }
                                 }
 
                                 // MusicBrainz genre tags
@@ -5797,15 +5771,6 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
     val wifiOnlyDownload by viewModel.wifiOnlyDownload.collectAsStateWithLifecycle()
     val autoBackupEnabled by viewModel.autoBackupEnabled.collectAsStateWithLifecycle()
     val transientMessage by viewModel.transientMessage.collectAsStateWithLifecycle()
-    val isLastFmLoggedIn by viewModel.isLastFmLoggedIn.collectAsStateWithLifecycle()
-    val lastFmUsername by viewModel.lastFmUsername.collectAsStateWithLifecycle()
-    val isLastFmLoggingIn by viewModel.isLastFmLoggingIn.collectAsStateWithLifecycle()
-    val lastFmLoginError by viewModel.lastFmLoginError.collectAsStateWithLifecycle()
-    val scrobbleEnabled by viewModel.scrobbleEnabled.collectAsStateWithLifecycle()
-
-    var lastFmUsernameInput by remember { mutableStateOf("") }
-    var lastFmPasswordInput by remember { mutableStateOf("") }
-    var showLastFmPassword by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
 
@@ -6424,154 +6389,6 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         onCheckedChange = { viewModel.setAutoBackupEnabled(it) },
                         colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
                     )
-                }
-            }
-        }
-
-        // Last.fm Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)),
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
-        ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = null,
-                        tint = Color(0xFFD51007),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = "Last.fm",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        fontFamily = LocalAppFontFamily.current,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (isLastFmLoggedIn) {
-                        Spacer(modifier = Modifier.weight(1f))
-                        Text(
-                            text = lastFmUsername,
-                            fontSize = 12.sp,
-                            fontFamily = LocalAppFontFamily.current,
-                            color = Color(0xFFD51007),
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-
-                if (isLastFmLoggedIn) {
-                    // Scrobble toggle
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = translate("اسکروبل آهنگ‌ها", "Scrobble Tracks", viewModel),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                fontFamily = LocalAppFontFamily.current,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = translate("پس از ۳۰ ثانیه، آهنگ جاری به Last.fm ارسال می‌شود.", "After 30s, the current track is sent to Last.fm.", viewModel),
-                                fontSize = 11.sp,
-                                fontFamily = LocalAppFontFamily.current,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                            )
-                        }
-                        Switch(
-                            checked = scrobbleEnabled,
-                            onCheckedChange = { viewModel.setScrobbleEnabled(it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFD51007), checkedTrackColor = Color(0xFFD51007).copy(alpha = 0.5f))
-                        )
-                    }
-                    // Logout
-                    Button(
-                        onClick = { viewModel.logoutLastFm() },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD51007).copy(alpha = 0.1f), contentColor = Color(0xFFD51007)),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, Color(0xFFD51007).copy(alpha = 0.4f))
-                    ) {
-                        Text(
-                            text = translate("خروج از Last.fm", "Disconnect Last.fm", viewModel),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp,
-                            fontFamily = LocalAppFontFamily.current
-                        )
-                    }
-                } else {
-                    // Login form
-                    OutlinedTextField(
-                        value = lastFmUsernameInput,
-                        onValueChange = { lastFmUsernameInput = it },
-                        label = { Text(translate("نام کاربری Last.fm", "Last.fm Username", viewModel), fontFamily = LocalAppFontFamily.current, fontSize = 12.sp) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFD51007),
-                            focusedLabelColor = Color(0xFFD51007)
-                        )
-                    )
-                    OutlinedTextField(
-                        value = lastFmPasswordInput,
-                        onValueChange = { lastFmPasswordInput = it },
-                        label = { Text(translate("رمز عبور", "Password", viewModel), fontFamily = LocalAppFontFamily.current, fontSize = 12.sp) },
-                        singleLine = true,
-                        visualTransformation = if (showLastFmPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                        trailingIcon = {
-                            IconButton(onClick = { showLastFmPassword = !showLastFmPassword }) {
-                                Icon(
-                                    imageVector = if (showLastFmPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = Color(0xFFD51007),
-                            focusedLabelColor = Color(0xFFD51007)
-                        )
-                    )
-                    lastFmLoginError?.let { err ->
-                        Text(text = err, color = Color(0xFFD51007), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
-                    }
-                    Button(
-                        onClick = {
-                            if (lastFmUsernameInput.isNotBlank() && lastFmPasswordInput.isNotBlank()) {
-                                viewModel.loginLastFm(lastFmUsernameInput, lastFmPasswordInput)
-                            }
-                        },
-                        enabled = !isLastFmLoggingIn,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD51007)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        if (isLastFmLoggingIn) {
-                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
-                        } else {
-                            Text(
-                                text = translate("ورود به Last.fm", "Connect Last.fm", viewModel),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                fontFamily = LocalAppFontFamily.current,
-                                color = Color.White
-                            )
-                        }
-                    }
                 }
             }
         }
@@ -7877,15 +7694,6 @@ fun CarModeScreen(viewModel: MusicViewModel, onClose: () -> Unit) {
 }
 
 // --- Timing and formatting utilities ---
-fun formatListenersCount(listeners: String): String {
-    val n = listeners.toLongOrNull() ?: return listeners
-    return when {
-        n >= 1_000_000 -> "%.1fM".format(n / 1_000_000.0)
-        n >= 1_000 -> "%.1fK".format(n / 1_000.0)
-        else -> n.toString()
-    }
-}
-
 fun formatTime(ms: Long): String {
     val totalSecs = ms / 1000
     val min = totalSecs / 60

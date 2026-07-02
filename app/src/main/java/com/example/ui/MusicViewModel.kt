@@ -215,22 +215,6 @@ class MusicViewModel(
     val enrichedArtistInfo: StateFlow<EnrichedArtistInfo?> = _enrichedArtistInfo.asStateFlow()
 
     // --- Last.fm Account State ---
-    private val _lastFmUsername = MutableStateFlow("")
-    val lastFmUsername: StateFlow<String> = _lastFmUsername.asStateFlow()
-
-    private val _lastFmSessionKey = MutableStateFlow("")
-
-    private val _isLastFmLoggedIn = MutableStateFlow(false)
-    val isLastFmLoggedIn: StateFlow<Boolean> = _isLastFmLoggedIn.asStateFlow()
-
-    private val _isLastFmLoggingIn = MutableStateFlow(false)
-    val isLastFmLoggingIn: StateFlow<Boolean> = _isLastFmLoggingIn.asStateFlow()
-
-    private val _lastFmLoginError = MutableStateFlow<String?>(null)
-    val lastFmLoginError: StateFlow<String?> = _lastFmLoginError.asStateFlow()
-
-    private val _scrobbleEnabled = MutableStateFlow(false)
-    val scrobbleEnabled: StateFlow<Boolean> = _scrobbleEnabled.asStateFlow()
 
     // --- Transient one-shot UI messages (toasts) ---
     private val _transientMessage = MutableStateFlow<String?>(null)
@@ -299,21 +283,6 @@ class MusicViewModel(
             }
         }
 
-        // Scrobble and now-playing updates on track change
-        viewModelScope.launch {
-            var scrobbleJob: Job? = null
-            playbackConnection.currentTrack.collect { song ->
-                scrobbleJob?.cancel()
-                if (song != null && _scrobbleEnabled.value && _lastFmSessionKey.value.isNotBlank()) {
-                    launch { repository.updateLastFmNowPlaying(song, _lastFmSessionKey.value) }
-                    scrobbleJob = launch {
-                        delay(30_000L)
-                        repository.scrobbleTrack(song, _lastFmSessionKey.value, System.currentTimeMillis() / 1000)
-                    }
-                }
-            }
-        }
-
         // Initialize Settings from preferences
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
         _themeMode.value = prefs.getString("theme_mode", "dark") ?: "dark"
@@ -335,11 +304,6 @@ class MusicViewModel(
         _crossfadeDurationSeconds.value = prefs.getInt("crossfade_duration_seconds", 3)
         _wifiOnlyDownload.value = prefs.getBoolean("wifi_only_download", false)
         _autoBackupEnabled.value = prefs.getBoolean("auto_backup_enabled", false)
-        _lastFmUsername.value = prefs.getString("lastfm_username", "") ?: ""
-        _lastFmSessionKey.value = prefs.getString("lastfm_session_key", "") ?: ""
-        _scrobbleEnabled.value = prefs.getBoolean("scrobble_enabled", false)
-        _isLastFmLoggedIn.value = _lastFmSessionKey.value.isNotBlank()
-
         loadTrendingContent()
         startAutoBackupLoop()
     }
@@ -858,50 +822,6 @@ class MusicViewModel(
 
     fun consumeTransientMessage() {
         _transientMessage.value = null
-    }
-
-    // --- Last.fm Actions ---
-    fun loginLastFm(username: String, password: String) {
-        viewModelScope.launch {
-            _isLastFmLoggingIn.value = true
-            _lastFmLoginError.value = null
-            val key = repository.loginLastFm(username, password)
-            _isLastFmLoggingIn.value = false
-            if (key != null) {
-                _lastFmSessionKey.value = key
-                _lastFmUsername.value = username
-                _isLastFmLoggedIn.value = true
-                val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
-                prefs.edit()
-                    .putString("lastfm_username", username)
-                    .putString("lastfm_session_key", key)
-                    .apply()
-            } else {
-                _lastFmLoginError.value = if (com.example.data.repository.MusicRepository.LAST_FM_API_KEY.isBlank())
-                    "کلید API اپلیکیشن تنظیم نشده است."
-                else
-                    "ورود ناموفق. نام کاربری یا رمز عبور اشتباه است."
-            }
-        }
-    }
-
-    fun logoutLastFm() {
-        _lastFmSessionKey.value = ""
-        _lastFmUsername.value = ""
-        _isLastFmLoggedIn.value = false
-        _scrobbleEnabled.value = false
-        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
-        prefs.edit()
-            .remove("lastfm_username")
-            .remove("lastfm_session_key")
-            .putBoolean("scrobble_enabled", false)
-            .apply()
-    }
-
-    fun setScrobbleEnabled(enabled: Boolean) {
-        _scrobbleEnabled.value = enabled
-        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("scrobble_enabled", enabled).apply()
     }
 
     override fun onCleared() {

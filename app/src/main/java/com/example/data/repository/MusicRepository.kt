@@ -27,12 +27,6 @@ class MusicRepository(
     private val context: Context,
     private val dao: MusicDao
 ) {
-    companion object {
-        // Register at https://www.last.fm/api/account/create and fill these in
-        const val LAST_FM_API_KEY = ""
-        const val LAST_FM_API_SECRET = ""
-    }
-
     private val moshi = Moshi.Builder()
         .addLast(KotlinJsonAdapterFactory())
         .build()
@@ -97,15 +91,6 @@ class MusicRepository(
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(LrclibApiService::class.java)
-    }
-
-    private val lastFmApiService: LastFmApiService by lazy {
-        Retrofit.Builder()
-            .baseUrl("https://ws.audioscrobbler.com/2.0/")
-            .client(OkHttpClient.Builder().addInterceptor(lrclibUserAgentInterceptor).build())
-            .addConverterFactory(MoshiConverterFactory.create(moshi))
-            .build()
-            .create(LastFmApiService::class.java)
     }
 
     private val musicBrainzApiService: MusicBrainzApiService by lazy {
@@ -724,98 +709,8 @@ class MusicRepository(
         )
     }
 
-    // --- Last.fm Integration ---
-    private fun lastFmApiSig(params: Map<String, String>): String {
-        val raw = params.entries.sortedBy { it.key }.joinToString("") { it.key + it.value } + LAST_FM_API_SECRET
-        return md5(raw)
-    }
-
-    suspend fun loginLastFm(username: String, password: String): String? = withContext(Dispatchers.IO) {
-        if (LAST_FM_API_KEY.isBlank()) return@withContext null
-        try {
-            val params = mapOf(
-                "api_key" to LAST_FM_API_KEY,
-                "method" to "auth.getMobileSession",
-                "password" to password,
-                "username" to username
-            )
-            val sig = lastFmApiSig(params)
-            lastFmApiService.getMobileSession(
-                username = username,
-                password = password,
-                apiKey = LAST_FM_API_KEY,
-                apiSig = sig
-            ).session?.key
-        } catch (e: Exception) {
-            null
-        }
-    }
-
-    suspend fun scrobbleTrack(track: SubsonicSong, sessionKey: String, timestampSecs: Long) = withContext(Dispatchers.IO) {
-        if (LAST_FM_API_KEY.isBlank() || sessionKey.isBlank()) return@withContext
-        val artist = track.artist ?: return@withContext
-        val album = track.album ?: ""
-        try {
-            val params = mapOf(
-                "album[0]" to album,
-                "api_key" to LAST_FM_API_KEY,
-                "artist[0]" to artist,
-                "method" to "track.scrobble",
-                "sk" to sessionKey,
-                "timestamp[0]" to timestampSecs.toString(),
-                "track[0]" to track.title
-            )
-            lastFmApiService.scrobble(
-                track = track.title,
-                artist = artist,
-                album = album,
-                timestamp = timestampSecs,
-                apiKey = LAST_FM_API_KEY,
-                sessionKey = sessionKey,
-                apiSig = lastFmApiSig(params)
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    suspend fun updateLastFmNowPlaying(track: SubsonicSong, sessionKey: String) = withContext(Dispatchers.IO) {
-        if (LAST_FM_API_KEY.isBlank() || sessionKey.isBlank()) return@withContext
-        val artist = track.artist ?: return@withContext
-        val album = track.album ?: ""
-        try {
-            val params = mapOf(
-                "api_key" to LAST_FM_API_KEY,
-                "artist" to artist,
-                "method" to "track.updateNowPlaying",
-                "sk" to sessionKey,
-                "track" to track.title
-            )
-            lastFmApiService.updateNowPlaying(
-                track = track.title,
-                artist = artist,
-                album = album,
-                apiKey = LAST_FM_API_KEY,
-                sessionKey = sessionKey,
-                apiSig = lastFmApiSig(params)
-            )
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-    }
-
-    suspend fun getLastFmArtistInfo(artistName: String): LastFmArtist? = withContext(Dispatchers.IO) {
-        if (LAST_FM_API_KEY.isBlank()) return@withContext null
-        try {
-            lastFmApiService.getArtistInfo(artist = artistName, apiKey = LAST_FM_API_KEY).artist
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     // --- MusicBrainz Integration ---
     suspend fun getEnrichedArtistInfo(artistName: String): EnrichedArtistInfo = withContext(Dispatchers.IO) {
-        val lastFmArtist = try { getLastFmArtistInfo(artistName) } catch (e: Exception) { null }
         val mbArtist = try {
             musicBrainzApiService.searchArtist(query = "\"$artistName\"").artists?.firstOrNull()
         } catch (e: Exception) { null }
@@ -826,13 +721,7 @@ class MusicRepository(
             genres = (mbArtist?.genres?.mapNotNull { it.name }
                 ?: mbArtist?.tags?.mapNotNull { it.name }
                 ?: emptyList()).take(5),
-            mbid = mbArtist?.id,
-            lastFmListeners = lastFmArtist?.listeners,
-            lastFmBio = lastFmArtist?.bio?.summary
-                ?.replace(Regex("<a[^>]*>.*?</a>", RegexOption.DOT_MATCHES_ALL), "")
-                ?.trim()
-                ?.takeIf { it.isNotBlank() },
-            lastFmTags = lastFmArtist?.tags?.tag?.mapNotNull { it.name }?.take(5) ?: emptyList()
+            mbid = mbArtist?.id
         )
     }
 }

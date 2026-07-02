@@ -40,8 +40,5 @@ data class EnrichedArtistInfo(
     val foundedYear: String?,
     val type: String?,
     val genres: List<String>,
-    val mbid: String?,
-    val lastFmListeners: String?,
-    val lastFmBio: String?,
-    val lastFmTags: List<String>
+    val mbid: String?
 )
