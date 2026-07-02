@@ -925,11 +925,29 @@ class MusicViewModel(
         }
     }
 
+    private var _discoverVideoOffset = 0
+    private var _discoverVideoQuery = "music video"
+    private val _isLoadingMoreVideos = MutableStateFlow(false)
+    val isLoadingMoreVideos: StateFlow<Boolean> = _isLoadingMoreVideos.asStateFlow()
+
     fun fetchMusicVideos(query: String = "music video") {
+        _discoverVideoQuery = query
+        _discoverVideoOffset = 0
+        _discoverMusicVideos.value = emptyList()
+        loadMusicVideosPage()
+    }
+
+    fun fetchMoreMusicVideos() {
+        if (_isLoadingMoreVideos.value) return
+        loadMusicVideosPage()
+    }
+
+    private fun loadMusicVideosPage() {
         viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingMoreVideos.value = true
             try {
-                val encoded = java.net.URLEncoder.encode(query, "UTF-8")
-                val url = "https://itunes.apple.com/search?term=$encoded&media=musicVideo&limit=25&country=us"
+                val encoded = java.net.URLEncoder.encode(_discoverVideoQuery, "UTF-8")
+                val url = "https://itunes.apple.com/search?term=$encoded&media=musicVideo&limit=25&offset=$_discoverVideoOffset&country=us"
                 val client = okhttp3.OkHttpClient()
                 val request = okhttp3.Request.Builder().url(url).build()
                 val body = client.newCall(request).execute().use { it.body?.string() } ?: return@launch
@@ -943,7 +961,7 @@ class MusicViewModel(
                         .replace("100x100bb", "600x600bb")
                     items.add(
                         MusicVideoItem(
-                            id = obj.optLong("trackId", i.toLong()),
+                            id = obj.optLong("trackId", (_discoverVideoOffset + i).toLong()),
                             title = obj.optString("trackName", ""),
                             artistName = obj.optString("artistName", ""),
                             thumbnailUrl = thumb,
@@ -951,8 +969,12 @@ class MusicViewModel(
                         )
                     )
                 }
-                _discoverMusicVideos.value = items
-            } catch (_: Exception) {}
+                _discoverVideoOffset += 25
+                _discoverMusicVideos.value = _discoverMusicVideos.value + items
+            } catch (_: Exception) {
+            } finally {
+                _isLoadingMoreVideos.value = false
+            }
         }
     }
 

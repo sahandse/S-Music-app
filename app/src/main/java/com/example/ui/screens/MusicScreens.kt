@@ -1370,7 +1370,6 @@ fun HomeScreen(
     onDiscoverClick: () -> Unit = {},
     onSearchClick: () -> Unit = {}
 ) {
-    var showComingSoon by remember { mutableStateOf(false) }
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
     val artists by viewModel.artistsList.collectAsStateWithLifecycle()
@@ -2091,99 +2090,7 @@ fun HomeScreen(
                 }
             }
 
-            // Coming Soon banner
-            SectionTitle(title = "بزودی")
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFF1C1C1E), Color(0xFF2C2C2E))
-                        )
-                    )
-                    .clickable { showComingSoon = true },
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(
-                            text = "آهنگ‌های بزودی",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = LocalAppFontFamily.current,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "جدیدترین انتشارات Apple Music",
-                            fontSize = 12.sp,
-                            fontFamily = LocalAppFontFamily.current,
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(AppleRed),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
             Spacer(Modifier.height(120.dp))
-        }
-
-        // Full-screen Coming Soon overlay — inside outer Box so it stacks correctly
-        if (showComingSoon) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-            ) {
-                AndroidView(
-                    factory = { context ->
-                        android.webkit.WebView(context).apply {
-                            settings.javaScriptEnabled = true
-                            settings.domStorageEnabled = true
-                            settings.mediaPlaybackRequiresUserGesture = false
-                            settings.loadWithOverviewMode = true
-                            settings.useWideViewPort = true
-                            webViewClient = android.webkit.WebViewClient()
-                            loadUrl("https://music.apple.com/us/room/6786349264")
-                        }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-                IconButton(
-                    onClick = { showComingSoon = false },
-                    modifier = Modifier
-                        .statusBarsPadding()
-                        .padding(12.dp)
-                        .align(Alignment.TopEnd)
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "بستن",
-                        tint = Color.White
-                    )
-                }
-            }
         }
         }
     }
@@ -5369,69 +5276,7 @@ fun ArtistDetailView(
                         }
                     }
 
-                    // All Songs section
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                        Text(
-                            text = translate("همه آهنگ‌ها", "All Songs", viewModel),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            fontFamily = LocalAppFontFamily.current,
-                            modifier = Modifier
-                                .padding(horizontal = 16.dp)
-                                .padding(top = 12.dp, bottom = 8.dp)
-                        )
-                    }
-                    if (isLoadingAllSongs) {
-                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = AppleRed, modifier = Modifier.size(24.dp))
-                            }
-                        }
-                    } else if (allSongs.isEmpty()) {
-                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
-                            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
-                                Text(
-                                    text = translate("هیچ آهنگی یافت نشد.", "No songs found.", viewModel),
-                                    color = Color.Gray,
-                                    fontFamily = LocalAppFontFamily.current
-                                )
-                            }
-                        }
-                    } else {
-                        items(allSongs, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) { song ->
-                            val videoForSong = songVideoMap[song]
-                            Row(
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(modifier = Modifier.weight(1f)) {
-                                    TrackRowItem(
-                                        song = song,
-                                        onPlay = { viewModel.playSongDirectly(song, allSongs) },
-                                        viewModel = viewModel,
-                                        backgroundTint = artistTrackTint
-                                    )
-                                }
-                                if (videoForSong != null) {
-                                    IconButton(
-                                        onClick = { videoPlayerUrl = videoForSong.previewUrl },
-                                        modifier = Modifier.size(40.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.PlayCircleOutline,
-                                            contentDescription = "موزیک ویدیو",
-                                            tint = AppleRed,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                } else {
-                                    Spacer(Modifier.width(40.dp))
-                                }
-                            }
-                        }
-                    }
-
-                    // Music Videos section — iTunes API thumbnails
+                    // Music Videos section — iTunes API thumbnails (below albums)
                     if (artistMusicVideos.isNotEmpty()) {
                         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                             Text(
@@ -5494,6 +5339,69 @@ fun ArtistDetailView(
                             }
                         }
                     }
+
+                    // All Songs section
+                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                        Text(
+                            text = translate("همه آهنگ‌ها", "All Songs", viewModel),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 12.dp, bottom = 8.dp)
+                        )
+                    }
+                    if (isLoadingAllSongs) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = AppleRed, modifier = Modifier.size(24.dp))
+                            }
+                        }
+                    } else if (allSongs.isEmpty()) {
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                            Box(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = translate("هیچ آهنگی یافت نشد.", "No songs found.", viewModel),
+                                    color = Color.Gray,
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                        }
+                    } else {
+                        items(allSongs, span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) { song ->
+                            val videoForSong = songVideoMap[song]
+                            Row(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    TrackRowItem(
+                                        song = song,
+                                        onPlay = { viewModel.playSongDirectly(song, allSongs) },
+                                        viewModel = viewModel,
+                                        backgroundTint = artistTrackTint
+                                    )
+                                }
+                                if (videoForSong != null) {
+                                    IconButton(
+                                        onClick = { videoPlayerUrl = videoForSong.previewUrl },
+                                        modifier = Modifier.size(40.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayCircleOutline,
+                                            contentDescription = "موزیک ویدیو",
+                                            tint = AppleRed,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                } else {
+                                    Spacer(Modifier.width(40.dp))
+                                }
+                            }
+                        }
+                    }
+
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                         Spacer(Modifier.height(16.dp))
                     }
@@ -8903,6 +8811,7 @@ private fun AudioDiscoverFeed(
 @Composable
 fun MusicVideoFeed(viewModel: MusicViewModel) {
     val videos by viewModel.discoverMusicVideos.collectAsStateWithLifecycle()
+    val isLoadingMore by viewModel.isLoadingMoreVideos.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -8936,6 +8845,10 @@ fun MusicVideoFeed(viewModel: MusicViewModel) {
         exoPlayer.setMediaItem(MediaItem.fromUri(video.previewUrl))
         exoPlayer.prepare()
         exoPlayer.play()
+        // Load next page when 5 videos remain
+        if (pagerState.currentPage >= videos.size - 5) {
+            viewModel.fetchMoreMusicVideos()
+        }
     }
 
     LaunchedEffect(isMuted) { exoPlayer.volume = if (isMuted) 0f else 1f }
@@ -8950,12 +8863,13 @@ fun MusicVideoFeed(viewModel: MusicViewModel) {
                 onToggleMute = { isMuted = !isMuted }
             )
         }
-        Text(
-            text = "${pagerState.currentPage + 1} / ${videos.size}",
-            color = Color.White.copy(0.5f),
-            fontSize = 11.sp,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 16.dp)
-        )
+        if (isLoadingMore) {
+            CircularProgressIndicator(
+                color = AppleRed,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp).size(24.dp),
+                strokeWidth = 2.dp
+            )
+        }
     }
 }
 
