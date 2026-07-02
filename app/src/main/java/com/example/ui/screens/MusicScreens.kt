@@ -953,7 +953,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         )
                                         1 -> DiscoverFeedScreen(
                                             viewModel = viewModel,
-                                            showBackButton = false
+                                            showBackButton = false,
+                                            onArtistClick = { name -> currentSubScreen = SubScreen.ArtistDetail(SubsonicArtist(id = "", name = name)) }
                                         )
                                         2 -> LibraryScreen(
                                             viewModel = viewModel,
@@ -1174,7 +1175,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     )
                                     1 -> DiscoverFeedScreen(
                                         viewModel = viewModel,
-                                        showBackButton = false
+                                        showBackButton = false,
+                                        onArtistClick = { name -> currentSubScreen = SubScreen.ArtistDetail(SubsonicArtist(id = "", name = name)) }
                                     )
                                     2 -> LibraryScreen(
                                         viewModel = viewModel,
@@ -8690,15 +8692,20 @@ fun formatTime(ms: Long): String {
 fun DiscoverFeedScreen(
     viewModel: MusicViewModel,
     onBack: () -> Unit = {},
-    showBackButton: Boolean = true
+    showBackButton: Boolean = true,
+    onArtistClick: (String) -> Unit = {}
 ) {
     // 0 = audio library, 1 = Apple Music video previews
     var feedTab by remember { mutableStateOf(0) }
 
+    LaunchedEffect(feedTab) {
+        if (feedTab == 1) viewModel.pausePlayback()
+    }
+
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when (feedTab) {
-            1 -> MusicVideoFeed(viewModel = viewModel)
-            else -> AudioDiscoverFeed(viewModel = viewModel, showBackButton = showBackButton, onBack = onBack)
+            1 -> MusicVideoFeed(viewModel = viewModel, onArtistClick = onArtistClick)
+            else -> AudioDiscoverFeed(viewModel = viewModel, showBackButton = showBackButton, onBack = onBack, onArtistClick = onArtistClick)
         }
 
         // Tab toggle — always on top
@@ -8739,10 +8746,15 @@ fun DiscoverFeedScreen(
 private fun AudioDiscoverFeed(
     viewModel: MusicViewModel,
     showBackButton: Boolean,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onArtistClick: (String) -> Unit = {}
 ) {
     val songs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val shuffled = remember(songs) { if (songs.size > 1) songs.shuffled() else songs }
+
+    DisposableEffect(Unit) {
+        onDispose { viewModel.pausePlayback() }
+    }
 
     if (shuffled.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -8777,7 +8789,8 @@ private fun AudioDiscoverFeed(
                     scope.launch {
                         if (page < shuffled.size - 1) pagerState.animateScrollToPage(page + 1)
                     }
-                }
+                },
+                onArtistClick = onArtistClick
             )
         }
 
@@ -8809,7 +8822,7 @@ private fun AudioDiscoverFeed(
 }
 
 @Composable
-fun MusicVideoFeed(viewModel: MusicViewModel) {
+fun MusicVideoFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit = {}) {
     val videos by viewModel.discoverMusicVideos.collectAsStateWithLifecycle()
     val isLoadingMore by viewModel.isLoadingMoreVideos.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -8860,7 +8873,8 @@ fun MusicVideoFeed(viewModel: MusicViewModel) {
                 isActive = page == pagerState.currentPage,
                 exoPlayer = exoPlayer,
                 isMuted = isMuted,
-                onToggleMute = { isMuted = !isMuted }
+                onToggleMute = { isMuted = !isMuted },
+                onArtistClick = onArtistClick
             )
         }
         if (isLoadingMore) {
@@ -8879,7 +8893,8 @@ fun MusicVideoPage(
     isActive: Boolean,
     exoPlayer: ExoPlayer,
     isMuted: Boolean,
-    onToggleMute: () -> Unit
+    onToggleMute: () -> Unit,
+    onArtistClick: (String) -> Unit = {}
 ) {
     Box(Modifier.fillMaxSize()) {
         // Blurred thumbnail background
@@ -8929,8 +8944,8 @@ fun MusicVideoPage(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current, maxLines = 2)
-                Text(video.artistName, color = Color.White.copy(0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current, maxLines = 2, modifier = Modifier.clickable { onArtistClick(video.artistName) })
+                Text(video.artistName, color = Color.White.copy(0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current, modifier = Modifier.clickable { onArtistClick(video.artistName) })
                 Text("Apple Music · پیش‌نمایش", color = Color.White.copy(0.45f), fontSize = 10.sp, fontFamily = LocalAppFontFamily.current)
             }
             IconButton(onClick = onToggleMute) {
@@ -8975,7 +8990,8 @@ fun DiscoverPage(
     viewModel: MusicViewModel,
     onLike: () -> Unit,
     onAddToQueue: () -> Unit,
-    onNext: () -> Unit
+    onNext: () -> Unit,
+    onArtistClick: (String) -> Unit = {}
 ) {
     val favoriteTracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
     val isLiked = favoriteTracks.any { it.id == song.id }
@@ -9061,7 +9077,8 @@ fun DiscoverPage(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable { onArtistClick(song.artist ?: "") }
             )
             Spacer(Modifier.height(4.dp))
             Text(
@@ -9069,7 +9086,8 @@ fun DiscoverPage(
                 color = Color.White.copy(alpha = 0.75f),
                 fontSize = 15.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.clickable { onArtistClick(song.artist ?: "") }
             )
             if (!song.album.isNullOrBlank()) {
                 Text(

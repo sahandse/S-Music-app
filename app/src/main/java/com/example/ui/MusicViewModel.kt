@@ -471,6 +471,10 @@ class MusicViewModel(
         playbackConnection.playTrack(song, queue)
     }
 
+    fun pausePlayback() {
+        if (playbackConnection.isPlaying.value) playbackConnection.togglePlayPause()
+    }
+
     fun playDownloadedTrack(track: com.example.data.local.DownloadedTrack) {
         val song = SubsonicSong(
             id = track.id,
@@ -970,7 +974,7 @@ class MusicViewModel(
                     )
                 }
                 _discoverVideoOffset += 25
-                _discoverMusicVideos.value = _discoverMusicVideos.value + items
+                _discoverMusicVideos.value = _discoverMusicVideos.value + items.shuffled()
             } catch (_: Exception) {
             } finally {
                 _isLoadingMoreVideos.value = false
