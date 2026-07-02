@@ -2648,7 +2648,7 @@ fun TrackRowItem(
                         modifier = Modifier.size(22.dp)
                     )
                 }
-                AnimatedVisibility(
+                androidx.compose.animation.AnimatedVisibility(
                     visible = showHeartAnim,
                     enter = scaleIn(tween(200)) + fadeIn(tween(200)),
                     exit = scaleOut(tween(300)) + fadeOut(tween(300))
@@ -5961,7 +5961,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                                 if (albumIdx < mosaicAlbums.size) {
                                     val mosAlbum = mosaicAlbums[albumIdx]
                                     AsyncImage(
-                                        model = viewModel.getCoverArtUrl(mosAlbum.coverArt),
+                                        model = viewModel.getCoverArtUrl(mosAlbum.coverArtUrl),
                                         contentDescription = mosAlbum.name,
                                         modifier = Modifier
                                             .weight(1f)
