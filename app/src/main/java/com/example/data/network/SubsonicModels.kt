@@ -28,7 +28,8 @@ data class SubsonicResponse(
     val artistInfo: ArtistInfo? = null,
     val artistInfo2: ArtistInfo? = null,
     val topSongs: SongList? = null,
-    val similarArtists2: SimilarArtists2? = null
+    val similarArtists2: SimilarArtists2? = null,
+    val internetRadioStations: InternetRadioStationList? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -200,5 +201,18 @@ data class ArtistInfo(
 @JsonClass(generateAdapter = true)
 data class SimilarArtists2(
     val artist: List<SubsonicArtist>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class InternetRadioStationList(
+    val internetRadioStation: List<InternetRadioStation>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class InternetRadioStation(
+    val id: String,
+    val name: String,
+    val streamUrl: String,
+    val homePageUrl: String? = null
 )
 

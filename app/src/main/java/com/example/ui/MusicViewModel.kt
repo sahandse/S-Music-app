@@ -11,6 +11,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.data.local.*
 import com.example.data.network.ArtistInfo
 import com.example.data.network.EnrichedArtistInfo
+import com.example.data.network.InternetRadioStation
+import com.example.data.network.MusicBrainzArtistDetail
 import com.example.data.network.SearchResult3
 import com.example.data.network.SubsonicAlbum
 import com.example.data.network.SubsonicArtist
@@ -214,6 +216,18 @@ class MusicViewModel(
     private val _enrichedArtistInfo = MutableStateFlow<EnrichedArtistInfo?>(null)
     val enrichedArtistInfo: StateFlow<EnrichedArtistInfo?> = _enrichedArtistInfo.asStateFlow()
 
+    // --- MusicBrainz artist detail (Wikipedia link + band members) ---
+    private val _artistMbDetail = MutableStateFlow<MusicBrainzArtistDetail?>(null)
+    val artistMbDetail: StateFlow<MusicBrainzArtistDetail?> = _artistMbDetail.asStateFlow()
+
+    // --- Internet Radio Stations ---
+    private val _internetRadioStations = MutableStateFlow<List<InternetRadioStation>>(emptyList())
+    val internetRadioStations: StateFlow<List<InternetRadioStation>> = _internetRadioStations.asStateFlow()
+
+    // --- Lyrics Translation ---
+    private val _translatedLyrics = MutableStateFlow<String?>(null)
+    val translatedLyrics: StateFlow<String?> = _translatedLyrics.asStateFlow()
+
     // --- Last.fm Account State ---
 
     // --- Transient one-shot UI messages (toasts) ---
@@ -306,6 +320,7 @@ class MusicViewModel(
         _autoBackupEnabled.value = prefs.getBoolean("auto_backup_enabled", false)
         loadTrendingContent()
         startAutoBackupLoop()
+        loadInternetRadioStations()
     }
 
     private fun startAutoBackupLoop() {
@@ -385,6 +400,7 @@ class MusicViewModel(
         _artistSimilarArtists.value = emptyList()
         _artistAllSongs.value = emptyList()
         _enrichedArtistInfo.value = null
+        _artistMbDetail.value = null
         viewModelScope.launch {
             _isLoadingDetail.value = true
             val details = repository.getArtistDetails(artist.id)
@@ -622,6 +638,47 @@ class MusicViewModel(
         viewModelScope.launch {
             repository.deletePlaylist(playlistId)
         }
+    }
+
+    // --- MusicBrainz Artist Detail ---
+    fun fetchArtistMbDetail(mbid: String) {
+        viewModelScope.launch {
+            try {
+                _artistMbDetail.value = repository.getArtistDetailFromMusicBrainz(mbid)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    // --- Internet Radio Stations ---
+    private fun loadInternetRadioStations() {
+        viewModelScope.launch {
+            try {
+                _internetRadioStations.value = repository.getInternetRadioStations()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun playSongDirectly(song: SubsonicSong) {
+        playbackConnection.playTrack(song, listOf(song))
+    }
+
+    // --- Lyrics Translation ---
+    fun translateLyrics(text: String) {
+        viewModelScope.launch {
+            try {
+                _translatedLyrics.value = repository.translateLyrics(text)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun clearTranslatedLyrics() {
+        _translatedLyrics.value = null
     }
 
     // --- Lyrics Loader ---

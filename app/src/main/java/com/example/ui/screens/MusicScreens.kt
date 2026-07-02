@@ -81,6 +81,8 @@ import coil.compose.AsyncImage
 import com.example.data.local.DownloadedTrack
 import com.example.data.local.LocalPlaylist
 import com.example.data.network.EnrichedArtistInfo
+import com.example.data.network.InternetRadioStation
+import com.example.data.network.MusicBrainzArtistDetail
 import com.example.data.network.SubsonicAlbum
 import com.example.data.network.SubsonicArtist
 import com.example.ui.theme.CardDark
@@ -2465,10 +2467,49 @@ fun TrackRowItem(
 
     var showPlaylistDialog by remember { mutableStateOf(false) }
     var showHeartAnim by remember(song.id) { mutableStateOf(false) }
+    var swipeOffsetX by remember(song.id) { mutableStateOf(0f) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(song.id) {
+                detectHorizontalDragGestures(
+                    onDragEnd = { swipeOffsetX = 0f },
+                    onHorizontalDrag = { _, delta ->
+                        swipeOffsetX = (swipeOffsetX + delta).coerceIn(-20f, 120f)
+                        if (swipeOffsetX > 80f && !isFavorite) {
+                            viewModel.toggleFavoriteTrack(song)
+                            showHeartAnim = true
+                            swipeOffsetX = 0f
+                        } else if (swipeOffsetX < -80f && isFavorite) {
+                            viewModel.toggleFavoriteTrack(song)
+                            swipeOffsetX = 0f
+                        }
+                    }
+                )
+            }
+    ) {
+        // Heart icon revealed on swipe right
+        if (swipeOffsetX > 10f) {
+            Icon(
+                imageVector = Icons.Filled.Favorite,
+                contentDescription = "like",
+                tint = AppleRed,
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = 8.dp)
+                    .size(24.dp)
+                    .graphicsLayer {
+                        translationX = swipeOffsetX - 48f
+                        alpha = (swipeOffsetX / 80f).coerceIn(0f, 1f)
+                    }
+            )
+        }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .offset { androidx.compose.ui.unit.IntOffset(swipeOffsetX.toInt().coerceAtMost(20), 0) }
             .clip(RoundedCornerShape(8.dp))
             .background(if (isCurrentlyPlaying) AppleRed.copy(alpha = 0.08f) else backgroundTint)
             .tvFocusable(cornerRadius = 8.dp)
@@ -2618,7 +2659,8 @@ fun TrackRowItem(
                 )
             }
         }
-    }
+    } // end Row
+    } // end outer Box (swipe container)
 
     if (showPlaylistDialog) {
         PlaylistSelectorDialog(
@@ -3345,6 +3387,7 @@ fun LibraryScreen(
     onPlaylistClick: (LocalPlaylist) -> Unit
 ) {
     val playlists by viewModel.localPlaylists.collectAsStateWithLifecycle()
+    val internetRadioStations by viewModel.internetRadioStations.collectAsStateWithLifecycle()
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
@@ -3403,6 +3446,75 @@ fun LibraryScreen(
                     )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f), thickness = 0.5.dp, modifier = Modifier.padding(start = 50.dp))
+            }
+        }
+
+        // Internet Radio Section
+        if (internetRadioStations.isNotEmpty()) {
+            item {
+                Text(text = "رادیو اینترنتی", fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(bottom = 4.dp))
+            }
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp)
+                ) {
+                    items(internetRadioStations) { station ->
+                        Card(
+                            modifier = Modifier
+                                .width(140.dp)
+                                .clickable {
+                                    val song = SubsonicSong(
+                                        id = station.id,
+                                        title = station.name,
+                                        artist = "رادیو",
+                                        album = null
+                                    )
+                                    viewModel.playSongDirectly(song)
+                                },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .background(AppleRed.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Radio,
+                                        contentDescription = null,
+                                        tint = AppleRed,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                                Text(
+                                    text = station.name,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.PlayCircle,
+                                    contentDescription = "پخش",
+                                    tint = AppleRed,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -4550,11 +4662,46 @@ fun ArtistDetailView(
         if (!bioText.isNullOrBlank()) bioText
         else getFallbackBiography(artist.name, details.country, details.birthYearOrActive, lang == "fa")
     }
-    
+
+    // Extract dominant color from artist cover art
+    var artistDominantColor by remember(artist.id) { mutableStateOf<Color?>(null) }
+    LaunchedEffect(artist.coverArt) {
+        val coverArtId = artist.coverArt
+        if (!coverArtId.isNullOrBlank()) {
+            try {
+                val req = ImageRequest.Builder(context)
+                    .data(viewModel.getCoverArtUrl(coverArtId))
+                    .allowHardware(false)
+                    .size(128)
+                    .build()
+                val result = context.imageLoader.execute(req)
+                if (result is SuccessResult) {
+                    val bmp = (result.drawable as? BitmapDrawable)?.bitmap
+                    bmp?.let {
+                        val palette = Palette.from(it).generate()
+                        val swatch = palette.vibrantSwatch ?: palette.dominantSwatch ?: palette.mutedSwatch
+                        swatch?.let { s -> artistDominantColor = Color(s.rgb) }
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+    val artistTrackTint = artistDominantColor?.copy(alpha = 0.07f) ?: Color.Transparent
+
+    val artistMbDetail by viewModel.artistMbDetail.collectAsStateWithLifecycle()
+
     var sortBy by remember { mutableStateOf("year") } // "year", "title"
 
     LaunchedEffect(artist.id) {
         viewModel.loadArtistDetails(artist)
+    }
+
+    // Fetch MusicBrainz detail when bioState has an mbid
+    LaunchedEffect(bioState?.musicBrainzId) {
+        val mbid = bioState?.musicBrainzId
+        if (!mbid.isNullOrBlank()) {
+            viewModel.fetchArtistMbDetail(mbid)
+        }
     }
 
     val sortedAlbums = remember(albums, sortBy) {
@@ -4630,7 +4777,24 @@ fun ArtistDetailView(
                                         )
                                     )
                             )
-                            
+
+                            // Dominant color tint gradient overlay
+                            if (artistDominantColor != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                colors = listOf(
+                                                    artistDominantColor!!.copy(alpha = 0.35f),
+                                                    artistDominantColor!!.copy(alpha = 0.10f),
+                                                    Color.Transparent
+                                                )
+                                            )
+                                        )
+                                )
+                            }
+
                             // Advanced Profile Column
                             Column(
                                 modifier = Modifier
@@ -4851,6 +5015,75 @@ fun ArtistDetailView(
                         }
                     }
 
+                    // MusicBrainz: Wikipedia link + band members
+                    if (artistMbDetail != null) {
+                        val wikiRelation = artistMbDetail!!.relations?.firstOrNull { it.type == "wikipedia" }
+                        val memberRelations = artistMbDetail!!.relations?.filter {
+                            it.type == "member of band" || it.type == "members"
+                        } ?: emptyList()
+
+                        if (wikiRelation != null || memberRelations.isNotEmpty()) {
+                            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
+                                Column(
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    wikiRelation?.url?.resource?.let { wikiUrl ->
+                                        OutlinedButton(
+                                            onClick = {
+                                                try {
+                                                    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(wikiUrl))
+                                                    context.startActivity(intent)
+                                                } catch (e: Exception) {}
+                                            },
+                                            border = BorderStroke(1.dp, AppleRed),
+                                            shape = RoundedCornerShape(12.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.OpenInBrowser,
+                                                contentDescription = null,
+                                                tint = AppleRed,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("ویکیپدیا", color = AppleRed, fontFamily = LocalAppFontFamily.current)
+                                        }
+                                    }
+
+                                    if (memberRelations.isNotEmpty()) {
+                                        Text(
+                                            text = "اعضا",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            fontFamily = LocalAppFontFamily.current
+                                        )
+                                        androidx.compose.foundation.layout.FlowRow(
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            memberRelations.forEach { rel ->
+                                                val memberName = rel.artist?.name ?: return@forEach
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(16.dp))
+                                                        .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = memberName,
+                                                        fontSize = 12.sp,
+                                                        fontFamily = LocalAppFontFamily.current,
+                                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     // Top Tracks section
                     if (topTracks.isNotEmpty()) {
                         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
@@ -4867,7 +5100,8 @@ fun ArtistDetailView(
                                         TrackRowItem(
                                             song = song,
                                             onPlay = { viewModel.playSongDirectly(song, topTracks) },
-                                            viewModel = viewModel
+                                            viewModel = viewModel,
+                                            backgroundTint = artistTrackTint
                                         )
                                     }
                                 }
@@ -5007,7 +5241,8 @@ fun ArtistDetailView(
                                 TrackRowItem(
                                     song = song,
                                     onPlay = { viewModel.playSongDirectly(song, allSongs) },
-                                    viewModel = viewModel
+                                    viewModel = viewModel,
+                                    backgroundTint = artistTrackTint
                                 )
                             }
                         }
@@ -7014,6 +7249,7 @@ fun FullscreenPlayer(
     val downloadedTracks by viewModel.downloadedTracks.collectAsStateWithLifecycle()
     val downloadProgresses by viewModel.downloadProgresses.collectAsStateWithLifecycle()
     val queue by viewModel.playbackConnection.playbackQueue.collectAsStateWithLifecycle()
+    val translatedLyrics by viewModel.translatedLyrics.collectAsStateWithLifecycle()
 
     var showTimerDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
@@ -7389,12 +7625,33 @@ fun FullscreenPlayer(
                         val parsedLyrics = remember(lyrics) { parseLrc(lyrics!!) }
                         if (parsedLyrics.isEmpty()) {
                             // Unsynced raw lyrics
-                            Box(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .verticalScroll(rememberScrollState()),
-                                contentAlignment = Alignment.Center
+                                horizontalAlignment = Alignment.CenterHorizontally
                             ) {
+                                // Translate button
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    if (translatedLyrics != null) {
+                                        TextButton(onClick = { viewModel.clearTranslatedLyrics() }) {
+                                            Text("بستن ترجمه", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                        }
+                                    } else {
+                                        OutlinedButton(
+                                            onClick = { viewModel.translateLyrics(lyrics!!) },
+                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                            shape = RoundedCornerShape(20.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text("ترجمه 🌐", color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                        }
+                                    }
+                                }
                                 Text(
                                     text = lyrics!!,
                                     color = Color.White,
@@ -7402,12 +7659,47 @@ fun FullscreenPlayer(
                                     fontWeight = FontWeight.SemiBold,
                                     lineHeight = 32.sp,
                                     textAlign = TextAlign.Center,
-                                    modifier = Modifier.padding(16.dp)
+                                    modifier = Modifier.padding(horizontal = 16.dp)
                                 )
+                                if (translatedLyrics != null) {
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    HorizontalDivider(color = Color.White.copy(alpha = 0.15f), modifier = Modifier.padding(horizontal = 24.dp))
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        text = translatedLyrics!!,
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        fontSize = 15.sp,
+                                        lineHeight = 26.sp,
+                                        textAlign = TextAlign.Center,
+                                        fontFamily = LocalAppFontFamily.current,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                                    )
+                                }
                             }
                         } else {
                             // Synced Lyrics autoscrolling board
-                            SyncedLyricsView(lyricsLines = parsedLyrics, currentProgressMs = progress)
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                SyncedLyricsView(lyricsLines = parsedLyrics, currentProgressMs = progress)
+                                // Translate button overlay (top-end)
+                                Row(
+                                    modifier = Modifier.align(Alignment.TopEnd).padding(horizontal = 16.dp, vertical = 4.dp)
+                                ) {
+                                    if (translatedLyrics != null) {
+                                        TextButton(onClick = { viewModel.clearTranslatedLyrics() }) {
+                                            Text("بستن ترجمه", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                        }
+                                    } else {
+                                        OutlinedButton(
+                                            onClick = { viewModel.translateLyrics(parsedLyrics.joinToString("\n") { it.text }) },
+                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                            shape = RoundedCornerShape(20.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        ) {
+                                            Text("ترجمه 🌐", color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

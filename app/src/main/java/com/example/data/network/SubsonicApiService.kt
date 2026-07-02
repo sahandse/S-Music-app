@@ -88,4 +88,7 @@ interface SubsonicApiService {
         @Query("count") count: Int = 10
     ): SubsonicResponseWrapper
 
+    @GET("rest/getInternetRadioStations.view")
+    suspend fun getInternetRadioStations(): SubsonicResponseWrapper
+
 }

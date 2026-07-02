@@ -42,3 +42,22 @@ data class EnrichedArtistInfo(
     val genres: List<String>,
     val mbid: String?
 )
+
+@JsonClass(generateAdapter = true)
+data class MusicBrainzArtistDetail(
+    val id: String? = null,
+    val name: String? = null,
+    @Json(name = "relations") val relations: List<MusicBrainzRelation>? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class MusicBrainzRelation(
+    val type: String? = null,
+    val url: MusicBrainzUrl? = null,
+    val artist: MusicBrainzArtist? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class MusicBrainzUrl(
+    val resource: String? = null
+)

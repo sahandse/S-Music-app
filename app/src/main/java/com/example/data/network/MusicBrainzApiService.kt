@@ -1,6 +1,7 @@
 package com.example.data.network
 
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface MusicBrainzApiService {
@@ -11,4 +12,11 @@ interface MusicBrainzApiService {
         @Query("limit") limit: Int = 1,
         @Query("fmt") format: String = "json"
     ): MusicBrainzArtistSearchResponse
+
+    @GET("artist/{mbid}")
+    suspend fun getArtistDetail(
+        @Path("mbid") mbid: String,
+        @Query("inc") inc: String = "url-rels+artist-rels",
+        @Query("fmt") format: String = "json"
+    ): MusicBrainzArtistDetail
 }

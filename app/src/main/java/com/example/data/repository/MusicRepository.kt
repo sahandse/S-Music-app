@@ -3,6 +3,7 @@ package com.example.data.repository
 import android.content.Context
 import com.example.data.local.*
 import com.example.data.network.*
+import kotlinx.coroutines.delay
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.Dispatchers
@@ -93,13 +94,29 @@ class MusicRepository(
             .create(LrclibApiService::class.java)
     }
 
+    private val musicBrainzUserAgentInterceptor = Interceptor { chain ->
+        val request = chain.request().newBuilder()
+            .header("User-Agent", "S-Music-App/1.0 (sahand.rezvanazar@gmail.com)")
+            .build()
+        chain.proceed(request)
+    }
+
     private val musicBrainzApiService: MusicBrainzApiService by lazy {
         Retrofit.Builder()
             .baseUrl("https://musicbrainz.org/ws/2/")
-            .client(OkHttpClient.Builder().addInterceptor(lrclibUserAgentInterceptor).build())
+            .client(OkHttpClient.Builder().addInterceptor(musicBrainzUserAgentInterceptor).build())
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(MusicBrainzApiService::class.java)
+    }
+
+    private val myMemoryApiService: MyMemoryApi by lazy {
+        Retrofit.Builder()
+            .baseUrl("https://api.mymemory.translated.net/")
+            .client(OkHttpClient.Builder().build())
+            .addConverterFactory(MoshiConverterFactory.create(moshi))
+            .build()
+            .create(MyMemoryApi::class.java)
     }
 
     init {
@@ -723,5 +740,43 @@ class MusicRepository(
                 ?: emptyList()).take(5),
             mbid = mbArtist?.id
         )
+    }
+
+    suspend fun getArtistDetailFromMusicBrainz(mbid: String): MusicBrainzArtistDetail? = withContext(Dispatchers.IO) {
+        try {
+            delay(300)
+            musicBrainzApiService.getArtistDetail(mbid)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    // --- Internet Radio Stations ---
+    suspend fun getInternetRadioStations(): List<InternetRadioStation> = withContext(Dispatchers.IO) {
+        if (cachedServer == null) return@withContext emptyList()
+        try {
+            apiService.getInternetRadioStations().response.internetRadioStations?.internetRadioStation ?: emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    // --- Lyrics Translation ---
+    suspend fun translateLyrics(text: String): String? = withContext(Dispatchers.IO) {
+        try {
+            if (text.length <= 400) {
+                myMemoryApiService.translate(text).responseData?.translatedText
+            } else {
+                val chunks = text.chunked(400)
+                val translated = chunks.mapNotNull { chunk ->
+                    try {
+                        myMemoryApiService.translate(chunk).responseData?.translatedText
+                    } catch (e: Exception) { null }
+                }
+                if (translated.isEmpty()) null else translated.joinToString("\n")
+            }
+        } catch (e: Exception) {
+            null
+        }
     }
 }
