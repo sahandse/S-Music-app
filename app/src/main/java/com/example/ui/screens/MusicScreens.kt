@@ -1367,6 +1367,7 @@ fun HomeScreen(
     onDiscoverClick: () -> Unit = {},
     onSearchClick: () -> Unit = {}
 ) {
+    var showComingSoon by remember { mutableStateOf(false) }
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
     val artists by viewModel.artistsList.collectAsStateWithLifecycle()
@@ -2084,6 +2085,100 @@ fun HomeScreen(
                             onClick = { onArtistClick(artist) }
                         )
                     }
+                }
+            }
+
+            // Coming Soon banner
+            SectionTitle(title = "بزودی")
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(Color(0xFF1C1C1E), Color(0xFF2C2C2E))
+                        )
+                    )
+                    .clickable { showComingSoon = true },
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "آهنگ‌های بزودی",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "جدیدترین انتشارات Apple Music",
+                            fontSize = 12.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = Color.White.copy(alpha = 0.6f)
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(AppleRed),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(120.dp))
+        }
+
+        // Full-screen Coming Soon overlay — inside outer Box so it stacks correctly
+        if (showComingSoon) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+            ) {
+                AndroidView(
+                    factory = { context ->
+                        android.webkit.WebView(context).apply {
+                            settings.javaScriptEnabled = true
+                            settings.domStorageEnabled = true
+                            settings.mediaPlaybackRequiresUserGesture = false
+                            settings.loadWithOverviewMode = true
+                            settings.useWideViewPort = true
+                            webViewClient = android.webkit.WebViewClient()
+                            loadUrl("https://music.apple.com/us/room/6786349264")
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+                IconButton(
+                    onClick = { showComingSoon = false },
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(12.dp)
+                        .align(Alignment.TopEnd)
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "بستن",
+                        tint = Color.White
+                    )
                 }
             }
         }
@@ -8599,7 +8694,7 @@ fun DiscoverFeedScreen(
             listOf(
                 "موسیقی شما" to 0,
                 "موزیک ویدیو" to 1,
-                "اپل موزیک" to 2
+                "بزودی" to 2
             ).forEach { (label, tabIndex) ->
                 val selected = feedTab == tabIndex
                 Box(
@@ -8725,7 +8820,7 @@ private fun AppleMusicVideoFeed() {
                 settings.loadWithOverviewMode = true
                 settings.useWideViewPort = true
                 webViewClient = android.webkit.WebViewClient()
-                loadUrl("https://music.apple.com/us/grouping/34")
+                loadUrl("https://music.apple.com/us/room/6786349264")
             }
         },
         modifier = Modifier.fillMaxSize()
