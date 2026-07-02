@@ -837,8 +837,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                     NavigationRailItem(
                         selected = selectedTab == 1 && currentSubScreen == null,
                         onClick = { selectedTab = 1; currentSubScreen = null },
-                        icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Search else Icons.Outlined.Search, contentDescription = "جستجو") },
-                        label = { Text("جستجو", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                        icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Explore else Icons.Outlined.Explore, contentDescription = "اکتشاف") },
+                        label = { Text("اکتشاف", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -927,9 +927,11 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onBack = { currentSubScreen = null }
                                     )
                                 }
-                                subScreen is SubScreen.Discover -> {
-                                    DiscoverFeedScreen(
+                                subScreen is SubScreen.Search -> {
+                                    SearchScreen(
                                         viewModel = viewModel,
+                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                        onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
                                         onBack = { currentSubScreen = null }
                                     )
                                 }
@@ -940,15 +942,15 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
                                             onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
                                             onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
-                                            onGenreClick = { selectedTab = 1 },
+                                            onSearchClick = { currentSubScreen = SubScreen.Search },
+                                            onGenreClick = { currentSubScreen = SubScreen.Search },
                                             onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings },
-                                            onDiscoverClick = { currentSubScreen = SubScreen.Discover }
+                                            onDiscoverClick = { selectedTab = 1; currentSubScreen = null }
                                         )
-                                        1 -> SearchScreen(
+                                        1 -> DiscoverFeedScreen(
                                             viewModel = viewModel,
-                                            onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
-                                            onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
+                                            showBackButton = false
                                         )
                                         2 -> LibraryScreen(
                                             viewModel = viewModel,
@@ -964,10 +966,11 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
                                             onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
                                             onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
-                                            onGenreClick = { selectedTab = 1 },
+                                            onSearchClick = { currentSubScreen = SubScreen.Search },
+                                            onGenreClick = { currentSubScreen = SubScreen.Search },
                                             onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings },
-                                            onDiscoverClick = { currentSubScreen = SubScreen.Discover }
+                                            onDiscoverClick = { selectedTab = 1; currentSubScreen = null }
                                         )
                                     }
                                 }
@@ -1060,8 +1063,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                             NavigationBarItem(
                                 selected = selectedTab == 1 && currentSubScreen == null,
                                 onClick = { selectedTab = 1; currentSubScreen = null },
-                                icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Search else Icons.Outlined.Search, contentDescription = "جستجو") },
-                                label = { Text("جستجو", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                                icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Explore else Icons.Outlined.Explore, contentDescription = "اکتشاف") },
+                                label = { Text("اکتشاف", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                             NavigationBarItem(
@@ -1145,9 +1148,11 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     onBack = { currentSubScreen = null }
                                 )
                             }
-                            subScreen is SubScreen.Discover -> {
-                                DiscoverFeedScreen(
+                            subScreen is SubScreen.Search -> {
+                                SearchScreen(
                                     viewModel = viewModel,
+                                    onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
+                                    onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
                                     onBack = { currentSubScreen = null }
                                 )
                             }
@@ -1158,15 +1163,15 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
                                         onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
                                         onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
-                                        onGenreClick = { selectedTab = 1 },
+                                        onSearchClick = { currentSubScreen = SubScreen.Search },
+                                        onGenreClick = { currentSubScreen = SubScreen.Search },
                                         onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings },
-                                        onDiscoverClick = { currentSubScreen = SubScreen.Discover }
+                                        onDiscoverClick = { selectedTab = 1; currentSubScreen = null }
                                     )
-                                    1 -> SearchScreen(
+                                    1 -> DiscoverFeedScreen(
                                         viewModel = viewModel,
-                                        onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
-                                        onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) }
+                                        showBackButton = false
                                     )
                                     2 -> LibraryScreen(
                                         viewModel = viewModel,
@@ -1182,10 +1187,11 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
                                         onAlbumClick = { currentSubScreen = SubScreen.AlbumDetail(it) },
                                         onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
-                                        onGenreClick = { selectedTab = 1 },
+                                        onSearchClick = { currentSubScreen = SubScreen.Search },
+                                        onGenreClick = { currentSubScreen = SubScreen.Search },
                                         onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings },
-                                        onDiscoverClick = { currentSubScreen = SubScreen.Discover }
+                                        onDiscoverClick = { selectedTab = 1; currentSubScreen = null }
                                     )
                                 }
                             }
@@ -1228,6 +1234,7 @@ sealed class SubScreen {
     data class SubLibraryItem(val type: String) : SubScreen()
     object Settings : SubScreen()
     object Discover : SubScreen()
+    object Search : SubScreen()
 }
 
 // --- Mini Player Bar Component ---
@@ -1357,7 +1364,8 @@ fun HomeScreen(
     onGenreClick: (String) -> Unit,
     onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
-    onDiscoverClick: () -> Unit = {}
+    onDiscoverClick: () -> Unit = {},
+    onSearchClick: () -> Unit = {}
 ) {
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
@@ -1495,6 +1503,17 @@ fun HomeScreen(
                             contentDescription = "دانلودها",
                             tint = AppleRed,
                             modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onSearchClick,
+                        modifier = Modifier.size(48.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Search,
+                            contentDescription = "جستجو",
+                            tint = AppleRed,
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                     IconButton(
@@ -1769,59 +1788,6 @@ fun HomeScreen(
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.size(24.dp)
                     )
-                }
-            }
-
-            // TikTok-style Discover Feed entry banner
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    .fillMaxWidth()
-                    .height(90.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        Brush.horizontalGradient(
-                            colors = listOf(Color(0xFF1A0033), Color(0xFF3D0057), AppleRed.copy(alpha = 0.85f))
-                        )
-                    )
-                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
-                    .clickable { onDiscoverClick() },
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            text = "✨ ${translate("فید اکتشاف", "Discovery Feed", viewModel)}",
-                            color = Color.White,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = LocalAppFontFamily.current
-                        )
-                        Text(
-                            text = translate("اسکرول کن، بشنو، عاشق شو", "Scroll · Listen · Love", viewModel),
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 12.sp,
-                            fontFamily = LocalAppFontFamily.current
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .background(Color.White.copy(alpha = 0.15f), CircleShape)
-                            .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
                 }
             }
 
@@ -2817,7 +2783,8 @@ fun PlaylistSelectorDialog(
 fun SearchScreen(
     viewModel: MusicViewModel,
     onArtistClick: (SubsonicArtist) -> Unit,
-    onAlbumClick: (SubsonicAlbum) -> Unit
+    onAlbumClick: (SubsonicAlbum) -> Unit,
+    onBack: (() -> Unit)? = null
 ) {
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
@@ -2850,14 +2817,25 @@ fun SearchScreen(
                 .padding(bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Page Title
-            Text(
-                text = translate("جستجو", "Search", viewModel),
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = LocalAppFontFamily.current,
-                modifier = Modifier.padding(top = 12.dp, start = 16.dp, end = 16.dp)
-            )
+            // Page Title row (with optional back button)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp, start = 4.dp, end = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (onBack != null) {
+                    IconButton(onClick = onBack) {
+                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "برگشت", tint = MaterialTheme.colorScheme.onSurface)
+                    }
+                } else {
+                    Spacer(Modifier.width(16.dp))
+                }
+                Text(
+                    text = translate("جستجو", "Search", viewModel),
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = LocalAppFontFamily.current
+                )
+            }
 
             // Search Input Header — modern pill-shaped search bar with embedded mic
             Row(
@@ -8562,7 +8540,11 @@ fun formatTime(ms: Long): String {
 // --- TikTok-style Vertical Discovery Feed ---
 
 @Composable
-fun DiscoverFeedScreen(viewModel: MusicViewModel, onBack: () -> Unit) {
+fun DiscoverFeedScreen(
+    viewModel: MusicViewModel,
+    onBack: () -> Unit = {},
+    showBackButton: Boolean = true
+) {
     val songs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val shuffled = remember(songs) { if (songs.size > 1) songs.shuffled() else songs }
 
@@ -8603,19 +8585,21 @@ fun DiscoverFeedScreen(viewModel: MusicViewModel, onBack: () -> Unit) {
             )
         }
 
-        // Back button overlay
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier
-                .padding(top = 48.dp, start = 16.dp)
-                .align(Alignment.TopStart)
-                .background(Color.Black.copy(alpha = 0.35f), CircleShape)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "برگشت",
-                tint = Color.White
-            )
+        // Back button overlay (only when not a root tab)
+        if (showBackButton) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .padding(top = 48.dp, start = 16.dp)
+                    .align(Alignment.TopStart)
+                    .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "برگشت",
+                    tint = Color.White
+                )
+            }
         }
 
         // Page counter
