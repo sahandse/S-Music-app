@@ -5511,11 +5511,51 @@ fun ArtistDetailView(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ArrowBack, // Back button should be standard back arrow
+                        imageVector = Icons.Default.ArrowBack,
                         contentDescription = "بازگشت",
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
+                }
+
+                // Full-screen video player overlay
+                val currentVideoUrl = videoPlayerUrl
+                if (currentVideoUrl != null) {
+                    val videoPlayer = remember(currentVideoUrl) {
+                        ExoPlayer.Builder(context).build().apply {
+                            setMediaItem(MediaItem.fromUri(currentVideoUrl))
+                            prepare()
+                            playWhenReady = true
+                        }
+                    }
+                    DisposableEffect(videoPlayer) { onDispose { videoPlayer.release() } }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black)
+                            .zIndex(20f)
+                    ) {
+                        AndroidView(
+                            factory = { ctx ->
+                                android.view.SurfaceView(ctx).also { sv -> videoPlayer.setVideoSurfaceView(sv) }
+                            },
+                            modifier = Modifier.fillMaxSize()
+                        )
+                        IconButton(
+                            onClick = { videoPlayerUrl = null },
+                            modifier = Modifier
+                                .statusBarsPadding()
+                                .padding(12.dp)
+                                .align(Alignment.TopEnd)
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "بستن",
+                                tint = Color.White
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -5779,46 +5819,6 @@ fun AlbumDetailView(
                 tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
-        }
-
-        // Full-screen video player overlay
-        val currentVideoUrl = videoPlayerUrl
-        if (currentVideoUrl != null) {
-            val videoPlayer = remember(currentVideoUrl) {
-                ExoPlayer.Builder(context).build().apply {
-                    setMediaItem(MediaItem.fromUri(currentVideoUrl))
-                    prepare()
-                    playWhenReady = true
-                }
-            }
-            DisposableEffect(videoPlayer) { onDispose { videoPlayer.release() } }
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black)
-                    .zIndex(20f)
-            ) {
-                AndroidView(
-                    factory = { ctx ->
-                        android.view.SurfaceView(ctx).also { sv -> videoPlayer.setVideoSurfaceView(sv) }
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-                IconButton(
-                    onClick = { videoPlayerUrl = null },
-                    modifier = Modifier
-                        .statusBarsPadding()
-                        .padding(12.dp)
-                        .align(Alignment.TopEnd)
-                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "بستن",
-                        tint = Color.White
-                    )
-                }
-            }
         }
     }
 }
