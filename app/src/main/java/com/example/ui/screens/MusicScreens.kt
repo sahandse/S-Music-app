@@ -8861,7 +8861,7 @@ fun DiscoverPage(
     onNext: () -> Unit
 ) {
     val favoriteTracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
-    val isLiked = favoriteTracks.any { it.trackId == song.id }
+    val isLiked = favoriteTracks.any { it.id == song.id }
     val infiniteTransition = rememberInfiniteTransition(label = "vinyl")
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
