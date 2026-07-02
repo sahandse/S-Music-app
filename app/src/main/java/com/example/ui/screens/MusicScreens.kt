@@ -1448,17 +1448,6 @@ fun HomeScreen(
             )
         }
         val homeScrollState = rememberScrollState()
-        val scrolledFraction = (homeScrollState.value / 300f).coerceIn(0f, 1f)
-        val greetingFontSize by animateFloatAsState(
-            targetValue = 20f - (6f * scrolledFraction),
-            animationSpec = tween(150),
-            label = "greetingSize"
-        )
-        val greetingAlpha by animateFloatAsState(
-            targetValue = 1f - scrolledFraction * 0.7f,
-            animationSpec = tween(150),
-            label = "greetingAlpha"
-        )
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -1466,7 +1455,7 @@ fun HomeScreen(
                 .padding(bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Top Bar with Smart Greeting and Download Icon
+            // Top Bar with Download and Profile Icons
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1474,7 +1463,6 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Top Left: Download and Profile Icons
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     IconButton(
                         onClick = onDownloadClick,
@@ -1499,56 +1487,12 @@ fun HomeScreen(
                         )
                     }
                 }
-
-                // Top Right: Time-based Smart Greeting using user's onboarding name
-                val calendar = Calendar.getInstance()
-                val hour = calendar.get(Calendar.HOUR_OF_DAY)
-                val storedName by viewModel.userName.collectAsStateWithLifecycle()
-                
-                val greetingPrefix = when (hour) {
-                    in 5..11 -> translate("صبح بخیر، ", "Good Morning, ", viewModel)
-                    in 12..16 -> translate("روزت خوش، ", "Good Day, ", viewModel)
-                    in 17..21 -> translate("عصرت بخیر، ", "Good Evening, ", viewModel)
-                    else -> translate("شب رویایی، ", "Good Night, ", viewModel)
-                }
-                
-                val greetingEmoji = when (hour) {
-                    in 5..11 -> "☀️"
-                    in 12..16 -> "🌤️"
-                    in 17..21 -> "☕"
-                    else -> "🌙"
-                }
-
-                val greetingText = if (storedName.isNotBlank()) {
-                    "$greetingPrefix$storedName $greetingEmoji"
-                } else {
-                    translate("سلام، خوش آمدید! $greetingEmoji", "Hello, Welcome! $greetingEmoji", viewModel)
-                }
-                
                 Text(
-                    text = greetingText,
-                    fontSize = greetingFontSize.sp,
+                    text = translate("خانه", "Home", viewModel),
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     fontFamily = LocalAppFontFamily.current,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.graphicsLayer { alpha = greetingAlpha }
-                )
-
-                val musicRecommendation = when (hour) {
-                    in 5..8 -> translate("بهترین موسیقی برای شروع روز ☕", "Best music to start your day ☕", viewModel)
-                    in 9..11 -> translate("موسیقی برای تمرکز و کار ⚡", "Focus music for productive work ⚡", viewModel)
-                    in 12..14 -> translate("موسیقی ناهار — آرام و دلنشین 🎶", "Chill lunch vibes 🎶", viewModel)
-                    in 15..17 -> translate("انرژی بعد از ظهر با موسیقی 🔥", "Energetic afternoon beats 🔥", viewModel)
-                    in 18..21 -> translate("موسیقی غروب آفتاب 🌇", "Sunset mood tunes 🌇", viewModel)
-                    in 22..23 -> translate("آرامش شب با موسیقی 🌃", "Chill night music 🌃", viewModel)
-                    else -> translate("موسیقی دیروقت شب 🌙", "Late night tunes 🌙", viewModel)
-                }
-                Text(
-                    text = musicRecommendation,
-                    fontSize = 12.sp,
-                    fontFamily = LocalAppFontFamily.current,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                    modifier = Modifier.padding(top = 2.dp).graphicsLayer { alpha = greetingAlpha }
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -5543,6 +5487,65 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                     contentDescription = translate("تنظیمات", "Settings", viewModel),
                     tint = MaterialTheme.colorScheme.onSurface
                 )
+            }
+        }
+
+        // حس حال — Mood / Vibe Card
+        run {
+            val cal = Calendar.getInstance()
+            val h = cal.get(Calendar.HOUR_OF_DAY)
+            val storedName by viewModel.userName.collectAsStateWithLifecycle()
+            data class MoodInfo(val emoji: String, val label: String, val subtitle: String, val color: Color)
+            val mood = when (h) {
+                in 5..8  -> MoodInfo("☀️", translate("صبح پرانرژی", "Fresh Morning", viewModel), translate("بهترین موسیقی برای شروع روز", "Best music to start your day", viewModel), Color(0xFFFFB74D))
+                in 9..11 -> MoodInfo("⚡", translate("تمرکز کامل", "Deep Focus", viewModel), translate("موسیقی برای تمرکز و کار", "Focus music for productive work", viewModel), Color(0xFF42A5F5))
+                in 12..14 -> MoodInfo("🎶", translate("استراحت ظهر", "Lunch Break", viewModel), translate("موسیقی آرام و دلنشین", "Chill & melodic tunes", viewModel), Color(0xFF66BB6A))
+                in 15..17 -> MoodInfo("🔥", translate("انرژی بعدازظهر", "Afternoon Energy", viewModel), translate("بیت‌های پرانرژی بعد از ظهر", "Energetic afternoon beats", viewModel), Color(0xFFEF5350))
+                in 18..21 -> MoodInfo("🌇", translate("حس غروب", "Sunset Mood", viewModel), translate("موسیقی غروب آفتاب", "Sunset mood tunes", viewModel), Color(0xFFFF7043))
+                in 22..23 -> MoodInfo("🌃", translate("شب آرام", "Calm Night", viewModel), translate("آرامش شب با موسیقی", "Chill night music", viewModel), Color(0xFF7E57C2))
+                else      -> MoodInfo("🌙", translate("دیروقت شب", "Late Night", viewModel), translate("موسیقی دیروقت شب", "Late night tunes", viewModel), Color(0xFF5C6BC0))
+            }
+            val greetingPrefix = when (h) {
+                in 5..11 -> translate("صبح بخیر،", "Good Morning,", viewModel)
+                in 12..16 -> translate("روزت خوش،", "Good Day,", viewModel)
+                in 17..21 -> translate("عصر بخیر،", "Good Evening,", viewModel)
+                else -> translate("شب بخیر،", "Good Night,", viewModel)
+            }
+            val displayName = storedName.ifBlank { translate("دوست عزیز", "friend", viewModel) }
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = mood.color.copy(alpha = 0.12f)),
+                border = BorderStroke(1.dp, mood.color.copy(alpha = 0.3f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(text = mood.emoji, fontSize = 44.sp)
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "$greetingPrefix $displayName",
+                            fontSize = 13.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                        Text(
+                            text = mood.label,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = mood.color
+                        )
+                        Text(
+                            text = mood.subtitle,
+                            fontSize = 12.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                }
             }
         }
 
