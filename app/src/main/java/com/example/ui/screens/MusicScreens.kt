@@ -103,6 +103,8 @@ import androidx.palette.graphics.Palette
 import coil.imageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
+import androidx.compose.foundation.pager.VerticalPager
+import androidx.compose.foundation.pager.rememberPagerState
 
 @Composable
 fun Modifier.glassmorphic(
@@ -925,6 +927,12 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onBack = { currentSubScreen = null }
                                     )
                                 }
+                                subScreen is SubScreen.Discover -> {
+                                    DiscoverFeedScreen(
+                                        viewModel = viewModel,
+                                        onBack = { currentSubScreen = null }
+                                    )
+                                }
                                 else -> {
                                     when (tab) {
                                         0 -> HomeScreen(
@@ -934,7 +942,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
                                             onGenreClick = { selectedTab = 1 },
                                             onProfileClick = { selectedTab = 3; currentSubScreen = null },
-                                            onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                            onSettingsClick = { currentSubScreen = SubScreen.Settings },
+                                            onDiscoverClick = { currentSubScreen = SubScreen.Discover }
                                         )
                                         1 -> SearchScreen(
                                             viewModel = viewModel,
@@ -957,7 +966,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
                                             onGenreClick = { selectedTab = 1 },
                                             onProfileClick = { selectedTab = 3; currentSubScreen = null },
-                                            onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                            onSettingsClick = { currentSubScreen = SubScreen.Settings },
+                                            onDiscoverClick = { currentSubScreen = SubScreen.Discover }
                                         )
                                     }
                                 }
@@ -1135,6 +1145,12 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     onBack = { currentSubScreen = null }
                                 )
                             }
+                            subScreen is SubScreen.Discover -> {
+                                DiscoverFeedScreen(
+                                    viewModel = viewModel,
+                                    onBack = { currentSubScreen = null }
+                                )
+                            }
                             else -> {
                                 when (tab) {
                                     0 -> HomeScreen(
@@ -1144,7 +1160,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
                                         onGenreClick = { selectedTab = 1 },
                                         onProfileClick = { selectedTab = 3; currentSubScreen = null },
-                                        onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                        onSettingsClick = { currentSubScreen = SubScreen.Settings },
+                                        onDiscoverClick = { currentSubScreen = SubScreen.Discover }
                                     )
                                     1 -> SearchScreen(
                                         viewModel = viewModel,
@@ -1167,7 +1184,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onDownloadClick = { currentSubScreen = SubScreen.SubLibraryItem("downloads") },
                                         onGenreClick = { selectedTab = 1 },
                                         onProfileClick = { selectedTab = 3; currentSubScreen = null },
-                                        onSettingsClick = { currentSubScreen = SubScreen.Settings }
+                                        onSettingsClick = { currentSubScreen = SubScreen.Settings },
+                                        onDiscoverClick = { currentSubScreen = SubScreen.Discover }
                                     )
                                 }
                             }
@@ -1209,6 +1227,7 @@ sealed class SubScreen {
     data class PlaylistDetail(val playlist: LocalPlaylist) : SubScreen()
     data class SubLibraryItem(val type: String) : SubScreen()
     object Settings : SubScreen()
+    object Discover : SubScreen()
 }
 
 // --- Mini Player Bar Component ---
@@ -1337,7 +1356,8 @@ fun HomeScreen(
     onDownloadClick: () -> Unit,
     onGenreClick: (String) -> Unit,
     onProfileClick: () -> Unit = {},
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit = {},
+    onDiscoverClick: () -> Unit = {}
 ) {
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
@@ -1749,6 +1769,59 @@ fun HomeScreen(
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         modifier = Modifier.size(24.dp)
                     )
+                }
+            }
+
+            // TikTok-style Discover Feed entry banner
+            Box(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .fillMaxWidth()
+                    .height(90.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(Color(0xFF1A0033), Color(0xFF3D0057), AppleRed.copy(alpha = 0.85f))
+                        )
+                    )
+                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
+                    .clickable { onDiscoverClick() },
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "✨ ${translate("فید اکتشاف", "Discovery Feed", viewModel)}",
+                            color = Color.White,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                        Text(
+                            text = translate("اسکرول کن، بشنو، عاشق شو", "Scroll · Listen · Love", viewModel),
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 12.sp,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
             }
 
@@ -8484,4 +8557,263 @@ fun formatTime(ms: Long): String {
     val min = totalSecs / 60
     val sec = totalSecs % 60
     return "%02d:%02d".format(min, sec)
+}
+
+// --- TikTok-style Vertical Discovery Feed ---
+
+@Composable
+fun DiscoverFeedScreen(viewModel: MusicViewModel, onBack: () -> Unit) {
+    val songs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
+    val shuffled = remember(songs) { if (songs.size > 1) songs.shuffled() else songs }
+
+    if (shuffled.isEmpty()) {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = AppleRed)
+        }
+        return
+    }
+
+    val pagerState = rememberPagerState(pageCount = { shuffled.size })
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(pagerState.currentPage) {
+        val song = shuffled.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
+        viewModel.playSongDirectly(song, shuffled)
+        delay(30_000L)
+        if (pagerState.currentPage < shuffled.size - 1) {
+            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+        }
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        VerticalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            DiscoverPage(
+                song = shuffled[page],
+                viewModel = viewModel,
+                onLike = { viewModel.toggleFavoriteTrack(shuffled[page]) },
+                onAddToQueue = { viewModel.addToQueue(listOf(shuffled[page])) },
+                onNext = {
+                    scope.launch {
+                        if (page < shuffled.size - 1) pagerState.animateScrollToPage(page + 1)
+                    }
+                }
+            )
+        }
+
+        // Back button overlay
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier
+                .padding(top = 48.dp, start = 16.dp)
+                .align(Alignment.TopStart)
+                .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "برگشت",
+                tint = Color.White
+            )
+        }
+
+        // Page counter
+        Text(
+            text = "${pagerState.currentPage + 1} / ${shuffled.size}",
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 11.sp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 56.dp, end = 20.dp)
+        )
+    }
+}
+
+@Composable
+fun DiscoverPage(
+    song: SubsonicSong,
+    viewModel: MusicViewModel,
+    onLike: () -> Unit,
+    onAddToQueue: () -> Unit,
+    onNext: () -> Unit
+) {
+    val favoriteTracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
+    val isLiked = favoriteTracks.any { it.trackId == song.id }
+    val infiniteTransition = rememberInfiniteTransition(label = "vinyl")
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(12000, easing = LinearEasing)),
+        label = "rotate"
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Blurred album art background
+        AsyncImage(
+            model = viewModel.getCoverArtUrl(song.coverArt),
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(40.dp)
+                .graphicsLayer(alpha = 0.55f),
+            contentScale = ContentScale.Crop
+        )
+
+        // Dark gradient overlay
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.35f),
+                            Color.Transparent,
+                            Color.Black.copy(alpha = 0.85f)
+                        )
+                    )
+                )
+        )
+
+        // Rotating vinyl cover in center
+        Box(
+            modifier = Modifier
+                .size(240.dp)
+                .align(Alignment.Center)
+                .graphicsLayer(rotationZ = rotation)
+        ) {
+            // Vinyl disk background
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF1A1A1A), CircleShape)
+                    .border(2.dp, Color.White.copy(alpha = 0.1f), CircleShape)
+            )
+            // Album art centered on vinyl
+            AsyncImage(
+                model = viewModel.getCoverArtUrl(song.coverArt),
+                contentDescription = song.title,
+                modifier = Modifier
+                    .size(160.dp)
+                    .align(Alignment.Center)
+                    .clip(CircleShape)
+                    .border(3.dp, Color(0xFF2A2A2A), CircleShape),
+                contentScale = ContentScale.Crop
+            )
+            // Vinyl center hole
+            Box(
+                modifier = Modifier
+                    .size(16.dp)
+                    .align(Alignment.Center)
+                    .background(Color(0xFF111111), CircleShape)
+                    .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+            )
+        }
+
+        // Song info bottom-left
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 20.dp, bottom = 100.dp, end = 80.dp)
+        ) {
+            Text(
+                text = song.title,
+                color = Color.White,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = song.artist ?: "Unknown Artist",
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            if (!song.album.isNullOrBlank()) {
+                Text(
+                    text = song.album,
+                    color = Color.White.copy(alpha = 0.5f),
+                    fontSize = 12.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        // Right sidebar actions
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 110.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Like button
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                IconButton(
+                    onClick = onLike,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = "لایک",
+                        tint = if (isLiked) AppleRed else Color.White,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+                Text("لایک", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+            }
+
+            // Add to queue button
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                IconButton(
+                    onClick = onAddToQueue,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AddToQueue,
+                        contentDescription = "افزودن به صف",
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Text("صف", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+            }
+
+            // Skip to next button
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                IconButton(
+                    onClick = onNext,
+                    modifier = Modifier
+                        .size(52.dp)
+                        .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.SkipNext,
+                        contentDescription = "بعدی",
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
+                    )
+                }
+                Text("بعدی", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+            }
+        }
+
+        // Swipe hint at bottom center
+        Text(
+            text = "↕ بکش برای آهنگ بعدی",
+            color = Color.White.copy(alpha = 0.45f),
+            fontSize = 11.sp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 60.dp)
+        )
+    }
 }
