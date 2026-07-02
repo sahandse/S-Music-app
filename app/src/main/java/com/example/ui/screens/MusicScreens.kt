@@ -6786,10 +6786,17 @@ fun FullscreenPlayer(
             }
 
             // Central Area (either big artwork or lyrics list)
+            // When showing lyrics, we must give a fixed height so the inner LazyColumn
+            // has bounded constraints (verticalScroll Column cannot contain LazyColumn with
+            // infinite/fillMaxSize height — that causes IllegalStateException crash).
+            val screenHeightDp = LocalConfiguration.current.screenHeightDp.dp
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 260.dp)
+                    .then(
+                        if (playerTab == 1) Modifier.height(screenHeightDp - 240.dp)
+                        else Modifier.heightIn(min = 260.dp)
+                    )
                     .padding(vertical = 8.dp)
                     .pointerInput(song.id) {
                         var totalDrag = 0f
