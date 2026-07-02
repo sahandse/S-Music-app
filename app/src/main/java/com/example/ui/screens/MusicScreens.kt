@@ -4429,7 +4429,7 @@ fun getFallbackBiography(name: String, country: String, activeText: String, isFa
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ArtistDetailView(
     artist: SubsonicArtist,
