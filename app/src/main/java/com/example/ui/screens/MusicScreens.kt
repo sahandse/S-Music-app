@@ -5791,6 +5791,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
     val bassLevel by viewModel.bassLevel.collectAsStateWithLifecycle()
     val trebleLevel by viewModel.trebleLevel.collectAsStateWithLifecycle()
     val crossfadeEnabled by viewModel.crossfadeEnabled.collectAsStateWithLifecycle()
+    val crossfadeDurationSeconds by viewModel.crossfadeDurationSeconds.collectAsStateWithLifecycle()
     val wifiOnlyDownload by viewModel.wifiOnlyDownload.collectAsStateWithLifecycle()
     val autoBackupEnabled by viewModel.autoBackupEnabled.collectAsStateWithLifecycle()
     val transientMessage by viewModel.transientMessage.collectAsStateWithLifecycle()
@@ -6264,23 +6265,59 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = translate("افکت محو شدن بین آهنگ‌ها (کراس‌فید)", "Crossfade between tracks", viewModel),
-                        fontSize = 13.sp,
-                        fontFamily = LocalAppFontFamily.current,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Switch(
-                        checked = crossfadeEnabled,
-                        onCheckedChange = { viewModel.setCrossfadeEnabled(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
-                    )
+                Column {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = translate("افکت محو شدن بین آهنگ‌ها (کراس‌فید)", "Crossfade between tracks", viewModel),
+                            fontSize = 13.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Switch(
+                            checked = crossfadeEnabled,
+                            onCheckedChange = { viewModel.setCrossfadeEnabled(it) },
+                            colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                        )
+                    }
+                    androidx.compose.animation.AnimatedVisibility(visible = crossfadeEnabled) {
+                        Column(modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = translate("مدت زمان", "Duration", viewModel),
+                                    fontSize = 12.sp,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                )
+                                Text(
+                                    text = "$crossfadeDurationSeconds ${translate("ثانیه", "sec", viewModel)}",
+                                    fontSize = 12.sp,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    color = AppleRed
+                                )
+                            }
+                            Slider(
+                                value = crossfadeDurationSeconds.toFloat(),
+                                onValueChange = { viewModel.setCrossfadeDuration(it.toInt()) },
+                                valueRange = 1f..12f,
+                                steps = 10,
+                                colors = androidx.compose.material3.SliderDefaults.colors(
+                                    thumbColor = AppleRed,
+                                    activeTrackColor = AppleRed,
+                                    inactiveTrackColor = AppleRed.copy(alpha = 0.25f)
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
                 }
 
                 Row(
@@ -6718,12 +6755,12 @@ fun FullscreenPlayer(
 
     val song = currentTrack!!
 
-    // Palette-based dominant color that animates on track change (like Spotify/Apple Music)
+    // Palette-based dominant color that animates on track change (Apple Music style)
     val context = LocalContext.current
-    var dominantColor by remember(song.id) { mutableStateOf(Color(0xFF121212)) }
+    var dominantColor by remember(song.id) { mutableStateOf(Color(0xFF0D0D0D)) }
     val dominantColorAnimated by animateColorAsState(
         targetValue = dominantColor,
-        animationSpec = tween(durationMillis = 900),
+        animationSpec = tween(durationMillis = 1200),
         label = "DominantColor"
     )
     LaunchedEffect(song.id) {
@@ -6731,13 +6768,14 @@ fun FullscreenPlayer(
             val req = ImageRequest.Builder(context)
                 .data(viewModel.getCoverArtUrl(song.coverArt))
                 .allowHardware(false)
+                .size(256)
                 .build()
             val result = context.imageLoader.execute(req)
             if (result is SuccessResult) {
                 val bitmap = (result.drawable as? BitmapDrawable)?.bitmap
                 bitmap?.let { bmp ->
                     val palette = Palette.from(bmp).generate()
-                    val swatch = palette.dominantSwatch ?: palette.vibrantSwatch
+                    val swatch = palette.vibrantSwatch ?: palette.dominantSwatch ?: palette.mutedSwatch
                     swatch?.let { dominantColor = Color(it.rgb) }
                 }
             }
@@ -6747,36 +6785,43 @@ fun FullscreenPlayer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(Color(0xFF050505))
     ) {
-        // Dynamic Blur cover artwork background
+        // Heavy-blur album art fill — Apple Music full-bleed ambient style
         AsyncImage(
             model = viewModel.getCoverArtUrl(song.coverArt),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .blur(80.dp)
-                .graphicsLayer(alpha = 0.45f),
+                .blur(140.dp)
+                .graphicsLayer(alpha = 0.70f),
             contentScale = ContentScale.Crop
         )
 
-        // Dynamic dominant-color gradient overlay (Spotify/Apple Music style)
+        // Dominant-color gradient: vivid top → transparent mid → near-black bottom
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0f to dominantColorAnimated.copy(alpha = 0.72f),
-                        0.55f to dominantColorAnimated.copy(alpha = 0.25f),
-                        1f to Color.Black.copy(alpha = 0.90f)
+                        0f to dominantColorAnimated.copy(alpha = 0.55f),
+                        0.38f to dominantColorAnimated.copy(alpha = 0.18f),
+                        0.65f to Color.Black.copy(alpha = 0.60f),
+                        1f to Color.Black.copy(alpha = 0.96f)
                     )
                 )
+        )
+
+        // Subtle top-corner light bloom
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
                 .drawBehind {
                     drawRect(
                         brush = Brush.radialGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.06f), Color.Transparent),
+                            colors = listOf(Color.White.copy(alpha = 0.09f), Color.Transparent),
                             center = androidx.compose.ui.geometry.Offset(0f, 0f),
-                            radius = size.width * 1.1f
+                            radius = size.width * 1.0f
                         )
                     )
                 }

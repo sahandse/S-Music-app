@@ -47,6 +47,8 @@ class MusicPlaybackService : MediaLibraryService() {
     private var equalizer: Equalizer? = null
     private var prefs: SharedPreferences? = null
     private var fadeJob: Job? = null
+    private var positionCheckJob: Job? = null
+    private var isFadingOut = false
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private lateinit var repository: MusicRepository
 
@@ -289,8 +291,10 @@ class MusicPlaybackService : MediaLibraryService() {
 
             exoPlayer.addListener(object : Player.Listener {
                 override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                    isFadingOut = false
                     if (prefs?.getBoolean("crossfade_enabled", false) == true) {
-                        runFadeIn(exoPlayer)
+                        val durationMs = (prefs?.getInt("crossfade_duration_seconds", 3) ?: 3) * 1000L
+                        runFadeIn(exoPlayer, durationMs)
                     }
                     val songId = mediaItem?.mediaId
                     if (songId != null) {
@@ -299,6 +303,10 @@ class MusicPlaybackService : MediaLibraryService() {
                             mediaSession?.setCustomLayout(ImmutableList.of(favoriteButton(isFavorite)))
                         }
                     }
+                }
+
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    if (isPlaying) startCrossfadeTracking(exoPlayer) else positionCheckJob?.cancel()
                 }
             })
 
@@ -364,17 +372,49 @@ class MusicPlaybackService : MediaLibraryService() {
         }
     }
 
-    private fun runFadeIn(exoPlayer: ExoPlayer) {
+    private fun startCrossfadeTracking(exoPlayer: ExoPlayer) {
+        positionCheckJob?.cancel()
+        positionCheckJob = serviceScope.launch {
+            while (true) {
+                delay(300L)
+                val sp = prefs ?: break
+                if (!sp.getBoolean("crossfade_enabled", false)) continue
+                val duration = exoPlayer.duration
+                val position = exoPlayer.currentPosition
+                val crossfadeMs = (sp.getInt("crossfade_duration_seconds", 3)) * 1000L
+                if (duration > 0 && duration != androidx.media3.common.C.TIME_UNSET
+                    && position >= duration - crossfadeMs && !isFadingOut
+                ) {
+                    isFadingOut = true
+                    runFadeOut(exoPlayer, crossfadeMs)
+                }
+            }
+        }
+    }
+
+    private fun runFadeIn(exoPlayer: ExoPlayer, durationMs: Long = 3000L) {
         fadeJob?.cancel()
         fadeJob = serviceScope.launch {
-            val steps = 10
-            val durationMs = 600L
+            val steps = 20
             exoPlayer.volume = 0f
             for (i in 1..steps) {
                 exoPlayer.volume = i / steps.toFloat()
                 delay(durationMs / steps)
             }
             exoPlayer.volume = 1f
+        }
+    }
+
+    private fun runFadeOut(exoPlayer: ExoPlayer, durationMs: Long = 3000L) {
+        fadeJob?.cancel()
+        fadeJob = serviceScope.launch {
+            val steps = 20
+            val startVol = exoPlayer.volume
+            for (i in steps downTo 0) {
+                exoPlayer.volume = startVol * (i / steps.toFloat())
+                delay(durationMs / steps)
+            }
+            exoPlayer.volume = 0f
         }
     }
 
@@ -393,6 +433,7 @@ class MusicPlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         fadeJob?.cancel()
+        positionCheckJob?.cancel()
         serviceScope.cancel()
         prefs?.unregisterOnSharedPreferenceChangeListener(prefsListener)
         equalizer?.release()

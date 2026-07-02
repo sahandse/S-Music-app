@@ -176,6 +176,9 @@ class MusicViewModel(
     private val _crossfadeEnabled = MutableStateFlow(false)
     val crossfadeEnabled: StateFlow<Boolean> = _crossfadeEnabled.asStateFlow()
 
+    private val _crossfadeDurationSeconds = MutableStateFlow(3)
+    val crossfadeDurationSeconds: StateFlow<Int> = _crossfadeDurationSeconds.asStateFlow()
+
     private val _wifiOnlyDownload = MutableStateFlow(false)
     val wifiOnlyDownload: StateFlow<Boolean> = _wifiOnlyDownload.asStateFlow()
 
@@ -329,6 +332,7 @@ class MusicViewModel(
         _bassLevel.value = prefs.getInt("bass_level", 50)
         _trebleLevel.value = prefs.getInt("treble_level", 50)
         _crossfadeEnabled.value = prefs.getBoolean("crossfade_enabled", false)
+        _crossfadeDurationSeconds.value = prefs.getInt("crossfade_duration_seconds", 3)
         _wifiOnlyDownload.value = prefs.getBoolean("wifi_only_download", false)
         _autoBackupEnabled.value = prefs.getBoolean("auto_backup_enabled", false)
         _lastFmUsername.value = prefs.getString("lastfm_username", "") ?: ""
@@ -772,6 +776,12 @@ class MusicViewModel(
         _crossfadeEnabled.value = enabled
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("crossfade_enabled", enabled).apply()
+    }
+
+    fun setCrossfadeDuration(seconds: Int) {
+        _crossfadeDurationSeconds.value = seconds
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putInt("crossfade_duration_seconds", seconds).apply()
     }
 
     fun setWifiOnlyDownload(enabled: Boolean) {
