@@ -72,7 +72,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import com.example.ui.MusicVideoItem
 import androidx.mediarouter.app.MediaRouteButton
 import com.google.android.gms.cast.framework.CastButtonFactory
 import kotlinx.coroutines.delay
@@ -8670,13 +8673,12 @@ fun DiscoverFeedScreen(
     onBack: () -> Unit = {},
     showBackButton: Boolean = true
 ) {
-    // 0 = audio, 1 = aparat, 2 = apple music
+    // 0 = audio library, 1 = Apple Music video previews
     var feedTab by remember { mutableStateOf(0) }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when (feedTab) {
-            1 -> AparatVideoFeed()
-            2 -> AppleMusicVideoFeed()
+            1 -> MusicVideoFeed(viewModel = viewModel)
             else -> AudioDiscoverFeed(viewModel = viewModel, showBackButton = showBackButton, onBack = onBack)
         }
 
@@ -8691,24 +8693,20 @@ fun DiscoverFeedScreen(
         ) {
             val activeColor = AppleRed
             val inactiveColor = Color.White.copy(alpha = 0.55f)
-            listOf(
-                "موسیقی شما" to 0,
-                "موزیک ویدیو" to 1,
-                "بزودی" to 2
-            ).forEach { (label, tabIndex) ->
+            listOf("موسیقی شما" to 0, "موزیک ویدیو" to 1).forEach { (label, tabIndex) ->
                 val selected = feedTab == tabIndex
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(if (selected) activeColor else Color.Transparent)
                         .clickable { feedTab = tabIndex }
-                        .padding(horizontal = 14.dp, vertical = 6.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = label,
                         color = if (selected) Color.White else inactiveColor,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                         fontFamily = LocalAppFontFamily.current
                     )
@@ -8792,39 +8790,133 @@ private fun AudioDiscoverFeed(
 }
 
 @Composable
-private fun AparatVideoFeed() {
-    AndroidView(
-        factory = { context ->
-            android.webkit.WebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-                webViewClient = android.webkit.WebViewClient()
-                loadUrl("https://www.aparat.com/landing-music")
+fun MusicVideoFeed(viewModel: MusicViewModel) {
+    val videos by viewModel.discoverMusicVideos.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        if (viewModel.discoverMusicVideos.value.isEmpty()) viewModel.fetchMusicVideos()
+    }
+
+    if (videos.isEmpty()) {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator(color = AppleRed)
+                Text("در حال دریافت موزیک ویدیو...", color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
             }
-        },
-        modifier = Modifier.fillMaxSize()
-    )
+        }
+        return
+    }
+
+    val pagerState = rememberPagerState(pageCount = { videos.size })
+    var isMuted by remember { mutableStateOf(false) }
+
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            repeatMode = Player.REPEAT_MODE_ONE
+            playWhenReady = true
+            volume = 1f
+        }
+    }
+    DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
+
+    LaunchedEffect(pagerState.currentPage, videos) {
+        val video = videos.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
+        exoPlayer.setMediaItem(MediaItem.fromUri(video.previewUrl))
+        exoPlayer.prepare()
+        exoPlayer.play()
+    }
+
+    LaunchedEffect(isMuted) { exoPlayer.volume = if (isMuted) 0f else 1f }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        VerticalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            MusicVideoPage(
+                video = videos[page],
+                isActive = page == pagerState.currentPage,
+                exoPlayer = exoPlayer,
+                isMuted = isMuted,
+                onToggleMute = { isMuted = !isMuted }
+            )
+        }
+        Text(
+            text = "${pagerState.currentPage + 1} / ${videos.size}",
+            color = Color.White.copy(0.5f),
+            fontSize = 11.sp,
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 16.dp)
+        )
+    }
 }
 
 @Composable
-private fun AppleMusicVideoFeed() {
-    AndroidView(
-        factory = { context ->
-            android.webkit.WebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.mediaPlaybackRequiresUserGesture = false
-                settings.loadWithOverviewMode = true
-                settings.useWideViewPort = true
-                webViewClient = android.webkit.WebViewClient()
-                loadUrl("https://music.apple.com/us/room/6786349264")
+fun MusicVideoPage(
+    video: MusicVideoItem,
+    isActive: Boolean,
+    exoPlayer: ExoPlayer,
+    isMuted: Boolean,
+    onToggleMute: () -> Unit
+) {
+    Box(Modifier.fillMaxSize()) {
+        // Blurred thumbnail background
+        AsyncImage(
+            model = video.thumbnailUrl,
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().blur(30.dp).graphicsLayer(alpha = 0.6f),
+            contentScale = ContentScale.Crop
+        )
+
+        // Video surface (only active page renders the player)
+        if (isActive) {
+            AndroidView(
+                factory = { ctx ->
+                    android.view.SurfaceView(ctx).also { sv ->
+                        exoPlayer.setVideoSurfaceView(sv)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .align(Alignment.Center)
+            )
+        } else {
+            AsyncImage(
+                model = video.thumbnailUrl,
+                contentDescription = null,
+                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).align(Alignment.Center),
+                contentScale = ContentScale.Fit
+            )
+        }
+
+        // Bottom gradient + info
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(180.dp)
+                .align(Alignment.BottomCenter)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.9f))))
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.BottomCenter)
+                .padding(horizontal = 16.dp, vertical = 20.dp),
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current, maxLines = 2)
+                Text(video.artistName, color = Color.White.copy(0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                Text("Apple Music · پیش‌نمایش", color = Color.White.copy(0.45f), fontSize = 10.sp, fontFamily = LocalAppFontFamily.current)
             }
-        },
-        modifier = Modifier.fillMaxSize()
-    )
+            IconButton(onClick = onToggleMute) {
+                Icon(
+                    imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                    contentDescription = if (isMuted) "صدا روشن" else "بی‌صدا",
+                    tint = Color.White
+                )
+            }
+        }
+    }
 }
 
 @Composable
