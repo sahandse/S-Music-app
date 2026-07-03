@@ -8968,8 +8968,11 @@ fun MusicVideoFeed(
     }
     DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
 
-    LaunchedEffect(pagerState.currentPage, videos) {
-        val video = videos.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
+    // Keyed on the current video's id (not the whole list) so appending the
+    // next page doesn't restart the video that is already playing
+    val currentVideo = videos.getOrNull(pagerState.currentPage)
+    LaunchedEffect(currentVideo?.id) {
+        val video = currentVideo ?: return@LaunchedEffect
         exoPlayer.setMediaItem(MediaItem.fromUri(video.previewUrl))
         exoPlayer.prepare()
         exoPlayer.play()
