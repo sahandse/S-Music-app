@@ -754,7 +754,6 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by viewModel.playbackConnection.isPlaying.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val activeApplePreview by viewModel.activeApplePreview.collectAsStateWithLifecycle()
 
     val dominantColorArgb by viewModel.dominantColorArgb.collectAsStateWithLifecycle()
     val accentColor by animateColorAsState(
@@ -1014,11 +1013,6 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         }
                     }
 
-                    // Apple Music 30s preview bar (landscape)
-                    activeApplePreview?.let { previewTrack ->
-                        ApplePreviewBar(track = previewTrack, onClose = { viewModel.stopApplePreview() })
-                    }
-
                     // Docked Mini Player docked below main area in landscape
                     androidx.compose.animation.AnimatedVisibility(
                         visible = currentTrack != null && !isPlayerExpanded,
@@ -1046,11 +1040,6 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                 containerColor = Color.Transparent,
                 bottomBar = {
                     Column {
-                        // Apple Music 30s preview bar
-                        activeApplePreview?.let { previewTrack ->
-                            ApplePreviewBar(track = previewTrack, onClose = { viewModel.stopApplePreview() })
-                        }
-
                         AnimatedVisibility(
                             visible = currentTrack != null && !isPlayerExpanded,
                             enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
@@ -1410,10 +1399,7 @@ fun HomeScreen(
     val favoriteAlbums by viewModel.favoriteAlbums.collectAsStateWithLifecycle()
     val preferredGenres by viewModel.preferredGenres.collectAsStateWithLifecycle()
     val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
-    val appleTopSongs by viewModel.appleTopSongs.collectAsStateWithLifecycle()
     val context = LocalContext.current
-
-    LaunchedEffect(Unit) { viewModel.fetchAppleTopSongs() }
 
     val newestTracks = remember(randomSongs) {
         randomSongs.filter { it.year != null }.sortedByDescending { it.year }.take(10)
@@ -1986,24 +1972,6 @@ fun HomeScreen(
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
                             imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, discoverWeeklySongs) }
-                        )
-                    }
-                }
-            }
-
-            // Global Top Songs — Apple most-played RSS feed with 30s previews (free, no token)
-            if (appleTopSongs.isNotEmpty()) {
-                SectionTitle(title = translate("پرطرفدارترین‌های جهان", "Global Top Songs", viewModel))
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    itemsIndexed(appleTopSongs) { index, track ->
-                        VerticalBigCard(
-                            title = "${index + 1}. ${track.title}",
-                            subtitle = track.artistName,
-                            imageUrl = track.artworkUrl,
-                            onClick = { viewModel.playApplePreview(track) }
                         )
                     }
                 }
@@ -2847,15 +2815,11 @@ fun SearchScreen(
     val history by viewModel.searchHistory.collectAsStateWithLifecycle()
     val isSearching by viewModel.isSearching.collectAsStateWithLifecycle()
     val trendingAlbums by viewModel.trendingAlbums.collectAsStateWithLifecycle()
-    val appleResults by viewModel.appleSearchResults.collectAsStateWithLifecycle()
     var activeFilter by remember { mutableStateOf("همه") }
     var selectedGenre by remember { mutableStateOf<String?>(null) }
     var selectedYear by remember { mutableStateOf<Int?>(null) }
 
     val context = LocalContext.current
-
-    // Free iTunes song search alongside server results (debounced in the ViewModel)
-    LaunchedEffect(query) { viewModel.searchApplePreviews(query) }
 
     // Voice recognizer intent setup
     val voiceLauncher = rememberLauncherForActivityResult(
@@ -3245,8 +3209,7 @@ fun SearchScreen(
                 val isResultEmpty = (artists.isEmpty() || !showArtists) &&
                                     (albums.isEmpty() || !showAlbums) &&
                                     (songs.isEmpty() || !showSongs) &&
-                                    offlineMatches.isEmpty() &&
-                                    (appleResults.isEmpty() || !showSongs)
+                                    offlineMatches.isEmpty()
 
                 if (isResultEmpty) {
                     Column(
@@ -3402,61 +3365,7 @@ fun SearchScreen(
                             }
                         }
 
-                        // 4. Apple Music previews (free iTunes Search API — songs not on the server)
-                        if (appleResults.isNotEmpty() && showSongs) {
-                            item {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.MusicNote,
-                                        contentDescription = null,
-                                        tint = AppleRed,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = translate("پیش‌نمایش از Apple Music", "Apple Music Previews", viewModel),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = AppleRed,
-                                        fontFamily = LocalAppFontFamily.current
-                                    )
-                                }
-                            }
-                            items(appleResults) { appleTrack ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { viewModel.playApplePreview(appleTrack) }
-                                        .padding(vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    AsyncImage(
-                                        model = appleTrack.artworkUrl,
-                                        contentDescription = appleTrack.title,
-                                        modifier = Modifier
-                                            .size(46.dp)
-                                            .clip(RoundedCornerShape(8.dp)),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(appleTrack.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
-                                        Text(appleTrack.artistName, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
-                                    }
-                                    Icon(
-                                        imageVector = Icons.Default.PlayCircleOutline,
-                                        contentDescription = "پخش پیش‌نمایش",
-                                        tint = AppleRed.copy(alpha = 0.7f),
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        // 5. Downloaded / Offline matches
+                        // 4. Downloaded / Offline matches
                         if (offlineMatches.isNotEmpty()) {
                             item {
                                 Row(
@@ -8805,16 +8714,18 @@ fun DiscoverFeedScreen(
     onArtistClick: (String) -> Unit = {},
     onSongClick: (SubsonicSong) -> Unit = {}
 ) {
-    // 0 = audio library, 1 = Apple Music video previews
+    // 0 = own-server audio, 1 = Apple Music video previews, 2 = Apple global top songs (30s previews)
     var feedTab by remember { mutableStateOf(0) }
 
     LaunchedEffect(feedTab) {
-        if (feedTab == 1) viewModel.pausePlayback()
+        // Leaving the server-audio tab pauses the main player so previews never overlap it
+        if (feedTab != 0) viewModel.pausePlayback()
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when (feedTab) {
             1 -> MusicVideoFeed(viewModel = viewModel, onArtistClick = onArtistClick, onOpenServerSong = onSongClick)
+            2 -> AppleTopSongsFeed(viewModel = viewModel, onArtistClick = onArtistClick)
             else -> AudioDiscoverFeed(viewModel = viewModel, showBackButton = showBackButton, onBack = onBack, onArtistClick = onArtistClick)
         }
 
@@ -8829,7 +8740,7 @@ fun DiscoverFeedScreen(
         ) {
             val activeColor = AppleRed
             val inactiveColor = Color.White.copy(alpha = 0.55f)
-            listOf("موسیقی شما" to 0, "موزیک ویدیو" to 1).forEach { (label, tabIndex) ->
+            listOf("موسیقی شما" to 0, "موزیک ویدیو" to 1, "برترین‌ها" to 2).forEach { (label, tabIndex) ->
                 val selected = feedTab == tabIndex
                 Box(
                     modifier = Modifier
@@ -9426,86 +9337,187 @@ fun rememberSongCoverUrl(song: SubsonicSong, viewModel: MusicViewModel): String 
     }
 }
 
-// --- Apple Music 30s Preview Bar (free iTunes previews, no Developer Token) ---
+// --- Discover: Apple Top Songs 30s preview feed (free iTunes previews, no Developer Token) ---
 @Composable
-fun ApplePreviewBar(track: ApplePreviewTrack, onClose: () -> Unit) {
+fun AppleTopSongsFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit = {}) {
+    val tracks by viewModel.appleTopSongs.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    var isPreviewPlaying by remember(track.previewUrl) { mutableStateOf(true) }
-    val previewPlayer = remember(track.previewUrl) {
-        ExoPlayer.Builder(context).build().apply {
-            setMediaItem(MediaItem.fromUri(track.previewUrl))
-            prepare()
-            playWhenReady = true
+
+    LaunchedEffect(Unit) { viewModel.fetchAppleTopSongs() }
+
+    if (tracks.isEmpty()) {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator(color = AppleRed)
+                Text("در حال دریافت برترین‌های جهان...", color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+            }
         }
+        return
     }
+
+    val pagerState = rememberPagerState(pageCount = { tracks.size })
+    val scope = rememberCoroutineScope()
+    var isPreviewPlaying by remember { mutableStateOf(true) }
+
+    val previewPlayer = remember {
+        ExoPlayer.Builder(context).build().apply { playWhenReady = true }
+    }
+    DisposableEffect(previewPlayer) { onDispose { previewPlayer.release() } }
+
+    // When a 30s preview finishes, advance to the next page automatically
     DisposableEffect(previewPlayer) {
         val listener = object : Player.Listener {
             override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_ENDED) onClose()
+                if (state == Player.STATE_ENDED) {
+                    scope.launch {
+                        if (pagerState.currentPage < tracks.size - 1) {
+                            pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                        }
+                    }
+                }
             }
         }
         previewPlayer.addListener(listener)
-        onDispose { previewPlayer.release() }
+        onDispose { previewPlayer.removeListener(listener) }
     }
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFF1C1C1E))
-            .border(1.dp, AppleRed.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
+    LaunchedEffect(pagerState.currentPage) {
+        val track = tracks.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
+        previewPlayer.setMediaItem(MediaItem.fromUri(track.previewUrl))
+        previewPlayer.prepare()
+        previewPlayer.play()
+        isPreviewPlaying = true
+    }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        VerticalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            AppleTopSongPage(
+                track = tracks[page],
+                rank = page + 1,
+                isPlaying = isPreviewPlaying && page == pagerState.currentPage,
+                onTogglePlay = {
+                    if (previewPlayer.isPlaying) previewPlayer.pause() else previewPlayer.play()
+                    isPreviewPlaying = previewPlayer.isPlaying
+                },
+                onArtistClick = onArtistClick
+            )
+        }
+        Text(
+            text = "${pagerState.currentPage + 1} / ${tracks.size}",
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 11.sp,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 56.dp, end = 20.dp)
+        )
+    }
+}
+
+@Composable
+fun AppleTopSongPage(
+    track: ApplePreviewTrack,
+    rank: Int,
+    isPlaying: Boolean,
+    onTogglePlay: () -> Unit,
+    onArtistClick: (String) -> Unit = {}
+) {
+    Box(Modifier.fillMaxSize()) {
+        // Blurred artwork background
         AsyncImage(
             model = track.artworkUrl,
-            contentDescription = track.title,
-            modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(10.dp)),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize().blur(40.dp).graphicsLayer(alpha = 0.55f),
             contentScale = ContentScale.Crop
         )
-        Column(modifier = Modifier.weight(1f)) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color.Black.copy(alpha = 0.35f), Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                    )
+                )
+        )
+
+        // Big artwork with rank badge; tap toggles the preview
+        Box(
+            modifier = Modifier
+                .size(260.dp)
+                .align(Alignment.Center)
+                .clip(RoundedCornerShape(20.dp))
+                .clickable(onClick = onTogglePlay)
+        ) {
+            AsyncImage(
+                model = track.artworkUrl,
+                contentDescription = track.title,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+            if (!isPlaying) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = "پخش",
+                    tint = Color.White.copy(alpha = 0.9f),
+                    modifier = Modifier
+                        .size(64.dp)
+                        .align(Alignment.Center)
+                        .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                        .padding(10.dp)
+                )
+            }
+            Text(
+                text = "#$rank",
+                color = Color.White,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .padding(10.dp)
+                    .background(AppleRed, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 4.dp)
+            )
+        }
+
+        // Info bottom-left
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 20.dp, bottom = 100.dp, end = 40.dp)
+        ) {
             Text(
                 text = track.title,
                 color = Color.White,
-                fontSize = 13.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 fontFamily = LocalAppFontFamily.current
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = track.artistName,
+                color = Color.White.copy(alpha = 0.75f),
+                fontSize = 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontFamily = LocalAppFontFamily.current,
+                modifier = Modifier.clickable { onArtistClick(track.artistName) }
             )
             Text(
-                text = "${track.artistName} · پیش‌نمایش Apple Music",
-                color = Color.White.copy(alpha = 0.55f),
+                text = "Apple Music · پیش‌نمایش ۳۰ ثانیه‌ای",
+                color = Color.White.copy(alpha = 0.45f),
                 fontSize = 11.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
                 fontFamily = LocalAppFontFamily.current
             )
         }
-        IconButton(
-            onClick = {
-                if (isPreviewPlaying) previewPlayer.pause() else previewPlayer.play()
-                isPreviewPlaying = !isPreviewPlaying
-            },
-            modifier = Modifier.size(38.dp)
-        ) {
-            Icon(
-                imageVector = if (isPreviewPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                contentDescription = if (isPreviewPlaying) "توقف" else "پخش",
-                tint = AppleRed
-            )
-        }
-        IconButton(onClick = onClose, modifier = Modifier.size(32.dp)) {
-            Icon(
-                imageVector = Icons.Default.Close,
-                contentDescription = "بستن",
-                tint = Color.White.copy(alpha = 0.6f),
-                modifier = Modifier.size(18.dp)
-            )
-        }
+
+        // Swipe hint
+        Text(
+            text = "↕ بکش برای آهنگ بعدی",
+            color = Color.White.copy(alpha = 0.45f),
+            fontSize = 11.sp,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 60.dp)
+        )
     }
 }
