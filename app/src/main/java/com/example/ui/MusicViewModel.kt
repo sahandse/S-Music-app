@@ -38,6 +38,14 @@ data class MusicVideoItem(
     val previewUrl: String
 )
 
+data class ApplePreviewTrack(
+    val id: Long,
+    val title: String,
+    val artistName: String,
+    val artworkUrl: String,
+    val previewUrl: String
+)
+
 class MusicViewModel(
     application: Application,
     private val repository: MusicRepository,
@@ -468,6 +476,7 @@ class MusicViewModel(
 
     // --- Playback Controls Helpers ---
     fun playSongDirectly(song: SubsonicSong, queue: List<SubsonicSong>) {
+        _activeApplePreview.value = null
         playbackConnection.playTrack(song, queue)
     }
 
@@ -483,6 +492,7 @@ class MusicViewModel(
             album = track.album,
             duration = track.duration
         )
+        _activeApplePreview.value = null
         playbackConnection.playTrack(song, listOf(song))
     }
 
@@ -979,6 +989,91 @@ class MusicViewModel(
             } finally {
                 _isLoadingMoreVideos.value = false
             }
+        }
+    }
+
+    // --- Apple Music free integrations (iTunes Search API + RSS, no Developer Token) ---
+    private val _appleTopSongs = MutableStateFlow<List<ApplePreviewTrack>>(emptyList())
+    val appleTopSongs: StateFlow<List<ApplePreviewTrack>> = _appleTopSongs.asStateFlow()
+
+    private val _appleSearchResults = MutableStateFlow<List<ApplePreviewTrack>>(emptyList())
+    val appleSearchResults: StateFlow<List<ApplePreviewTrack>> = _appleSearchResults.asStateFlow()
+
+    private val _activeApplePreview = MutableStateFlow<ApplePreviewTrack?>(null)
+    val activeApplePreview: StateFlow<ApplePreviewTrack?> = _activeApplePreview.asStateFlow()
+
+    fun playApplePreview(track: ApplePreviewTrack) {
+        pausePlayback()
+        _activeApplePreview.value = track
+    }
+
+    fun stopApplePreview() {
+        _activeApplePreview.value = null
+    }
+
+    private fun parseApplePreviewTracks(body: String): List<ApplePreviewTrack> {
+        val arr = org.json.JSONObject(body).getJSONArray("results")
+        val items = mutableListOf<ApplePreviewTrack>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val preview = obj.optString("previewUrl", "")
+            if (preview.isBlank()) continue
+            items.add(
+                ApplePreviewTrack(
+                    id = obj.optLong("trackId", i.toLong()),
+                    title = obj.optString("trackName", ""),
+                    artistName = obj.optString("artistName", ""),
+                    artworkUrl = obj.optString("artworkUrl100", "").replace("100x100bb", "600x600bb"),
+                    previewUrl = preview
+                )
+            )
+        }
+        return items
+    }
+
+    fun fetchAppleTopSongs(country: String = "us") {
+        if (_appleTopSongs.value.isNotEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val client = okhttp3.OkHttpClient()
+                // Free Apple marketing RSS feed: most-played songs of the day
+                val rssUrl = "https://rss.applemarketingtools.com/api/v2/$country/music/most-played/50/songs.json"
+                val rssBody = client.newCall(okhttp3.Request.Builder().url(rssUrl).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                val rssResults = org.json.JSONObject(rssBody).getJSONObject("feed").getJSONArray("results")
+                val ids = mutableListOf<Long>()
+                for (i in 0 until rssResults.length()) {
+                    rssResults.getJSONObject(i).optString("id").toLongOrNull()?.let { ids.add(it) }
+                }
+                if (ids.isEmpty()) return@launch
+                // The RSS feed has no preview URLs; one batch lookup call resolves them all
+                val lookupUrl = "https://itunes.apple.com/lookup?id=${ids.joinToString(",")}&country=$country"
+                val lookupBody = client.newCall(okhttp3.Request.Builder().url(lookupUrl).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                val byId = parseApplePreviewTracks(lookupBody).associateBy { it.id }
+                _appleTopSongs.value = ids.mapNotNull { byId[it] }
+            } catch (_: Exception) {}
+        }
+    }
+
+    private var appleSearchJob: kotlinx.coroutines.Job? = null
+
+    fun searchApplePreviews(query: String) {
+        appleSearchJob?.cancel()
+        if (query.isBlank()) {
+            _appleSearchResults.value = emptyList()
+            return
+        }
+        appleSearchJob = viewModelScope.launch(Dispatchers.IO) {
+            delay(500) // debounce typing to respect the ~20 req/min rate limit
+            try {
+                val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+                val url = "https://itunes.apple.com/search?term=$encoded&media=music&entity=song&limit=15&country=us"
+                val client = okhttp3.OkHttpClient()
+                val body = client.newCall(okhttp3.Request.Builder().url(url).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                _appleSearchResults.value = parseApplePreviewTracks(body)
+            } catch (_: Exception) {}
         }
     }
 
