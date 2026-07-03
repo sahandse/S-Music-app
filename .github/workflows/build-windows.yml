@@ -31,9 +31,10 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Build renderer + package Windows installer
+        # No GH_TOKEN here on purpose: it makes electron-builder try to
+        # auto-publish to GitHub and crash on update-info. The release upload
+        # is handled by the ncipollo step below instead.
         run: npm run build
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: List build output
         id: out
