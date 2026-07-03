@@ -1061,26 +1061,47 @@ class MusicViewModel(
     }
 
     fun fetchAppleTopSongs(country: String = "us") {
-        if (_appleTopSongs.value.isNotEmpty()) return
+        // Refetch when the list is empty OR previews never resolved (e.g. lookup failed)
+        if (_appleTopSongs.value.any { it.previewUrl.isNotBlank() }) return
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 val client = okhttp3.OkHttpClient()
-                // Free Apple marketing RSS feed: most-played songs of the day
+                // Free Apple marketing RSS feed: most-played songs of the day.
+                // Title, artist, and artwork all come straight from the feed so the
+                // covers always show; the lookup call only resolves preview URLs.
                 val rssUrl = "https://rss.applemarketingtools.com/api/v2/$country/music/most-played/50/songs.json"
                 val rssBody = client.newCall(okhttp3.Request.Builder().url(rssUrl).build())
                     .execute().use { it.body?.string() } ?: return@launch
                 val rssResults = org.json.JSONObject(rssBody).getJSONObject("feed").getJSONArray("results")
-                val ids = mutableListOf<Long>()
+                val rssTracks = mutableListOf<ApplePreviewTrack>()
                 for (i in 0 until rssResults.length()) {
-                    rssResults.getJSONObject(i).optString("id").toLongOrNull()?.let { ids.add(it) }
+                    val obj = rssResults.getJSONObject(i)
+                    val id = obj.optString("id").toLongOrNull() ?: continue
+                    rssTracks.add(
+                        ApplePreviewTrack(
+                            id = id,
+                            title = obj.optString("name", ""),
+                            artistName = obj.optString("artistName", ""),
+                            artworkUrl = obj.optString("artworkUrl100", "").replace("100x100bb", "600x600bb"),
+                            previewUrl = "" // filled from the lookup below
+                        )
+                    )
                 }
-                if (ids.isEmpty()) return@launch
-                // The RSS feed has no preview URLs; one batch lookup call resolves them all
-                val lookupUrl = "https://itunes.apple.com/lookup?id=${ids.joinToString(",")}&country=$country"
+                if (rssTracks.isEmpty()) return@launch
+                // Show the chart immediately with covers; previews get merged in after
+                _appleTopSongs.value = rssTracks
+
+                val lookupUrl = "https://itunes.apple.com/lookup?id=${rssTracks.joinToString(",") { it.id.toString() }}&country=$country"
                 val lookupBody = client.newCall(okhttp3.Request.Builder().url(lookupUrl).build())
                     .execute().use { it.body?.string() } ?: return@launch
-                val byId = parseApplePreviewTracks(lookupBody).associateBy { it.id }
-                _appleTopSongs.value = ids.mapNotNull { byId[it] }
+                val lookupById = parseApplePreviewTracks(lookupBody).associateBy { it.id }
+                _appleTopSongs.value = rssTracks.map { rss ->
+                    val looked = lookupById[rss.id]
+                    rss.copy(
+                        previewUrl = looked?.previewUrl ?: "",
+                        artworkUrl = rss.artworkUrl.ifBlank { looked?.artworkUrl.orEmpty() }
+                    )
+                }
             } catch (_: Exception) {}
         }
     }

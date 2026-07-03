@@ -8745,6 +8745,7 @@ fun DiscoverFeedScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
+                        .tvFocusable(cornerRadius = 20.dp)
                         .background(if (selected) activeColor else Color.Transparent)
                         .clickable { feedTab = tabIndex }
                         .padding(horizontal = 16.dp, vertical = 6.dp),
@@ -9381,8 +9382,12 @@ fun AppleTopSongsFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit
         onDispose { previewPlayer.removeListener(listener) }
     }
 
-    LaunchedEffect(pagerState.currentPage) {
-        val track = tracks.getOrNull(pagerState.currentPage) ?: return@LaunchedEffect
+    // Keyed on the preview URL too: the chart shows instantly with covers while
+    // previews are still resolving, so playback must start once they arrive
+    val currentTopTrack = tracks.getOrNull(pagerState.currentPage)
+    LaunchedEffect(pagerState.currentPage, currentTopTrack?.previewUrl) {
+        val track = currentTopTrack ?: return@LaunchedEffect
+        if (track.previewUrl.isBlank()) return@LaunchedEffect
         previewPlayer.setMediaItem(MediaItem.fromUri(track.previewUrl))
         previewPlayer.prepare()
         previewPlayer.play()
@@ -9402,6 +9407,44 @@ fun AppleTopSongsFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit
                 onArtistClick = onArtistClick
             )
         }
+
+        // D-pad friendly previous/next controls (TV & landscape have no touch swipes)
+        val configuration = LocalConfiguration.current
+        if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                IconButton(
+                    onClick = {
+                        scope.launch {
+                            if (pagerState.currentPage > 0) pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                        }
+                    },
+                    modifier = Modifier
+                        .tvFocusable(cornerRadius = 24.dp)
+                        .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                ) {
+                    Icon(imageVector = Icons.Default.KeyboardArrowUp, contentDescription = "قبلی", tint = Color.White)
+                }
+                IconButton(
+                    onClick = {
+                        scope.launch {
+                            if (pagerState.currentPage < tracks.size - 1) pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                        }
+                    },
+                    modifier = Modifier
+                        .tvFocusable(cornerRadius = 24.dp)
+                        .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                ) {
+                    Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "بعدی", tint = Color.White)
+                }
+            }
+        }
+
         Text(
             text = "${pagerState.currentPage + 1} / ${tracks.size}",
             color = Color.White.copy(alpha = 0.6f),
@@ -9421,6 +9464,9 @@ fun AppleTopSongPage(
     onTogglePlay: () -> Unit,
     onArtistClick: (String) -> Unit = {}
 ) {
+    val configuration = LocalConfiguration.current
+    val isWide = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     Box(Modifier.fillMaxSize()) {
         // Blurred artwork background
         AsyncImage(
@@ -9439,85 +9485,205 @@ fun AppleTopSongPage(
                 )
         )
 
-        // Big artwork with rank badge; tap toggles the preview
-        Box(
-            modifier = Modifier
-                .size(260.dp)
-                .align(Alignment.Center)
-                .clip(RoundedCornerShape(20.dp))
-                .clickable(onClick = onTogglePlay)
-        ) {
+        if (isWide) {
+            // TV / landscape: artwork beside the details, everything D-pad focusable
+            Row(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 56.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(44.dp)
+            ) {
+                TopSongArtwork(
+                    track = track,
+                    rank = rank,
+                    isPlaying = isPlaying,
+                    onTogglePlay = onTogglePlay,
+                    size = 280.dp
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "#$rank از ۵۰ آهنگ برتر جهان",
+                        color = AppleRed,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = track.title,
+                        color = Color.White,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = track.artistName,
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 20.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontFamily = LocalAppFontFamily.current,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .tvFocusable(cornerRadius = 8.dp)
+                            .clickable { onArtistClick(track.artistName) }
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(24.dp))
+                                .tvFocusable(cornerRadius = 24.dp)
+                                .background(AppleRed)
+                                .clickable(onClick = onTogglePlay)
+                                .padding(horizontal = 22.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(
+                                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = if (isPlaying) "توقف" else "پخش",
+                                    color = Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                        }
+                        Text(
+                            text = "Apple Music · پیش‌نمایش ۳۰ ثانیه‌ای",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 12.sp,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                    }
+                }
+            }
+        } else {
+            // Portrait / phone layout
+            TopSongArtwork(
+                track = track,
+                rank = rank,
+                isPlaying = isPlaying,
+                onTogglePlay = onTogglePlay,
+                size = 260.dp,
+                modifier = Modifier.align(Alignment.Center)
+            )
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 20.dp, bottom = 100.dp, end = 40.dp)
+            ) {
+                Text(
+                    text = track.title,
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    fontFamily = LocalAppFontFamily.current
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = track.artistName,
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    fontFamily = LocalAppFontFamily.current,
+                    modifier = Modifier.clickable { onArtistClick(track.artistName) }
+                )
+                Text(
+                    text = "Apple Music · پیش‌نمایش ۳۰ ثانیه‌ای",
+                    color = Color.White.copy(alpha = 0.45f),
+                    fontSize = 11.sp,
+                    fontFamily = LocalAppFontFamily.current
+                )
+            }
+
+            // Swipe hint
+            Text(
+                text = "↕ بکش برای آهنگ بعدی",
+                color = Color.White.copy(alpha = 0.45f),
+                fontSize = 11.sp,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 60.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TopSongArtwork(
+    track: ApplePreviewTrack,
+    rank: Int,
+    isPlaying: Boolean,
+    onTogglePlay: () -> Unit,
+    size: Dp,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(20.dp))
+            .tvFocusable(cornerRadius = 20.dp)
+            .clickable(onClick = onTogglePlay)
+            .background(Color(0xFF1C1C1E))
+    ) {
+        if (track.artworkUrl.isNotBlank()) {
             AsyncImage(
                 model = track.artworkUrl,
                 contentDescription = track.title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
             )
-            if (!isPlaying) {
-                Icon(
-                    imageVector = Icons.Filled.PlayArrow,
-                    contentDescription = "پخش",
-                    tint = Color.White.copy(alpha = 0.9f),
-                    modifier = Modifier
-                        .size(64.dp)
-                        .align(Alignment.Center)
-                        .background(Color.Black.copy(alpha = 0.45f), CircleShape)
-                        .padding(10.dp)
-                )
-            }
-            Text(
-                text = "#$rank",
-                color = Color.White,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
+        } else {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = null,
+                tint = Color.White.copy(alpha = 0.35f),
                 modifier = Modifier
+                    .size(72.dp)
+                    .align(Alignment.Center)
+            )
+        }
+        if (!isPlaying) {
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = "پخش",
+                tint = Color.White.copy(alpha = 0.9f),
+                modifier = Modifier
+                    .size(64.dp)
+                    .align(Alignment.Center)
+                    .background(Color.Black.copy(alpha = 0.45f), CircleShape)
                     .padding(10.dp)
-                    .background(AppleRed, RoundedCornerShape(10.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
             )
         }
-
-        // Info bottom-left
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 20.dp, bottom = 100.dp, end = 40.dp)
-        ) {
-            Text(
-                text = track.title,
-                color = Color.White,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                fontFamily = LocalAppFontFamily.current
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = track.artistName,
-                color = Color.White.copy(alpha = 0.75f),
-                fontSize = 15.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontFamily = LocalAppFontFamily.current,
-                modifier = Modifier.clickable { onArtistClick(track.artistName) }
-            )
-            Text(
-                text = "Apple Music · پیش‌نمایش ۳۰ ثانیه‌ای",
-                color = Color.White.copy(alpha = 0.45f),
-                fontSize = 11.sp,
-                fontFamily = LocalAppFontFamily.current
-            )
-        }
-
-        // Swipe hint
         Text(
-            text = "↕ بکش برای آهنگ بعدی",
-            color = Color.White.copy(alpha = 0.45f),
-            fontSize = 11.sp,
+            text = "#$rank",
+            color = Color.White,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 60.dp)
+                .padding(10.dp)
+                .background(AppleRed, RoundedCornerShape(10.dp))
+                .padding(horizontal = 10.dp, vertical = 4.dp)
         )
     }
 }
