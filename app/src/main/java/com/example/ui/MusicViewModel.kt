@@ -229,6 +229,9 @@ class MusicViewModel(
     private val _resumeOnBluetooth = MutableStateFlow(false)
     val resumeOnBluetooth: StateFlow<Boolean> = _resumeOnBluetooth.asStateFlow()
 
+    private val _saveDownloadsPublic = MutableStateFlow(true)
+    val saveDownloadsPublic: StateFlow<Boolean> = _saveDownloadsPublic.asStateFlow()
+
     // Set by MainActivity when the app is launched from a launcher shortcut
     var pendingShortcutDest: String? = null
 
@@ -367,6 +370,7 @@ class MusicViewModel(
         _wifiOnlyDownload.value = prefs.getBoolean("wifi_only_download", false)
         _fadeOnPause.value = prefs.getBoolean("fade_on_pause", false)
         _resumeOnBluetooth.value = prefs.getBoolean("resume_on_bluetooth", false)
+        _saveDownloadsPublic.value = prefs.getBoolean("save_downloads_public", true)
         _autoBackupEnabled.value = prefs.getBoolean("auto_backup_enabled", false)
         loadTrendingContent()
         startAutoBackupLoop()
@@ -1083,6 +1087,12 @@ class MusicViewModel(
         _resumeOnBluetooth.value = enabled
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("resume_on_bluetooth", enabled).apply()
+    }
+
+    fun setSaveDownloadsPublic(enabled: Boolean) {
+        _saveDownloadsPublic.value = enabled
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("save_downloads_public", enabled).apply()
     }
 
     // --- Backup export/import via user-picked file (SAF) ---

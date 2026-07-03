@@ -7671,6 +7671,33 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
+                            text = translate("ذخیره دانلود در حافظه گوشی", "Save downloads to phone storage", viewModel),
+                            fontSize = 13.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = translate("دانلودها در پوشه Music/High Music قابل مشاهده می‌شوند", "Downloads appear in Music/High Music, visible to other apps", viewModel),
+                            fontSize = 11.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                    val saveDownloadsPublic by viewModel.saveDownloadsPublic.collectAsStateWithLifecycle()
+                    Switch(
+                        checked = saveDownloadsPublic,
+                        onCheckedChange = { viewModel.setSaveDownloadsPublic(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
                             text = translate("توقف و پخش نرم (Fade)", "Smooth fade on play/pause", viewModel),
                             fontSize = 13.sp,
                             fontFamily = LocalAppFontFamily.current,

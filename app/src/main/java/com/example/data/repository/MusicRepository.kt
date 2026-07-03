@@ -671,11 +671,66 @@ class MusicRepository(
                 coverArtPath = coverArtPath
             )
             dao.insertDownloadedTrack(record)
+
+            // Also drop a copy into the phone's public Music folder so the
+            // download shows up in the file manager and other apps
+            publishDownloadToPublicMusic(song, localFile)
             true
         } catch (e: Exception) {
             e.printStackTrace()
             if (localFile.exists()) localFile.delete()
             false
+        }
+    }
+
+    private fun sanitizeFileName(name: String): String =
+        name.replace(Regex("[\\\\/:*?\"<>|]"), "_").take(80)
+
+    private fun publishDownloadToPublicMusic(song: SubsonicSong, sourceFile: File) {
+        try {
+            val prefs = context.getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+            if (!prefs.getBoolean("save_downloads_public", true)) return
+            val displayName = sanitizeFileName("${song.artist ?: "Unknown"} - ${song.title}") +
+                "." + (song.suffix ?: "mp3")
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                val resolver = context.contentResolver
+                val values = android.content.ContentValues().apply {
+                    put(android.provider.MediaStore.Audio.Media.DISPLAY_NAME, displayName)
+                    put(android.provider.MediaStore.Audio.Media.MIME_TYPE, "audio/mpeg")
+                    put(android.provider.MediaStore.Audio.Media.TITLE, song.title)
+                    put(android.provider.MediaStore.Audio.Media.ARTIST, song.artist ?: "")
+                    put(android.provider.MediaStore.Audio.Media.ALBUM, song.album ?: "")
+                    put(
+                        android.provider.MediaStore.Audio.Media.RELATIVE_PATH,
+                        android.os.Environment.DIRECTORY_MUSIC + "/High Music"
+                    )
+                    put(android.provider.MediaStore.Audio.Media.IS_PENDING, 1)
+                }
+                val uri = resolver.insert(
+                    android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values
+                ) ?: return
+                resolver.openOutputStream(uri)?.use { out ->
+                    sourceFile.inputStream().use { it.copyTo(out) }
+                }
+                values.clear()
+                values.put(android.provider.MediaStore.Audio.Media.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+                prefs.edit().putString("public_copy_uri_${song.id}", uri.toString()).apply()
+            } else {
+                val dir = File(
+                    android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_MUSIC),
+                    "High Music"
+                )
+                if (!dir.exists()) dir.mkdirs()
+                val dest = File(dir, displayName)
+                sourceFile.inputStream().use { input ->
+                    FileOutputStream(dest).use { input.copyTo(it) }
+                }
+                android.media.MediaScannerConnection.scanFile(context, arrayOf(dest.absolutePath), null, null)
+                prefs.edit().putString("public_copy_uri_${song.id}", dest.absolutePath).apply()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -688,6 +743,19 @@ class MusicRepository(
                 val artFile = File(artPath)
                 if (artFile.exists()) artFile.delete()
             }
+            // Remove the public Music-folder copy too
+            try {
+                val prefs = context.getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+                val publicRef = prefs.getString("public_copy_uri_$id", null)
+                if (publicRef != null) {
+                    if (publicRef.startsWith("content://")) {
+                        context.contentResolver.delete(android.net.Uri.parse(publicRef), null, null)
+                    } else {
+                        File(publicRef).delete()
+                    }
+                    prefs.edit().remove("public_copy_uri_$id").apply()
+                }
+            } catch (_: Exception) {}
             dao.deleteDownloadedTrack(id)
         }
     }
