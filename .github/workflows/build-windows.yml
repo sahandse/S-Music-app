@@ -1,0 +1,62 @@
+name: Build Windows Desktop
+
+on:
+  push:
+    branches:
+      - claude/music-app-fonts-q1foo3
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build-windows.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build renderer + package Windows installer
+        run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List build output
+        id: out
+        shell: bash
+        run: |
+          ls -la release || true
+          INSTALLER=$(find release -maxdepth 1 -name "*.exe" | head -n 1)
+          echo "installer=$INSTALLER" >> "$GITHUB_OUTPUT"
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: high-music-windows
+          path: desktop/release/*.exe
+
+      - name: Publish/update GitHub Release with installer
+        uses: ncipollo/release-action@v1
+        with:
+          tag: latest-windows-build
+          name: "High Music — Windows Desktop"
+          body: "Automatically built Windows desktop app from `${{ github.ref_name }}`. Commit: ${{ github.sha }}"
+          artifacts: desktop/release/*.exe
+          allowUpdates: true
+          replacesArtifacts: true
+          makeLatest: false
+          token: ${{ secrets.GITHUB_TOKEN }}
