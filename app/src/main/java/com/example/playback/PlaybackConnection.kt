@@ -234,23 +234,23 @@ class PlaybackConnection(
             return
         }
 
-        // Smooth ~300ms volume ramp instead of a hard cut
+        // Smooth ~300ms volume ramp instead of a hard cut. Ramps between fixed
+        // 0..1 so rapid re-taps that cancel a ramp midway can never leave the
+        // volume stuck at a partial level.
         fadeJob?.cancel()
         fadeJob = connectionScope.launch {
             if (controller.isPlaying) {
-                val startVolume = controller.volume.takeIf { it > 0f } ?: 1f
                 for (step in 9 downTo 0) {
-                    controller.volume = startVolume * step / 10f
+                    controller.volume = step / 10f
                     delay(30)
                 }
                 controller.pause()
-                controller.volume = startVolume
+                controller.volume = 1f
             } else {
-                val targetVolume = controller.volume.takeIf { it > 0f } ?: 1f
                 controller.volume = 0f
                 controller.play()
                 for (step in 1..10) {
-                    controller.volume = targetVolume * step / 10f
+                    controller.volume = step / 10f
                     delay(30)
                 }
             }

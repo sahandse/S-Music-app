@@ -1380,10 +1380,14 @@ class MusicViewModel(
                 val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
                     type = "image/png"
                     putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    clipData = android.content.ClipData.newRawUri("share_card", uri)
                     addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
                 val chooser = android.content.Intent.createChooser(send, "اشتراک‌گذاری آهنگ").apply {
-                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    addFlags(
+                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
                 }
                 context.startActivity(chooser)
             } catch (e: Exception) {
