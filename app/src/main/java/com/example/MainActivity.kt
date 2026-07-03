@@ -31,6 +31,9 @@ class MainActivity : ComponentActivity() {
         val factory = MusicViewModelFactory(application, repository, playbackConnection)
         val viewModel = ViewModelProvider(this, factory)[MusicViewModel::class.java]
 
+        // Launcher shortcut destination (long-press app icon → discover/search/library)
+        intent.getStringExtra("shortcut_dest")?.let { viewModel.pendingShortcutDest = it }
+
         setContent {
             val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
             val themeAccent by viewModel.themeAccent.collectAsStateWithLifecycle()

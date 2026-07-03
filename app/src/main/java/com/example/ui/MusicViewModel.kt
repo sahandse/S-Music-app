@@ -52,6 +52,22 @@ data class LyricsSearchHit(
     val snippet: String
 )
 
+data class PodcastItem(
+    val id: Long,
+    val name: String,
+    val artistName: String,
+    val artworkUrl: String,
+    val feedUrl: String
+)
+
+data class PodcastEpisode(
+    val title: String,
+    val audioUrl: String,
+    val durationSec: Int,
+    val pubDate: String,
+    val imageUrl: String
+)
+
 class MusicViewModel(
     application: Application,
     private val repository: MusicRepository,
@@ -210,6 +226,12 @@ class MusicViewModel(
     private val _fadeOnPause = MutableStateFlow(false)
     val fadeOnPause: StateFlow<Boolean> = _fadeOnPause.asStateFlow()
 
+    private val _resumeOnBluetooth = MutableStateFlow(false)
+    val resumeOnBluetooth: StateFlow<Boolean> = _resumeOnBluetooth.asStateFlow()
+
+    // Set by MainActivity when the app is launched from a launcher shortcut
+    var pendingShortcutDest: String? = null
+
     // --- Multi-server management ---
     val allServers: StateFlow<List<SavedServer>> = repository.getAllServersFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -344,6 +366,7 @@ class MusicViewModel(
         _crossfadeDurationSeconds.value = prefs.getInt("crossfade_duration_seconds", 3)
         _wifiOnlyDownload.value = prefs.getBoolean("wifi_only_download", false)
         _fadeOnPause.value = prefs.getBoolean("fade_on_pause", false)
+        _resumeOnBluetooth.value = prefs.getBoolean("resume_on_bluetooth", false)
         _autoBackupEnabled.value = prefs.getBoolean("auto_backup_enabled", false)
         loadTrendingContent()
         startAutoBackupLoop()
@@ -1056,6 +1079,44 @@ class MusicViewModel(
         prefs.edit().putBoolean("fade_on_pause", enabled).apply()
     }
 
+    fun setResumeOnBluetooth(enabled: Boolean) {
+        _resumeOnBluetooth.value = enabled
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("resume_on_bluetooth", enabled).apply()
+    }
+
+    // --- Backup export/import via user-picked file (SAF) ---
+    fun exportBackupToUri(uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val json = repository.exportPlaylistsBackup()
+                getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
+                    out.write(json.toByteArray(Charsets.UTF_8))
+                }
+                _transientMessage.value = "بکاپ در فایل ذخیره شد"
+            } catch (e: Exception) {
+                _transientMessage.value = "خطا در ذخیره فایل بکاپ"
+            }
+        }
+    }
+
+    fun importBackupFromUri(uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val json = getApplication<Application>().contentResolver.openInputStream(uri)
+                    ?.bufferedReader()?.use { it.readText() }
+                if (json.isNullOrBlank()) {
+                    _transientMessage.value = "فایل بکاپ خالی است"
+                    return@launch
+                }
+                val ok = repository.importPlaylistsBackup(json)
+                _transientMessage.value = if (ok) "بازیابی از فایل انجام شد" else "فایل بکاپ نامعتبر است"
+            } catch (e: Exception) {
+                _transientMessage.value = "خطا در بازیابی از فایل"
+            }
+        }
+    }
+
     // --- Multi-server management ---
     fun switchServer(url: String) {
         viewModelScope.launch {
@@ -1368,30 +1429,128 @@ class MusicViewModel(
                 }
                 canvas.drawText("♪ $appName", w / 2f, h - 110f, appPaint)
 
-                // Save to cache and hand off to the system share sheet
-                val dir = File(context.cacheDir, "share").apply { mkdirs() }
-                val file = File(dir, "share_card.png")
-                java.io.FileOutputStream(file).use { out ->
-                    bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 95, out)
-                }
-                val uri = androidx.core.content.FileProvider.getUriForFile(
-                    context, "${context.packageName}.fileprovider", file
-                )
-                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
-                    type = "image/png"
-                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
-                    clipData = android.content.ClipData.newRawUri("share_card", uri)
-                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                val chooser = android.content.Intent.createChooser(send, "اشتراک‌گذاری آهنگ").apply {
-                    addFlags(
-                        android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
-                            android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                }
-                context.startActivity(chooser)
+                saveAndShareCardBitmap(bmp)
             } catch (e: Exception) {
                 _transientMessage.value = "خطا در ساخت کارت اشتراک‌گذاری"
+            }
+        }
+    }
+
+    private fun saveAndShareCardBitmap(bmp: android.graphics.Bitmap) {
+        val context = getApplication<Application>()
+        val dir = File(context.cacheDir, "share").apply { mkdirs() }
+        val file = File(dir, "share_card.png")
+        java.io.FileOutputStream(file).use { out ->
+            bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 95, out)
+        }
+        val uri = androidx.core.content.FileProvider.getUriForFile(
+            context, "${context.packageName}.fileprovider", file
+        )
+        val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "image/png"
+            putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            clipData = android.content.ClipData.newRawUri("share_card", uri)
+            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        val chooser = android.content.Intent.createChooser(send, "اشتراک‌گذاری").apply {
+            addFlags(
+                android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+            )
+        }
+        context.startActivity(chooser)
+    }
+
+    // Lyric card: one chosen lyric line as a big story image (cover, line, song, app name — no URL)
+    fun shareLyricCard(song: SubsonicSong, line: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val context = getApplication<Application>()
+                val coverUrl = repository.getCoverArtUrl(song.coverArt)
+                val request = ImageRequest.Builder(context)
+                    .data(coverUrl).allowHardware(false).size(600).build()
+                val cover = (context.imageLoader.execute(request).drawable as? BitmapDrawable)?.bitmap
+
+                val w = 1080
+                val h = 1920
+                val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bmp)
+                val filterPaint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG)
+
+                if (cover != null) {
+                    val scale = maxOf(w.toFloat() / cover.width, h.toFloat() / cover.height)
+                    val m = android.graphics.Matrix()
+                    m.setScale(scale, scale)
+                    m.postTranslate((w - cover.width * scale) / 2f, (h - cover.height * scale) / 2f)
+                    canvas.drawBitmap(cover, m, filterPaint)
+                    canvas.drawColor(android.graphics.Color.argb(215, 8, 8, 12))
+                } else {
+                    canvas.drawColor(android.graphics.Color.rgb(16, 16, 20))
+                }
+
+                // Small rounded cover up top
+                if (cover != null) {
+                    val size = 280f
+                    val left = (w - size) / 2f
+                    val top = 260f
+                    val rect = android.graphics.RectF(left, top, left + size, top + size)
+                    val clip = android.graphics.Path().apply {
+                        addRoundRect(rect, 32f, 32f, android.graphics.Path.Direction.CW)
+                    }
+                    canvas.save()
+                    canvas.clipPath(clip)
+                    val cs = maxOf(size / cover.width, size / cover.height)
+                    val cm = android.graphics.Matrix()
+                    cm.setScale(cs, cs)
+                    cm.postTranslate(left + (size - cover.width * cs) / 2f, top + (size - cover.height * cs) / 2f)
+                    canvas.drawBitmap(cover, cm, filterPaint)
+                    canvas.restore()
+                }
+
+                // The lyric line, big and centered (up to 6 wrapped lines)
+                val quoted = "“$line”"
+                val lyricPaint = android.text.TextPaint().apply {
+                    color = android.graphics.Color.WHITE
+                    textSize = 74f
+                    isAntiAlias = true
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                }
+                val lyricLayout = android.text.StaticLayout.Builder
+                    .obtain(quoted, 0, quoted.length, lyricPaint, w - 180)
+                    .setAlignment(android.text.Layout.Alignment.ALIGN_CENTER)
+                    .setLineSpacing(0f, 1.25f)
+                    .setMaxLines(6)
+                    .setEllipsize(android.text.TextUtils.TruncateAt.END)
+                    .build()
+                canvas.save()
+                canvas.translate(90f, 700f + ((760 - lyricLayout.height) / 2f).coerceAtLeast(0f))
+                lyricLayout.draw(canvas)
+                canvas.restore()
+
+                // Song title · artist
+                val metaPaint = android.text.TextPaint().apply {
+                    color = android.graphics.Color.argb(200, 255, 255, 255)
+                    textSize = 42f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                val metaText = listOfNotNull(song.title.takeIf { it.isNotBlank() }, song.artist).joinToString(" · ")
+                canvas.drawText(metaText, w / 2f, 1640f, metaPaint)
+
+                // App name only — no web address
+                val appName = context.applicationInfo.loadLabel(context.packageManager).toString()
+                val appPaint = android.text.TextPaint().apply {
+                    color = android.graphics.Color.rgb(250, 45, 72)
+                    textSize = 42f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                }
+                canvas.drawText("♪ $appName", w / 2f, h - 110f, appPaint)
+
+                saveAndShareCardBitmap(bmp)
+            } catch (e: Exception) {
+                _transientMessage.value = "خطا در ساخت کارت متن"
             }
         }
     }
@@ -1558,6 +1717,194 @@ class MusicViewModel(
                 }
             } catch (_: Exception) {}
         }
+    }
+
+    // --- Podcasts (free iTunes Search API + public RSS feeds; full episodes, no key) ---
+    private val _podcastSearchResults = MutableStateFlow<List<PodcastItem>>(emptyList())
+    val podcastSearchResults: StateFlow<List<PodcastItem>> = _podcastSearchResults.asStateFlow()
+
+    private val _topPodcasts = MutableStateFlow<List<PodcastItem>>(emptyList())
+    val topPodcasts: StateFlow<List<PodcastItem>> = _topPodcasts.asStateFlow()
+
+    private val _podcastEpisodes = MutableStateFlow<List<PodcastEpisode>>(emptyList())
+    val podcastEpisodes: StateFlow<List<PodcastEpisode>> = _podcastEpisodes.asStateFlow()
+
+    private val _isLoadingEpisodes = MutableStateFlow(false)
+    val isLoadingEpisodes: StateFlow<Boolean> = _isLoadingEpisodes.asStateFlow()
+
+    private val _followedPodcasts = MutableStateFlow<List<PodcastItem>>(emptyList())
+    val followedPodcasts: StateFlow<List<PodcastItem>> = _followedPodcasts.asStateFlow()
+
+    private fun parsePodcastResults(body: String): List<PodcastItem> {
+        val arr = org.json.JSONObject(body).getJSONArray("results")
+        val items = mutableListOf<PodcastItem>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            val feed = obj.optString("feedUrl", "")
+            if (feed.isBlank()) continue
+            items.add(
+                PodcastItem(
+                    id = obj.optLong("collectionId", i.toLong()),
+                    name = obj.optString("collectionName", ""),
+                    artistName = obj.optString("artistName", ""),
+                    artworkUrl = obj.optString("artworkUrl600", "").ifBlank {
+                        obj.optString("artworkUrl100", "").replace("100x100bb", "600x600bb")
+                    },
+                    feedUrl = feed
+                )
+            )
+        }
+        return items
+    }
+
+    fun searchPodcasts(query: String) {
+        if (query.isBlank()) {
+            _podcastSearchResults.value = emptyList()
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val encoded = java.net.URLEncoder.encode(query, "UTF-8")
+                val url = "https://itunes.apple.com/search?term=$encoded&media=podcast&limit=20"
+                val body = okhttp3.OkHttpClient().newCall(okhttp3.Request.Builder().url(url).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                _podcastSearchResults.value = parsePodcastResults(body)
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun fetchTopPodcasts(country: String = "us") {
+        if (_topPodcasts.value.isNotEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val client = okhttp3.OkHttpClient()
+                val rssUrl = "https://rss.applemarketingtools.com/api/v2/$country/podcasts/top/25/podcasts.json"
+                val rssBody = client.newCall(okhttp3.Request.Builder().url(rssUrl).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                val results = org.json.JSONObject(rssBody).getJSONObject("feed").getJSONArray("results")
+                val ids = mutableListOf<String>()
+                for (i in 0 until results.length()) {
+                    results.getJSONObject(i).optString("id").takeIf { it.isNotBlank() }?.let { ids.add(it) }
+                }
+                if (ids.isEmpty()) return@launch
+                // Lookup resolves feed URLs for the charted podcasts
+                val lookupUrl = "https://itunes.apple.com/lookup?id=${ids.joinToString(",")}"
+                val lookupBody = client.newCall(okhttp3.Request.Builder().url(lookupUrl).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                _topPodcasts.value = parsePodcastResults(lookupBody)
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun loadPodcastEpisodes(podcast: PodcastItem) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isLoadingEpisodes.value = true
+            _podcastEpisodes.value = emptyList()
+            try {
+                val body = okhttp3.OkHttpClient()
+                    .newCall(okhttp3.Request.Builder().url(podcast.feedUrl).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                val episodes = mutableListOf<PodcastEpisode>()
+                val parser = android.util.Xml.newPullParser()
+                parser.setFeature(org.xmlpull.v1.XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
+                parser.setInput(java.io.StringReader(body))
+                var inItem = false
+                var title = ""
+                var audioUrl = ""
+                var duration = 0
+                var pubDate = ""
+                var image = ""
+                var event = parser.eventType
+                while (event != org.xmlpull.v1.XmlPullParser.END_DOCUMENT && episodes.size < 50) {
+                    when (event) {
+                        org.xmlpull.v1.XmlPullParser.START_TAG -> when (parser.name) {
+                            "item" -> { inItem = true; title = ""; audioUrl = ""; duration = 0; pubDate = ""; image = "" }
+                            "title" -> if (inItem) title = parser.nextText().trim()
+                            "enclosure" -> if (inItem) audioUrl = parser.getAttributeValue(null, "url") ?: ""
+                            "itunes:duration" -> if (inItem) {
+                                val raw = parser.nextText().trim()
+                                duration = raw.toIntOrNull() ?: raw.split(":")
+                                    .mapNotNull { it.toIntOrNull() }
+                                    .fold(0) { acc, part -> acc * 60 + part }
+                            }
+                            "pubDate" -> if (inItem) pubDate = parser.nextText().trim().take(16)
+                            "itunes:image" -> if (inItem) image = parser.getAttributeValue(null, "href") ?: ""
+                        }
+                        org.xmlpull.v1.XmlPullParser.END_TAG -> if (parser.name == "item") {
+                            inItem = false
+                            if (title.isNotBlank() && audioUrl.isNotBlank()) {
+                                episodes.add(PodcastEpisode(title, audioUrl, duration, pubDate, image))
+                            }
+                        }
+                    }
+                    event = parser.next()
+                }
+                _podcastEpisodes.value = episodes
+            } catch (_: Exception) {
+            } finally {
+                _isLoadingEpisodes.value = false
+            }
+        }
+    }
+
+    fun playPodcastEpisode(episode: PodcastEpisode, podcast: PodcastItem) {
+        val song = SubsonicSong(
+            id = "podcast_${episode.audioUrl.hashCode()}",
+            title = episode.title,
+            artist = podcast.name,
+            album = podcast.artistName,
+            coverArt = episode.imageUrl.ifBlank { podcast.artworkUrl },
+            duration = episode.durationSec,
+            path = episode.audioUrl
+        )
+        playSongDirectly(song, listOf(song))
+    }
+
+    fun toggleFollowPodcast(podcast: PodcastItem) {
+        val current = _followedPodcasts.value
+        _followedPodcasts.value = if (current.any { it.id == podcast.id }) {
+            current.filterNot { it.id == podcast.id }
+        } else {
+            current + podcast
+        }
+        persistFollowedPodcasts()
+    }
+
+    private fun persistFollowedPodcasts() {
+        try {
+            val arr = org.json.JSONArray()
+            _followedPodcasts.value.forEach { p ->
+                arr.put(
+                    org.json.JSONObject()
+                        .put("id", p.id).put("name", p.name).put("artistName", p.artistName)
+                        .put("artworkUrl", p.artworkUrl).put("feedUrl", p.feedUrl)
+                )
+            }
+            getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+                .edit().putString("followed_podcasts", arr.toString()).apply()
+        } catch (_: Exception) {}
+    }
+
+    fun loadFollowedPodcasts() {
+        try {
+            val json = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+                .getString("followed_podcasts", null) ?: return
+            val arr = org.json.JSONArray(json)
+            val items = mutableListOf<PodcastItem>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                items.add(
+                    PodcastItem(
+                        id = o.optLong("id"),
+                        name = o.optString("name"),
+                        artistName = o.optString("artistName"),
+                        artworkUrl = o.optString("artworkUrl"),
+                        feedUrl = o.optString("feedUrl")
+                    )
+                )
+            }
+            _followedPodcasts.value = items
+        } catch (_: Exception) {}
     }
 
     override fun onCleared() {

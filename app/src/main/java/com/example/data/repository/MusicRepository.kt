@@ -245,6 +245,11 @@ class MusicRepository(
             return@withContext song.path ?: ""
         }
 
+        // Podcast episodes stream directly from the feed's enclosure URL
+        if (song.id.startsWith("podcast_")) {
+            return@withContext song.path ?: ""
+        }
+
         // If downloaded offline, return its local file path URI
         val downloaded = dao.getDownloadedTrack(song.id)
         if (downloaded != null) {

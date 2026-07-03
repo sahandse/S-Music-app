@@ -65,6 +65,91 @@ class MusicPlaybackService : MediaLibraryService() {
         private const val FAVORITES_ID = "favorites"
         private const val PLAYLISTS_ID = "playlists"
         private const val PLAYLIST_PREFIX = "playlist_"
+        const val ACTION_WIDGET_PLAY_PAUSE = "com.example.smusic.WIDGET_PLAY_PAUSE"
+        const val ACTION_WIDGET_NEXT = "com.example.smusic.WIDGET_NEXT"
+        const val ACTION_WIDGET_PREV = "com.example.smusic.WIDGET_PREV"
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            ACTION_WIDGET_PLAY_PAUSE -> player?.let { if (it.isPlaying) it.pause() else it.play() }
+            ACTION_WIDGET_NEXT -> player?.let {
+                val next = it.currentMediaItemIndex + 1
+                if (next < it.mediaItemCount) { it.seekTo(next, 0); it.play() }
+            }
+            ACTION_WIDGET_PREV -> player?.let {
+                val prev = it.currentMediaItemIndex - 1
+                if (prev >= 0) { it.seekTo(prev, 0); it.play() } else it.seekTo(0)
+            }
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
+    // Resume playback when a bluetooth device (car / headset) connects, if enabled
+    private val bluetoothReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: android.content.Context?, intent: Intent?) {
+            if (intent?.action != android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED) return
+            if (prefs?.getBoolean("resume_on_bluetooth", false) != true) return
+            val p = player ?: return
+            serviceScope.launch {
+                delay(2000) // let the audio route settle before resuming
+                if (p.mediaItemCount > 0 && !p.isPlaying) p.play()
+            }
+        }
+    }
+
+    // --- Home screen widget ---
+    private fun updateWidget() {
+        try {
+            val mgr = android.appwidget.AppWidgetManager.getInstance(this)
+            val ids = mgr.getAppWidgetIds(android.content.ComponentName(this, PlayerWidgetProvider::class.java))
+            if (ids.isEmpty()) return
+            val p = player ?: return
+            val views = android.widget.RemoteViews(packageName, R.layout.widget_player)
+            val meta = p.mediaMetadata
+            views.setTextViewText(R.id.widget_title, meta.title ?: "S Music")
+            views.setTextViewText(R.id.widget_artist, meta.artist ?: "")
+            views.setImageViewResource(
+                R.id.widget_play_pause,
+                if (p.isPlaying) R.drawable.ic_widget_pause else R.drawable.ic_widget_play
+            )
+
+            fun servicePendingIntent(action: String, code: Int): PendingIntent =
+                PendingIntent.getService(
+                    this, code,
+                    Intent(this, MusicPlaybackService::class.java).setAction(action),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+            views.setOnClickPendingIntent(R.id.widget_play_pause, servicePendingIntent(ACTION_WIDGET_PLAY_PAUSE, 10))
+            views.setOnClickPendingIntent(R.id.widget_next, servicePendingIntent(ACTION_WIDGET_NEXT, 11))
+            views.setOnClickPendingIntent(R.id.widget_prev, servicePendingIntent(ACTION_WIDGET_PREV, 12))
+            val openApp = PendingIntent.getActivity(
+                this, 13, Intent(this, MainActivity::class.java),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            views.setOnClickPendingIntent(R.id.widget_cover, openApp)
+            views.setOnClickPendingIntent(R.id.widget_title, openApp)
+
+            val artUri = meta.artworkUri?.toString()
+            if (artUri.isNullOrBlank()) {
+                views.setImageViewResource(R.id.widget_cover, R.mipmap.ic_launcher)
+                mgr.updateAppWidget(ids, views)
+            } else {
+                serviceScope.launch {
+                    try {
+                        val req = coil.request.ImageRequest.Builder(this@MusicPlaybackService)
+                            .data(artUri).allowHardware(false).size(256).build()
+                        val res = coil.Coil.imageLoader(this@MusicPlaybackService).execute(req)
+                        val bmp = (res.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap
+                        if (bmp != null) views.setImageViewBitmap(R.id.widget_cover, bmp)
+                        else views.setImageViewResource(R.id.widget_cover, R.mipmap.ic_launcher)
+                    } catch (_: Exception) {
+                        views.setImageViewResource(R.id.widget_cover, R.mipmap.ic_launcher)
+                    }
+                    mgr.updateAppWidget(ids, views)
+                }
+            }
+        } catch (_: Exception) {}
     }
 
     private fun favoriteButton(isFavorite: Boolean): CommandButton {
@@ -303,14 +388,29 @@ class MusicPlaybackService : MediaLibraryService() {
                             mediaSession?.setCustomLayout(ImmutableList.of(favoriteButton(isFavorite)))
                         }
                     }
+                    updateWidget()
                 }
 
                 override fun onIsPlayingChanged(isPlaying: Boolean) {
                     if (isPlaying) startCrossfadeTracking(exoPlayer) else positionCheckJob?.cancel()
+                    updateWidget()
+                }
+
+                override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
+                    updateWidget()
                 }
             })
 
             setUpCastPlayer(exoPlayer)
+
+            try {
+                androidx.core.content.ContextCompat.registerReceiver(
+                    this,
+                    bluetoothReceiver,
+                    android.content.IntentFilter(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED),
+                    androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+                )
+            } catch (_: Exception) {}
         }
     }
 
@@ -432,6 +532,7 @@ class MusicPlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        try { unregisterReceiver(bluetoothReceiver) } catch (_: Exception) {}
         fadeJob?.cancel()
         positionCheckJob?.cancel()
         serviceScope.cancel()

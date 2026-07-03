@@ -78,6 +78,8 @@ import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.ui.MusicVideoItem
 import com.example.ui.ApplePreviewTrack
+import com.example.ui.PodcastItem
+import com.example.ui.PodcastEpisode
 import androidx.mediarouter.app.MediaRouteButton
 import com.google.android.gms.cast.framework.CastButtonFactory
 import kotlinx.coroutines.delay
@@ -748,7 +750,17 @@ fun LoginScreen(viewModel: MusicViewModel) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainMusicApp(viewModel: MusicViewModel) {
-    var selectedTab by remember { mutableStateOf(0) } // 0: Home, 1: Search, 2: Library, 3: Settings
+    // Launcher-shortcut destination (long-press app icon)
+    val shortcutDest = remember { viewModel.pendingShortcutDest.also { viewModel.pendingShortcutDest = null } }
+    var selectedTab by remember {
+        mutableStateOf(
+            when (shortcutDest) {
+                "discover" -> 1
+                "library" -> 2
+                else -> 0
+            }
+        )
+    } // 0: Home, 1: Discover, 2: Library, 3: Profile
     var isPlayerExpanded by remember { mutableStateOf(false) }
     var showCarMode by remember { mutableStateOf(false) }
 
@@ -764,7 +776,9 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     )
 
     // Internal sub-navigation state (Artist / Album details)
-    var currentSubScreen by remember { mutableStateOf<SubScreen?>(null) }
+    var currentSubScreen by remember {
+        mutableStateOf<SubScreen?>(if (shortcutDest == "search") SubScreen.Search else null)
+    }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -3564,7 +3578,8 @@ fun LibraryScreen(
             Triple("artists", "هنرمندان من" to "My Artists", Icons.Outlined.People),
             Triple("all_artists", "مرور همه هنرمندان" to "Browse All Artists", Icons.Outlined.Groups),
             Triple("downloads", "دانلودهای آفلاین" to "Offline Downloads", Icons.Outlined.OfflinePin),
-            Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid)
+            Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid),
+            Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts)
         )
 
         items(categories) { cat ->
@@ -4070,6 +4085,7 @@ fun SubLibraryItemsView(
         "smart_top" -> translate("پرپخش‌ترین‌های من", "Most Played", viewModel)
         "smart_recent" -> translate("جدیدترین‌ها", "Newest", viewModel)
         "smart_never" -> translate("هرگز گوش نداده", "Never Played", viewModel)
+        "podcasts" -> translate("پادکست", "Podcasts", viewModel)
         else -> translate("دانلودها", "Downloads", viewModel)
     }
 
@@ -4089,6 +4105,9 @@ fun SubLibraryItemsView(
             when (type) {
                 "device_songs" -> {
                     DeviceSongsView(viewModel = viewModel)
+                }
+                "podcasts" -> {
+                    PodcastsView(viewModel = viewModel)
                 }
                 "smart_top", "smart_recent", "smart_never" -> {
                     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
@@ -7660,6 +7679,33 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
                     )
                 }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = translate("ادامه پخش با اتصال بلوتوث", "Resume on Bluetooth connect", viewModel),
+                            fontSize = 13.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = translate("با وصل شدن هندزفری یا ماشین، پخش ادامه پیدا می‌کند", "Playback resumes when your headset or car connects", viewModel),
+                            fontSize = 11.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                    val resumeOnBluetooth by viewModel.resumeOnBluetooth.collectAsStateWithLifecycle()
+                    Switch(
+                        checked = resumeOnBluetooth,
+                        onCheckedChange = { viewModel.setResumeOnBluetooth(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                    )
+                }
             }
         }
 
@@ -7714,6 +7760,37 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
                     ) {
                         Text(translate("بازیابی", "Restore", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                    }
+                }
+
+                // Backup to a user-picked file (survives uninstall / phone switch)
+                val backupExportLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.CreateDocument("application/json")
+                ) { uri -> uri?.let { viewModel.exportBackupToUri(it) } }
+                val backupImportLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.OpenDocument()
+                ) { uri -> uri?.let { viewModel.importBackupFromUri(it) } }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { backupExportLauncher.launch("smusic_backup.json") },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                    ) {
+                        Text(translate("خروجی به فایل", "Export to file", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                    }
+                    OutlinedButton(
+                        onClick = { backupImportLauncher.launch(arrayOf("application/json", "text/*", "application/octet-stream")) },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f),
+                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                    ) {
+                        Text(translate("بازیابی از فایل", "Restore from file", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                 }
 
@@ -7922,6 +7999,7 @@ fun FullscreenPlayer(
 
     // Toggle Tab: 0: AlbumArt Cover, 1: Lyrics list
     var playerTab by remember { mutableStateOf(0) }
+    var showLyricCardPicker by remember { mutableStateOf(false) }
 
     if (currentTrack == null) {
         LaunchedEffect(Unit) { onDismiss() }
@@ -8308,6 +8386,15 @@ fun FullscreenPlayer(
                                     horizontalArrangement = Arrangement.End,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    OutlinedButton(
+                                        onClick = { showLyricCardPicker = true },
+                                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                        shape = RoundedCornerShape(20.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(translate("کارت متن ✨", "Lyric Card ✨", viewModel), color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                    }
+                                    Spacer(Modifier.width(8.dp))
                                     if (translatedLyrics != null) {
                                         TextButton(onClick = { viewModel.clearTranslatedLyrics() }) {
                                             Text(translate("بستن ترجمه", "Hide Translation", viewModel), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
@@ -8355,6 +8442,15 @@ fun FullscreenPlayer(
                                 Row(
                                     modifier = Modifier.align(Alignment.TopEnd).padding(horizontal = 16.dp, vertical = 4.dp)
                                 ) {
+                                    OutlinedButton(
+                                        onClick = { showLyricCardPicker = true },
+                                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                        shape = RoundedCornerShape(20.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(translate("کارت متن ✨", "Lyric Card ✨", viewModel), color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                    }
+                                    Spacer(Modifier.width(8.dp))
                                     if (translatedLyrics != null) {
                                         TextButton(onClick = { viewModel.clearTranslatedLyrics() }) {
                                             Text(translate("بستن ترجمه", "Hide Translation", viewModel), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
@@ -8733,6 +8829,50 @@ fun FullscreenPlayer(
     }
 
     // Timer dialog
+    // Lyric card line picker
+    if (showLyricCardPicker) {
+        val cardLines = remember(lyrics) {
+            val raw = lyrics ?: ""
+            val parsed = parseLrc(raw)
+            val lines = if (parsed.isNotEmpty()) parsed.map { it.text } else raw.lines()
+            lines.map { it.trim() }.filter { it.length in 3..120 }.distinct()
+        }
+        AlertDialog(
+            onDismissRequest = { showLyricCardPicker = false },
+            title = { Text(translate("یک خط از شعر را انتخاب کن", "Pick a lyric line", viewModel), fontFamily = LocalAppFontFamily.current, fontSize = 16.sp) },
+            text = {
+                if (cardLines.isEmpty()) {
+                    Text(translate("متنی برای این آهنگ موجود نیست", "No lyrics available for this song", viewModel), fontFamily = LocalAppFontFamily.current)
+                } else {
+                    LazyColumn(modifier = Modifier.height(360.dp)) {
+                        items(cardLines) { line ->
+                            Text(
+                                text = line,
+                                fontSize = 14.sp,
+                                fontFamily = LocalAppFontFamily.current,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        showLyricCardPicker = false
+                                        viewModel.shareLyricCard(song, line)
+                                    }
+                                    .padding(vertical = 10.dp, horizontal = 8.dp)
+                            )
+                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showLyricCardPicker = false }) {
+                    Text(translate("انصراف", "Cancel", viewModel), color = Color.Gray, fontFamily = LocalAppFontFamily.current)
+                }
+            }
+        )
+    }
+
     if (showTimerDialog) {
         SleepTimerDialog(
             currentMinutes = sleepTimerLeft,
@@ -9998,6 +10138,236 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                 }
             }
         }
+    }
+}
+
+// --- Library: Podcasts (search + top charts + followed + full episode playback) ---
+@Composable
+fun PodcastsView(viewModel: MusicViewModel) {
+    var selectedPodcast by remember { mutableStateOf<PodcastItem?>(null) }
+    val followed by viewModel.followedPodcasts.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadFollowedPodcasts()
+        viewModel.fetchTopPodcasts()
+    }
+
+    val currentPodcast = selectedPodcast
+    if (currentPodcast != null) {
+        // Episodes list
+        val episodes by viewModel.podcastEpisodes.collectAsStateWithLifecycle()
+        val isLoading by viewModel.isLoadingEpisodes.collectAsStateWithLifecycle()
+        val isFollowed = followed.any { it.id == currentPodcast.id }
+
+        LaunchedEffect(currentPodcast.id) { viewModel.loadPodcastEpisodes(currentPodcast) }
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                IconButton(onClick = { selectedPodcast = null }) {
+                    Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "بازگشت")
+                }
+                AsyncImage(
+                    model = currentPodcast.artworkUrl,
+                    contentDescription = currentPodcast.name,
+                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(currentPodcast.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                    Text(currentPodcast.artistName, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                }
+                OutlinedButton(
+                    onClick = { viewModel.toggleFollowPodcast(currentPodcast) },
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                    border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.5f)),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = if (isFollowed) translate("دنبال شده ✓", "Following ✓", viewModel) else translate("دنبال کردن", "Follow", viewModel),
+                        fontSize = 12.sp,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+            }
+            if (isLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = AppleRed)
+                }
+            } else if (episodes.isEmpty()) {
+                EmptyStateView(message = translate("اپیزودی پیدا نشد.", "No episodes found.", viewModel))
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                    items(episodes) { episode ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { viewModel.playPodcastEpisode(episode, currentPodcast) }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayCircleOutline,
+                                contentDescription = null,
+                                tint = AppleRed,
+                                modifier = Modifier.size(30.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(episode.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                                val durText = if (episode.durationSec > 0) "${episode.durationSec / 60} ${translate("دقیقه", "min", viewModel)}" else ""
+                                Text(
+                                    text = listOf(episode.pubDate, durText).filter { it.isNotBlank() }.joinToString(" · "),
+                                    fontSize = 11.sp,
+                                    color = Color.Gray,
+                                    maxLines = 1,
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                    }
+                }
+            }
+        }
+        return
+    }
+
+    // Browse: search + followed + top charts
+    var podcastQuery by remember { mutableStateOf("") }
+    val searchResults by viewModel.podcastSearchResults.collectAsStateWithLifecycle()
+    val topPodcasts by viewModel.topPodcasts.collectAsStateWithLifecycle()
+
+    LaunchedEffect(podcastQuery) {
+        delay(500)
+        viewModel.searchPodcasts(podcastQuery)
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Search box
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .height(46.dp)
+                .clip(RoundedCornerShape(23.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+            BasicTextField(
+                value = podcastQuery,
+                onValueChange = { podcastQuery = it },
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 14.sp,
+                    fontFamily = LocalAppFontFamily.current,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(AppleRed),
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        if (podcastQuery.isEmpty()) {
+                            Text(
+                                text = translate("جستجوی پادکست...", "Search podcasts...", viewModel),
+                                fontSize = 14.sp,
+                                fontFamily = LocalAppFontFamily.current,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+        }
+
+        LazyColumn(modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 16.dp)) {
+            val shownList = if (podcastQuery.isNotBlank()) searchResults else emptyList()
+
+            if (shownList.isNotEmpty()) {
+                item {
+                    Text(
+                        text = translate("نتایج جستجو", "Search Results", viewModel),
+                        fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppleRed,
+                        fontFamily = LocalAppFontFamily.current,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                }
+                items(shownList) { podcast ->
+                    PodcastRow(podcast = podcast, onClick = { selectedPodcast = podcast })
+                }
+            }
+
+            if (followed.isNotEmpty()) {
+                item {
+                    Text(
+                        text = translate("دنبال‌شده‌ها", "Following", viewModel),
+                        fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppleRed,
+                        fontFamily = LocalAppFontFamily.current,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    )
+                }
+                items(followed) { podcast ->
+                    PodcastRow(podcast = podcast, onClick = { selectedPodcast = podcast })
+                }
+            }
+
+            item {
+                Text(
+                    text = translate("پرطرفدارترین پادکست‌ها", "Top Podcasts", viewModel),
+                    fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppleRed,
+                    fontFamily = LocalAppFontFamily.current,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
+            if (topPodcasts.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(color = AppleRed)
+                    }
+                }
+            } else {
+                items(topPodcasts) { podcast ->
+                    PodcastRow(podcast = podcast, onClick = { selectedPodcast = podcast })
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PodcastRow(podcast: PodcastItem, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        AsyncImage(
+            model = podcast.artworkUrl,
+            contentDescription = podcast.name,
+            modifier = Modifier.size(54.dp).clip(RoundedCornerShape(12.dp)),
+            contentScale = ContentScale.Crop
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(podcast.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+            Text(podcast.artistName, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+        }
+        Icon(
+            imageVector = Icons.Default.ChevronLeft,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+            modifier = Modifier.size(16.dp)
+        )
     }
 }
 
