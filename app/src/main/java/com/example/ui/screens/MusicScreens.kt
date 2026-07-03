@@ -7,6 +7,7 @@ import android.speech.RecognizerIntent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -833,7 +834,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         selected = selectedTab == 0 && currentSubScreen == null,
                         onClick = { selectedTab = 0; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "خانه") },
-                        label = { Text("خانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                        label = { Text(translate("خانه", "Home", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -842,7 +843,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         selected = selectedTab == 1 && currentSubScreen == null,
                         onClick = { selectedTab = 1; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Explore else Icons.Outlined.Explore, contentDescription = "اکتشاف") },
-                        label = { Text("اکتشاف", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                        label = { Text(translate("اکتشاف", "Discover", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -851,7 +852,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         selected = selectedTab == 2 && currentSubScreen == null,
                         onClick = { selectedTab = 2; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 2) Icons.Filled.LibraryMusic else Icons.Outlined.LibraryMusic, contentDescription = "کتابخانه") },
-                        label = { Text("کتابخانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                        label = { Text(translate("کتابخانه", "Library", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -860,7 +861,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         selected = selectedTab == 3 && currentSubScreen == null,
                         onClick = { selectedTab = 3; currentSubScreen = null },
                         icon = { Icon(imageVector = if (selectedTab == 3) Icons.Filled.Person else Icons.Outlined.Person, contentDescription = "پروفایل") },
-                        label = { Text("پروفایل", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                        label = { Text(translate("پروفایل", "Profile", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
@@ -1070,28 +1071,28 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 selected = selectedTab == 0 && currentSubScreen == null,
                                 onClick = { selectedTab = 0; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 0) Icons.Filled.Home else Icons.Outlined.Home, contentDescription = "خانه") },
-                                label = { Text("خانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                                label = { Text(translate("خانه", "Home", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 1 && currentSubScreen == null,
                                 onClick = { selectedTab = 1; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 1) Icons.Filled.Explore else Icons.Outlined.Explore, contentDescription = "اکتشاف") },
-                                label = { Text("اکتشاف", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                                label = { Text(translate("اکتشاف", "Discover", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 2 && currentSubScreen == null,
                                 onClick = { selectedTab = 2; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 2) Icons.Filled.LibraryMusic else Icons.Outlined.LibraryMusic, contentDescription = "کتابخانه") },
-                                label = { Text("کتابخانه", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                                label = { Text(translate("کتابخانه", "Library", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                             NavigationBarItem(
                                 selected = selectedTab == 3 && currentSubScreen == null,
                                 onClick = { selectedTab = 3; currentSubScreen = null },
                                 icon = { Icon(imageVector = if (selectedTab == 3) Icons.Filled.Person else Icons.Outlined.Person, contentDescription = "پروفایل") },
-                                label = { Text("پروفایل", fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                                label = { Text(translate("پروفایل", "Profile", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
                         }
@@ -3076,9 +3077,9 @@ fun SearchScreen(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(text = "تاریخچه جستجو", fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = LocalAppFontFamily.current)
+                            Text(text = translate("تاریخچه جستجو", "Search History", viewModel), fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = LocalAppFontFamily.current)
                             TextButton(onClick = { viewModel.clearSearchHistory() }) {
-                                Text("پاک کردن همه", color = AppleRed, fontFamily = LocalAppFontFamily.current)
+                                Text(translate("پاک کردن همه", "Clear All", viewModel), color = AppleRed, fontFamily = LocalAppFontFamily.current)
                             }
                         }
 
@@ -3106,7 +3107,7 @@ fun SearchScreen(
                     }
 
                     // Quick Search Suggestions
-                    Text(text = "پیشنهادهای جستجو", fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = LocalAppFontFamily.current)
+                    Text(text = translate("پیشنهادهای جستجو", "Search Suggestions", viewModel), fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = LocalAppFontFamily.current)
                     val suggestions = listOf("The Weeknd", "Taylor Swift", "Coldplay", "Adele", "Eminem", "Billie Eilish", "Dua Lipa")
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -3464,6 +3465,8 @@ fun LibraryScreen(
     val playlists by viewModel.localPlaylists.collectAsStateWithLifecycle()
     val internetRadioStations by viewModel.internetRadioStations.collectAsStateWithLifecycle()
     var showCreatePlaylistDialog by remember { mutableStateOf(false) }
+    // null = closed, otherwise "empty" / "manual" / "spotify"
+    var createPlaylistMode by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier = Modifier
@@ -3474,7 +3477,7 @@ fun LibraryScreen(
     ) {
         item {
             Text(
-                text = "کتابخانه",
+                text = translate("کتابخانه", "Library", viewModel),
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 12.dp)
@@ -3483,11 +3486,12 @@ fun LibraryScreen(
 
         // Section item selectors
         val categories = listOf(
-            Triple("songs", "آهنگ‌های من", Icons.Outlined.MusicNote),
-            Triple("albums", "آلبوم‌های من", Icons.Outlined.Album),
-            Triple("artists", "هنرمندان من", Icons.Outlined.People),
-            Triple("all_artists", "مرور همه هنرمندان", Icons.Outlined.Groups),
-            Triple("downloads", "دانلودهای آفلاین", Icons.Outlined.OfflinePin)
+            Triple("songs", "آهنگ‌های من" to "My Songs", Icons.Outlined.MusicNote),
+            Triple("albums", "آلبوم‌های من" to "My Albums", Icons.Outlined.Album),
+            Triple("artists", "هنرمندان من" to "My Artists", Icons.Outlined.People),
+            Triple("all_artists", "مرور همه هنرمندان" to "Browse All Artists", Icons.Outlined.Groups),
+            Triple("downloads", "دانلودهای آفلاین" to "Offline Downloads", Icons.Outlined.OfflinePin),
+            Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid)
         )
 
         items(categories) { cat ->
@@ -3507,7 +3511,7 @@ fun LibraryScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = cat.second,
+                        text = translate(cat.second.first, cat.second.second, viewModel),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.weight(1f),
@@ -3527,7 +3531,7 @@ fun LibraryScreen(
         // Internet Radio Section
         if (internetRadioStations.isNotEmpty()) {
             item {
-                Text(text = "رادیو اینترنتی", fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(bottom = 4.dp))
+                Text(text = translate("رادیو اینترنتی", "Internet Radio", viewModel), fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(bottom = 4.dp))
             }
             item {
                 LazyRow(
@@ -3600,7 +3604,7 @@ fun LibraryScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = "لیست‌های پخش من", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                Text(text = translate("لیست‌های پخش من", "My Playlists", viewModel), fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 IconButton(onClick = { showCreatePlaylistDialog = true }) {
                     Icon(imageVector = Icons.Default.Add, contentDescription = "ایجاد پلی‌لیست", tint = AppleRed)
                 }
@@ -3652,13 +3656,56 @@ fun LibraryScreen(
         }
     }
 
+    // --- Playlist creation: mode chooser → empty / manual picker / Spotify import ---
     if (showCreatePlaylistDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreatePlaylistDialog = false },
+            title = { Text("ایجاد لیست پخش جدید", fontFamily = LocalAppFontFamily.current) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        Triple("empty", "پلی‌لیست خالی" to "بعداً آهنگ اضافه کنید", Icons.Outlined.PlaylistAdd),
+                        Triple("manual", "دستی از آهنگ‌های موجود" to "انتخاب آهنگ‌ها از کتابخانه", Icons.Outlined.LibraryMusic),
+                        Triple("spotify", "ایمپورت از اسپاتیفای" to "با لینک پلی‌لیست عمومی", Icons.Outlined.Link)
+                    ).forEach { (mode, labels, icon) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    showCreatePlaylistDialog = false
+                                    createPlaylistMode = mode
+                                }
+                                .padding(vertical = 10.dp, horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(imageVector = icon, contentDescription = null, tint = AppleRed, modifier = Modifier.size(24.dp))
+                            Column {
+                                Text(labels.first, fontWeight = FontWeight.Bold, fontSize = 14.sp, fontFamily = LocalAppFontFamily.current)
+                                Text(labels.second, fontSize = 11.sp, color = Color.Gray, fontFamily = LocalAppFontFamily.current)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showCreatePlaylistDialog = false }) {
+                    Text("انصراف", color = Color.Gray, fontFamily = LocalAppFontFamily.current)
+                }
+            }
+        )
+    }
+
+    // 1) Empty playlist (name + description)
+    if (createPlaylistMode == "empty") {
         var playlistName by remember { mutableStateOf("") }
         var playlistDesc by remember { mutableStateOf("") }
 
         AlertDialog(
-            onDismissRequest = { showCreatePlaylistDialog = false },
-            title = { Text("ایجاد لیست پخش جدید") },
+            onDismissRequest = { createPlaylistMode = null },
+            title = { Text("پلی‌لیست خالی", fontFamily = LocalAppFontFamily.current) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     OutlinedTextField(
@@ -3681,7 +3728,7 @@ fun LibraryScreen(
                     onClick = {
                         if (playlistName.isNotBlank()) {
                             viewModel.createPlaylist(playlistName, playlistDesc)
-                            showCreatePlaylistDialog = false
+                            createPlaylistMode = null
                         }
                     }
                 ) {
@@ -3689,12 +3736,192 @@ fun LibraryScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCreatePlaylistDialog = false }) {
+                TextButton(onClick = { createPlaylistMode = null }) {
                     Text("انصراف", color = Color.Gray)
                 }
             }
         )
     }
+
+    // 2) Manual picker from existing songs
+    if (createPlaylistMode == "manual") {
+        ManualPlaylistDialog(
+            viewModel = viewModel,
+            onDismiss = { createPlaylistMode = null }
+        )
+    }
+
+    // 3) Import from Spotify link
+    if (createPlaylistMode == "spotify") {
+        SpotifyImportDialog(
+            viewModel = viewModel,
+            onDismiss = { createPlaylistMode = null }
+        )
+    }
+}
+
+// Multi-select song picker backed by the library search
+@Composable
+private fun ManualPlaylistDialog(viewModel: MusicViewModel, onDismiss: () -> Unit) {
+    var playlistName by remember { mutableStateOf("") }
+    var pickerQuery by remember { mutableStateOf("") }
+    val selected = remember { mutableStateListOf<SubsonicSong>() }
+    val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
+    val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
+
+    LaunchedEffect(pickerQuery) {
+        if (pickerQuery.isNotBlank()) viewModel.updateSearchQuery(pickerQuery)
+    }
+
+    val shownSongs = if (pickerQuery.isBlank()) randomSongs else (searchResults.song ?: emptyList())
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("ساخت پلی‌لیست دستی", fontFamily = LocalAppFontFamily.current) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = playlistName,
+                    onValueChange = { playlistName = it },
+                    label = { Text("نام لیست پخش") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                )
+                OutlinedTextField(
+                    value = pickerQuery,
+                    onValueChange = { pickerQuery = it },
+                    label = { Text("جستجوی آهنگ...") },
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                )
+                Text(
+                    text = "${selected.size} آهنگ انتخاب شده",
+                    fontSize = 12.sp,
+                    color = AppleRed,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = LocalAppFontFamily.current
+                )
+                LazyColumn(modifier = Modifier.height(280.dp)) {
+                    items(shownSongs, key = { it.id }) { song ->
+                        val isSelected = selected.any { it.id == song.id }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    if (isSelected) selected.removeAll { it.id == song.id }
+                                    else selected.add(song)
+                                }
+                                .padding(vertical = 6.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = {
+                                    if (isSelected) selected.removeAll { it.id == song.id }
+                                    else selected.add(song)
+                                },
+                                colors = CheckboxDefaults.colors(checkedColor = AppleRed)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(song.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                                Text(song.artist ?: "", fontSize = 11.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    if (playlistName.isNotBlank() && selected.isNotEmpty()) {
+                        viewModel.createPlaylistWithSongs(playlistName, selected.toList())
+                        onDismiss()
+                    }
+                },
+                enabled = playlistName.isNotBlank() && selected.isNotEmpty()
+            ) {
+                Text("ایجاد (${selected.size})", color = if (playlistName.isNotBlank() && selected.isNotEmpty()) AppleRed else Color.Gray)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("انصراف", color = Color.Gray)
+            }
+        }
+    )
+}
+
+// Paste a public Spotify playlist link; tracks get matched against the server library
+@Composable
+private fun SpotifyImportDialog(viewModel: MusicViewModel, onDismiss: () -> Unit) {
+    var spotifyLink by remember { mutableStateOf("") }
+    val isImporting by viewModel.isImportingSpotify.collectAsStateWithLifecycle()
+    val importStatus by viewModel.spotifyImportStatus.collectAsStateWithLifecycle()
+
+    AlertDialog(
+        onDismissRequest = {
+            if (!isImporting) {
+                viewModel.clearSpotifyImportStatus()
+                onDismiss()
+            }
+        },
+        title = { Text("ایمپورت از اسپاتیفای", fontFamily = LocalAppFontFamily.current) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "لینک پلی‌لیست عمومی اسپاتیفای را وارد کنید. آهنگ‌ها با کتابخانه سرور شما تطبیق داده می‌شوند.",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    fontFamily = LocalAppFontFamily.current
+                )
+                OutlinedTextField(
+                    value = spotifyLink,
+                    onValueChange = { spotifyLink = it },
+                    label = { Text("https://open.spotify.com/playlist/...") },
+                    singleLine = true,
+                    enabled = !isImporting,
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                )
+                if (isImporting) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CircularProgressIndicator(color = AppleRed, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Text("در حال دریافت و تطبیق آهنگ‌ها...", fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                    }
+                }
+                importStatus?.let { status ->
+                    Text(
+                        text = status,
+                        fontSize = 13.sp,
+                        color = if (status.startsWith("✓")) Color(0xFF34C759) else AppleRed,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { viewModel.importSpotifyPlaylist(spotifyLink.trim()) },
+                enabled = !isImporting && spotifyLink.isNotBlank()
+            ) {
+                Text("ایمپورت", color = if (!isImporting && spotifyLink.isNotBlank()) AppleRed else Color.Gray)
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = {
+                    if (!isImporting) {
+                        viewModel.clearSpotifyImportStatus()
+                        onDismiss()
+                    }
+                }
+            ) {
+                Text(if (importStatus?.startsWith("✓") == true) "بستن" else "انصراف", color = Color.Gray)
+            }
+        }
+    )
 }
 
 // --- Sub-Library Items Explorer (Lliked Songs, Albums, Artists, Downloads) ---
@@ -3708,11 +3935,12 @@ fun SubLibraryItemsView(
     onArtistClick: (SubsonicArtist) -> Unit
 ) {
     val title = when (type) {
-        "songs" -> "آهنگ‌های من"
-        "albums" -> "آلبوم‌های من"
-        "artists" -> "هنرمندان من"
-        "all_artists" -> "مرور همه هنرمندان"
-        else -> "دانلودها"
+        "songs" -> translate("آهنگ‌های من", "My Songs", viewModel)
+        "albums" -> translate("آلبوم‌های من", "My Albums", viewModel)
+        "artists" -> translate("هنرمندان من", "My Artists", viewModel)
+        "all_artists" -> translate("مرور همه هنرمندان", "Browse All Artists", viewModel)
+        "device_songs" -> translate("آهنگ‌های داخل گوشی", "Songs on Device", viewModel)
+        else -> translate("دانلودها", "Downloads", viewModel)
     }
 
     Scaffold(
@@ -3729,6 +3957,9 @@ fun SubLibraryItemsView(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding).padding(bottom = 80.dp)) {
             when (type) {
+                "device_songs" -> {
+                    DeviceSongsView(viewModel = viewModel)
+                }
                 "songs" -> {
                     val tracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
                     if (tracks.isEmpty()) {
@@ -7838,7 +8069,7 @@ fun FullscreenPlayer(
                     if (isLoadingLyrics) {
                         CircularProgressIndicator(color = AppleRed)
                     } else if (lyrics == null) {
-                        Text("متن موسیقی یافت نشد.", color = Color.White.copy(alpha = 0.6f), fontSize = 15.sp)
+                        Text(translate("متن موسیقی یافت نشد.", "Lyrics not found.", viewModel), color = Color.White.copy(alpha = 0.6f), fontSize = 15.sp)
                     } else {
                         val parsedLyrics = remember(lyrics) { parseLrc(lyrics!!) }
                         if (parsedLyrics.isEmpty()) {
@@ -7857,7 +8088,7 @@ fun FullscreenPlayer(
                                 ) {
                                     if (translatedLyrics != null) {
                                         TextButton(onClick = { viewModel.clearTranslatedLyrics() }) {
-                                            Text("بستن ترجمه", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                            Text(translate("بستن ترجمه", "Hide Translation", viewModel), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                         }
                                     } else {
                                         OutlinedButton(
@@ -7866,7 +8097,7 @@ fun FullscreenPlayer(
                                             shape = RoundedCornerShape(20.dp),
                                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                         ) {
-                                            Text("ترجمه 🌐", color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                            Text(translate("ترجمه 🌐", "Translate 🌐", viewModel), color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                         }
                                     }
                                 }
@@ -7904,7 +8135,7 @@ fun FullscreenPlayer(
                                 ) {
                                     if (translatedLyrics != null) {
                                         TextButton(onClick = { viewModel.clearTranslatedLyrics() }) {
-                                            Text("بستن ترجمه", color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                            Text(translate("بستن ترجمه", "Hide Translation", viewModel), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                         }
                                     } else {
                                         OutlinedButton(
@@ -7913,7 +8144,7 @@ fun FullscreenPlayer(
                                             shape = RoundedCornerShape(20.dp),
                                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                         ) {
-                                            Text("ترجمه 🌐", color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                            Text(translate("ترجمه 🌐", "Translate 🌐", viewModel), color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                         }
                                     }
                                 }
@@ -8740,7 +8971,11 @@ fun DiscoverFeedScreen(
         ) {
             val activeColor = AppleRed
             val inactiveColor = Color.White.copy(alpha = 0.55f)
-            listOf("موسیقی شما" to 0, "موزیک ویدیو" to 1, "برترین‌ها" to 2).forEach { (label, tabIndex) ->
+            listOf(
+                translate("موسیقی شما", "Your Music", viewModel) to 0,
+                translate("موزیک ویدیو", "Music Videos", viewModel) to 1,
+                translate("برترین‌ها", "Top Charts", viewModel) to 2
+            ).forEach { (label, tabIndex) ->
                 val selected = feedTab == tabIndex
                 Box(
                     modifier = Modifier
@@ -8862,7 +9097,7 @@ fun MusicVideoFeed(
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CircularProgressIndicator(color = AppleRed)
-                Text("در حال دریافت موزیک ویدیو...", color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+                Text(translate("در حال دریافت موزیک ویدیو...", "Loading music videos...", viewModel), color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
             }
         }
         return
@@ -9271,7 +9506,7 @@ fun DiscoverPage(
                         modifier = Modifier.size(28.dp)
                     )
                 }
-                Text("لایک", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+                Text(translate("لایک", "Like", viewModel), color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
             }
 
             // Add to queue button
@@ -9289,7 +9524,7 @@ fun DiscoverPage(
                         modifier = Modifier.size(26.dp)
                     )
                 }
-                Text("صف", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+                Text(translate("صف", "Queue", viewModel), color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
             }
 
             // Skip to next button
@@ -9307,19 +9542,200 @@ fun DiscoverPage(
                         modifier = Modifier.size(26.dp)
                     )
                 }
-                Text("بعدی", color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
+                Text(translate("بعدی", "Next", viewModel), color = Color.White.copy(alpha = 0.8f), fontSize = 10.sp)
             }
         }
 
         // Swipe hint at bottom center
         Text(
-            text = "↕ بکش برای آهنگ بعدی",
+            text = translate("↕ بکش برای آهنگ بعدی", "↕ Swipe for next song", viewModel),
             color = Color.White.copy(alpha = 0.45f),
             fontSize = 11.sp,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 60.dp)
         )
+    }
+}
+
+// --- Library: songs stored on the device (MediaStore) with text filter ---
+@Composable
+fun DeviceSongsView(viewModel: MusicViewModel) {
+    val context = LocalContext.current
+    val songs by viewModel.deviceSongs.collectAsStateWithLifecycle()
+    var filterQuery by remember { mutableStateOf("") }
+
+    val permission = if (android.os.Build.VERSION.SDK_INT >= 33)
+        android.Manifest.permission.READ_MEDIA_AUDIO
+    else
+        android.Manifest.permission.READ_EXTERNAL_STORAGE
+    var hasPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, permission) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        hasPermission = granted
+        if (granted) viewModel.loadDeviceSongs()
+    }
+    LaunchedEffect(Unit) {
+        if (hasPermission) viewModel.loadDeviceSongs() else permissionLauncher.launch(permission)
+    }
+
+    if (!hasPermission) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.PhoneAndroid,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                modifier = Modifier.size(56.dp)
+            )
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = translate("برای نمایش آهنگ‌های داخل گوشی، اجازه دسترسی لازم است", "Permission is required to show songs on this device", viewModel),
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                fontFamily = LocalAppFontFamily.current,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+            )
+            Spacer(Modifier.height(14.dp))
+            Button(
+                onClick = { permissionLauncher.launch(permission) },
+                colors = ButtonDefaults.buttonColors(containerColor = AppleRed)
+            ) {
+                Text(translate("اجازه دسترسی", "Grant access", viewModel), color = Color.White, fontFamily = LocalAppFontFamily.current)
+            }
+        }
+        return
+    }
+
+    val filtered = remember(songs, filterQuery) {
+        if (filterQuery.isBlank()) songs
+        else songs.filter { s ->
+            s.title.contains(filterQuery, ignoreCase = true) ||
+                s.artist?.contains(filterQuery, ignoreCase = true) == true ||
+                s.album?.contains(filterQuery, ignoreCase = true) == true
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Filter box
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .height(46.dp)
+                .clip(RoundedCornerShape(23.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                .padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+            BasicTextField(
+                value = filterQuery,
+                onValueChange = { filterQuery = it },
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 14.sp,
+                    fontFamily = LocalAppFontFamily.current,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(AppleRed),
+                modifier = Modifier.weight(1f),
+                decorationBox = { innerTextField ->
+                    Box(contentAlignment = Alignment.CenterStart) {
+                        if (filterQuery.isEmpty()) {
+                            Text(
+                                text = translate("فیلتر بر اساس نام، خواننده یا آلبوم...", "Filter by title, artist or album...", viewModel),
+                                fontSize = 14.sp,
+                                fontFamily = LocalAppFontFamily.current,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                        }
+                        innerTextField()
+                    }
+                }
+            )
+            if (filterQuery.isNotEmpty()) {
+                IconButton(onClick = { filterQuery = "" }, modifier = Modifier.size(28.dp)) {
+                    Icon(imageVector = Icons.Default.Close, contentDescription = "پاک کردن", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
+        Text(
+            text = translate("${filtered.size} آهنگ", "${filtered.size} songs", viewModel),
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+            fontFamily = LocalAppFontFamily.current,
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp)
+        )
+
+        if (filtered.isEmpty()) {
+            EmptyStateView(
+                message = if (songs.isEmpty()) "آهنگی در حافظه گوشی پیدا نشد."
+                else "نتیجه‌ای برای این فیلتر پیدا نشد."
+            )
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                items(filtered, key = { it.id }) { song ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { viewModel.playSongDirectly(song, filtered) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = AppleRed,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = song.title,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontFamily = LocalAppFontFamily.current
+                            )
+                            Text(
+                                text = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
+                                fontSize = 12.sp,
+                                color = Color.Gray,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontFamily = LocalAppFontFamily.current
+                            )
+                        }
+                        val dur = song.duration ?: 0
+                        Text(
+                            text = "%d:%02d".format(dur / 60, dur % 60),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                }
+            }
+        }
     }
 }
 
@@ -9350,7 +9766,7 @@ fun AppleTopSongsFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CircularProgressIndicator(color = AppleRed)
-                Text("در حال دریافت برترین‌های جهان...", color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+                Text(translate("در حال دریافت برترین‌های جهان...", "Loading global top songs...", viewModel), color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
             }
         }
         return

@@ -649,6 +649,122 @@ class MusicViewModel(
         }
     }
 
+    // Manual playlist creation from picked songs
+    fun createPlaylistWithSongs(name: String, songs: List<SubsonicSong>) {
+        viewModelScope.launch {
+            val id = repository.createLocalPlaylist(name, null)
+            songs.forEach { repository.addTrackToPlaylist(id, it) }
+            _transientMessage.value = "پلی‌لیست «$name» با ${songs.size} آهنگ ساخته شد"
+        }
+    }
+
+    // --- Spotify playlist import (public embed page, no API key) ---
+    private val _spotifyImportStatus = MutableStateFlow<String?>(null)
+    val spotifyImportStatus: StateFlow<String?> = _spotifyImportStatus.asStateFlow()
+    private val _isImportingSpotify = MutableStateFlow(false)
+    val isImportingSpotify: StateFlow<Boolean> = _isImportingSpotify.asStateFlow()
+
+    fun clearSpotifyImportStatus() {
+        _spotifyImportStatus.value = null
+    }
+
+    fun importSpotifyPlaylist(link: String) {
+        if (_isImportingSpotify.value) return
+        viewModelScope.launch(Dispatchers.IO) {
+            _isImportingSpotify.value = true
+            _spotifyImportStatus.value = null
+            try {
+                val playlistId = Regex("playlist/([A-Za-z0-9]+)").find(link)?.groupValues?.get(1)
+                if (playlistId == null) {
+                    _spotifyImportStatus.value = "لینک پلی‌لیست اسپاتیفای معتبر نیست"
+                    return@launch
+                }
+                // The public embed page ships the playlist as JSON — no login or API key needed
+                val url = "https://open.spotify.com/embed/playlist/$playlistId"
+                val client = okhttp3.OkHttpClient()
+                val request = okhttp3.Request.Builder()
+                    .url(url)
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36")
+                    .build()
+                val html = client.newCall(request).execute().use { it.body?.string() }
+                if (html.isNullOrBlank()) {
+                    _spotifyImportStatus.value = "دسترسی به اسپاتیفای ممکن نشد"
+                    return@launch
+                }
+
+                var playlistName = "Spotify Playlist"
+                val wanted = mutableListOf<Pair<String, String>>() // title to artist
+
+                // Primary: parse the embedded __NEXT_DATA__ JSON
+                val jsonStr = Regex(
+                    "<script id=\"__NEXT_DATA__\" type=\"application/json\">(.*?)</script>",
+                    RegexOption.DOT_MATCHES_ALL
+                ).find(html)?.groupValues?.get(1)
+                if (jsonStr != null) {
+                    try {
+                        val entity = org.json.JSONObject(jsonStr)
+                            .optJSONObject("props")?.optJSONObject("pageProps")
+                            ?.optJSONObject("state")?.optJSONObject("data")
+                            ?.optJSONObject("entity")
+                        if (entity != null) {
+                            playlistName = entity.optString("name").ifBlank { playlistName }
+                            val trackArr = entity.optJSONArray("trackList")
+                            if (trackArr != null) {
+                                for (i in 0 until trackArr.length()) {
+                                    val t = trackArr.getJSONObject(i)
+                                    val title = t.optString("title")
+                                    val artist = t.optString("subtitle")
+                                    if (title.isNotBlank()) wanted.add(title to artist)
+                                }
+                            }
+                        }
+                    } catch (_: Exception) {}
+                    // Fallback: generic scan of the JSON for title/subtitle pairs
+                    if (wanted.isEmpty()) {
+                        Regex("\"title\"\\s*:\\s*\"(.*?)\"\\s*,\\s*\"subtitle\"\\s*:\\s*\"(.*?)\"")
+                            .findAll(jsonStr).forEach { m ->
+                                val title = m.groupValues[1]
+                                if (title.isNotBlank()) wanted.add(title to m.groupValues[2])
+                            }
+                    }
+                }
+
+                if (wanted.isEmpty()) {
+                    _spotifyImportStatus.value = "آهنگی در این پلی‌لیست پیدا نشد (شاید پلی‌لیست خصوصی است)"
+                    return@launch
+                }
+
+                // Match each Spotify track against the user's own server library
+                val matched = mutableListOf<SubsonicSong>()
+                for ((title, subtitle) in wanted) {
+                    try {
+                        val primaryArtist = subtitle.split(",").first().trim()
+                        val candidates = repository.search(title).song ?: emptyList()
+                        val hit = candidates.firstOrNull { s ->
+                            s.artist != null && primaryArtist.isNotBlank() && (
+                                s.artist.contains(primaryArtist, ignoreCase = true) ||
+                                    primaryArtist.contains(s.artist, ignoreCase = true)
+                                )
+                        } ?: candidates.firstOrNull { it.title.equals(title, ignoreCase = true) }
+                        if (hit != null && matched.none { it.id == hit.id }) matched.add(hit)
+                    } catch (_: Exception) {}
+                }
+
+                if (matched.isEmpty()) {
+                    _spotifyImportStatus.value = "هیچ‌کدام از ${wanted.size} آهنگ این پلی‌لیست در سرور شما پیدا نشد"
+                } else {
+                    val id = repository.createLocalPlaylist(playlistName, "ایمپورت از اسپاتیفای")
+                    matched.forEach { repository.addTrackToPlaylist(id, it) }
+                    _spotifyImportStatus.value = "✓ «$playlistName» ساخته شد — ${matched.size} از ${wanted.size} آهنگ در سرور پیدا شد"
+                }
+            } catch (e: Exception) {
+                _spotifyImportStatus.value = "خطا در ایمپورت از اسپاتیفای"
+            } finally {
+                _isImportingSpotify.value = false
+            }
+        }
+    }
+
     fun removeTrackFromPlaylist(playlistId: Long, trackId: String) {
         viewModelScope.launch {
             repository.removeTrackFromPlaylist(playlistId, trackId)
@@ -691,9 +807,14 @@ class MusicViewModel(
     fun translateLyrics(text: String) {
         viewModelScope.launch {
             try {
-                _translatedLyrics.value = repository.translateLyrics(text)
+                val result = repository.translateLyrics(text)
+                _translatedLyrics.value = result
+                if (result == null) {
+                    _transientMessage.value = "ترجمه در دسترس نیست — بعداً دوباره امتحان کنید"
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
+                _transientMessage.value = "خطا در ترجمه"
             }
         }
     }
@@ -1030,6 +1151,59 @@ class MusicViewModel(
                             video.artistName.contains(s.artist, ignoreCase = true)
                         )
                 }
+            } catch (_: Exception) {}
+        }
+    }
+
+    // --- Songs stored on the device (MediaStore) ---
+    private val _deviceSongs = MutableStateFlow<List<SubsonicSong>>(emptyList())
+    val deviceSongs: StateFlow<List<SubsonicSong>> = _deviceSongs.asStateFlow()
+
+    fun loadDeviceSongs() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val resolver = getApplication<Application>().contentResolver
+                val media = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+                val projection = arrayOf(
+                    android.provider.MediaStore.Audio.Media._ID,
+                    android.provider.MediaStore.Audio.Media.TITLE,
+                    android.provider.MediaStore.Audio.Media.ARTIST,
+                    android.provider.MediaStore.Audio.Media.ALBUM,
+                    android.provider.MediaStore.Audio.Media.DURATION,
+                    android.provider.MediaStore.Audio.Media.SIZE
+                )
+                val songs = mutableListOf<SubsonicSong>()
+                resolver.query(
+                    media,
+                    projection,
+                    android.provider.MediaStore.Audio.Media.IS_MUSIC + " != 0",
+                    null,
+                    android.provider.MediaStore.Audio.Media.TITLE + " COLLATE NOCASE ASC"
+                )?.use { cursor ->
+                    val idCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media._ID)
+                    val titleCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.TITLE)
+                    val artistCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.ARTIST)
+                    val albumCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.ALBUM)
+                    val durationCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DURATION)
+                    val sizeCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.SIZE)
+                    while (cursor.moveToNext()) {
+                        val id = cursor.getLong(idCol)
+                        val contentUri = android.content.ContentUris.withAppendedId(media, id)
+                        val rawArtist = cursor.getString(artistCol)
+                        songs.add(
+                            SubsonicSong(
+                                id = "local_$id",
+                                title = cursor.getString(titleCol) ?: "",
+                                artist = if (rawArtist.isNullOrBlank() || rawArtist == "<unknown>") null else rawArtist,
+                                album = cursor.getString(albumCol),
+                                duration = (cursor.getLong(durationCol) / 1000L).toInt(),
+                                size = cursor.getLong(sizeCol),
+                                path = contentUri.toString()
+                            )
+                        )
+                    }
+                }
+                _deviceSongs.value = songs
             } catch (_: Exception) {}
         }
     }

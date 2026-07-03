@@ -240,6 +240,11 @@ class MusicRepository(
             return@withContext DemoData.getDemoAudioUrl(song.id)
         }
 
+        // Songs stored on the device play straight from their MediaStore content URI
+        if (song.id.startsWith("local_")) {
+            return@withContext song.path ?: ""
+        }
+
         // If downloaded offline, return its local file path URI
         val downloaded = dao.getDownloadedTrack(song.id)
         if (downloaded != null) {
@@ -764,17 +769,37 @@ class MusicRepository(
     // --- Lyrics Translation ---
     suspend fun translateLyrics(text: String): String? = withContext(Dispatchers.IO) {
         try {
-            if (text.length <= 400) {
-                myMemoryApiService.translate(text).responseData?.translatedText
-            } else {
-                val chunks = text.chunked(400)
-                val translated = chunks.mapNotNull { chunk ->
-                    try {
-                        myMemoryApiService.translate(chunk).responseData?.translatedText
-                    } catch (e: Exception) { null }
+            // MyMemory has no auto-detect: pick the pair from the script of the text.
+            // Persian/Arabic script → translate to English, otherwise → to Persian.
+            val hasPersianScript = text.any { it in '؀'..'ۿ' }
+            val langpair = if (hasPersianScript) "fa|en" else "en|fa"
+
+            // Group whole lines into chunks under MyMemory's ~500-char per-request
+            // limit so lines are never split mid-sentence
+            val chunks = mutableListOf<String>()
+            val current = StringBuilder()
+            text.lineSequence().forEach { line ->
+                if (current.length + line.length + 1 > 450 && current.isNotEmpty()) {
+                    chunks.add(current.toString())
+                    current.clear()
                 }
-                if (translated.isEmpty()) null else translated.joinToString("\n")
+                if (current.isNotEmpty()) current.append('\n')
+                current.append(line)
             }
+            if (current.isNotEmpty()) chunks.add(current.toString())
+
+            val translated = chunks.mapNotNull { chunk ->
+                try {
+                    val result = myMemoryApiService.translate(chunk, langpair).responseData?.translatedText
+                    // MyMemory reports errors inside translatedText — treat those as failures
+                    if (result.isNullOrBlank() ||
+                        result.contains("INVALID", ignoreCase = true) ||
+                        result.contains("QUERY LENGTH LIMIT", ignoreCase = true) ||
+                        result.contains("MYMEMORY WARNING", ignoreCase = true)
+                    ) null else result
+                } catch (e: Exception) { null }
+            }
+            if (translated.isEmpty()) null else translated.joinToString("\n")
         } catch (e: Exception) {
             null
         }
