@@ -3579,6 +3579,7 @@ fun LibraryScreen(
             Triple("all_artists", "مرور همه هنرمندان" to "Browse All Artists", Icons.Outlined.Groups),
             Triple("downloads", "دانلودهای آفلاین" to "Offline Downloads", Icons.Outlined.OfflinePin),
             Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid),
+            Triple("catalog", "🎵 کاتالوگ آنلاین" to "🎵 Online Catalog", Icons.Outlined.LibraryMusic),
             Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts),
             Triple("telegram", "☁️ فضای ابری تلگرام" to "☁️ Telegram Cloud", Icons.Outlined.CloudUpload),
             Triple("quiz", "🎮 بازی حدس آهنگ" to "🎮 Music Quiz", Icons.Outlined.SportsEsports)
@@ -4089,6 +4090,7 @@ fun SubLibraryItemsView(
         "smart_never" -> translate("هرگز گوش نداده", "Never Played", viewModel)
         "podcasts" -> translate("پادکست", "Podcasts", viewModel)
         "telegram" -> translate("فضای ابری تلگرام", "Telegram Cloud", viewModel)
+        "catalog" -> translate("کاتالوگ آنلاین", "Online Catalog", viewModel)
         "quiz" -> translate("بازی حدس آهنگ", "Music Quiz", viewModel)
         else -> translate("دانلودها", "Downloads", viewModel)
     }
@@ -4118,6 +4120,9 @@ fun SubLibraryItemsView(
                 }
                 "telegram" -> {
                     TelegramView(viewModel = viewModel)
+                }
+                "catalog" -> {
+                    CatalogView(viewModel = viewModel)
                 }
                 "smart_top", "smart_recent", "smart_never" -> {
                     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
@@ -10558,6 +10563,152 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                 }
             }
         }
+    }
+}
+
+// --- Library: shared online catalog (admin curates a Telegram channel, all users read it) ---
+@Composable
+fun CatalogView(viewModel: MusicViewModel) {
+    val configured by viewModel.catalogConfigured.collectAsStateWithLifecycle()
+    val songs by viewModel.catalogSongs.collectAsStateWithLifecycle()
+    val status by viewModel.catalogStatus.collectAsStateWithLifecycle()
+    val busy by viewModel.isCatalogBusy.collectAsStateWithLifecycle()
+    var adminMode by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { viewModel.loadCatalogState() }
+
+    if (!configured) {
+        var token by remember { mutableStateOf("") }
+        var channel by remember { mutableStateOf("") }
+        var configUrl by remember { mutableStateOf("") }
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+            Icon(Icons.Outlined.LibraryMusic, contentDescription = null, tint = AppleRed, modifier = Modifier.size(48.dp))
+            Spacer(Modifier.height(12.dp))
+            Text(translate("کاتالوگ آنلاین", "Online Catalog", viewModel), fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = translate(
+                    "آهنگ‌های مشترک از یک کانال تلگرام. اگر ادمین هستید توکن بات و آیدی کانال را وارد کنید؛ در غیر این صورت آدرس پیکربندی را از ادمین بگیرید.",
+                    "Shared songs from a Telegram channel. If you're the admin, enter the bot token and channel id; otherwise paste a config URL from the admin.",
+                    viewModel
+                ),
+                fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                fontFamily = LocalAppFontFamily.current, lineHeight = 20.sp
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(value = configUrl, onValueChange = { configUrl = it }, label = { Text(translate("آدرس پیکربندی (کاربر عادی)", "Config URL (regular user)", viewModel)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+            Button(onClick = { viewModel.applyCatalogConfigUrl(configUrl) }, colors = ButtonDefaults.buttonColors(containerColor = AppleRed), enabled = configUrl.isNotBlank(), modifier = Modifier.padding(top = 8.dp)) {
+                Text(translate("اتصال با آدرس", "Connect via URL", viewModel), color = Color.White, fontFamily = LocalAppFontFamily.current)
+            }
+            Spacer(Modifier.height(20.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+            Spacer(Modifier.height(16.dp))
+            Text(translate("— یا به‌عنوان ادمین —", "— or as admin —", viewModel), fontSize = 12.sp, color = Color.Gray, fontFamily = LocalAppFontFamily.current)
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = token, onValueChange = { token = it }, label = { Text(translate("توکن بات", "Bot token", viewModel)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(value = channel, onValueChange = { channel = it }, label = { Text(translate("آیدی کانال (مثل @mychannel)", "Channel id (e.g. @mychannel)", viewModel)) }, singleLine = true, modifier = Modifier.fillMaxWidth(), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+            Button(onClick = { viewModel.configureCatalog(token, channel) }, colors = ButtonDefaults.buttonColors(containerColor = AppleRed), enabled = token.isNotBlank() && channel.isNotBlank(), modifier = Modifier.padding(top = 10.dp)) {
+                Text(translate("اتصال", "Connect", viewModel), color = Color.White, fontFamily = LocalAppFontFamily.current)
+            }
+            status?.let { Spacer(Modifier.height(12.dp)); Text(it, color = AppleRed, fontSize = 13.sp, fontFamily = LocalAppFontFamily.current) }
+        }
+        return
+    }
+
+    var pendingUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var upTitle by remember { mutableStateOf("") }
+    var upArtist by remember { mutableStateOf("") }
+    var upCover by remember { mutableStateOf("") }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) { pendingUri = uri; upTitle = ""; upArtist = ""; upCover = "" }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("🎵 " + translate("${songs.size} آهنگ در کاتالوگ", "${songs.size} songs in catalog", viewModel), fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), fontFamily = LocalAppFontFamily.current)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { viewModel.fetchCatalog() }) {
+                    Icon(Icons.Default.Refresh, contentDescription = "بروزرسانی", tint = AppleRed, modifier = Modifier.size(20.dp))
+                }
+                TextButton(onClick = { adminMode = !adminMode }) {
+                    Text(if (adminMode) translate("حالت کاربر", "User mode", viewModel) else translate("حالت ادمین", "Admin mode", viewModel), color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                }
+            }
+        }
+
+        if (adminMode) {
+            Button(
+                onClick = { picker.launch("audio/*") },
+                colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                modifier = Modifier.padding(horizontal = 16.dp),
+                enabled = !busy
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(translate("افزودن آهنگ به کاتالوگ", "Add song to catalog", viewModel), color = Color.White, fontFamily = LocalAppFontFamily.current)
+            }
+        }
+
+        if (busy) {
+            Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CircularProgressIndicator(color = AppleRed, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(translate("در حال کار...", "Working...", viewModel), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+            }
+        }
+        status?.let { Text(it, color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) }
+
+        if (songs.isEmpty()) {
+            EmptyStateView(message = translate("کاتالوگ خالی است.", "Catalog is empty.", viewModel))
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                items(songs, key = { it.fileId }) { s ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { viewModel.playCatalogSong(s, songs) }.padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(AppleRed.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                            if (s.coverUrl.isNotBlank()) {
+                                AsyncImage(model = s.coverUrl, contentDescription = null, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                            } else {
+                                Icon(Icons.Default.MusicNote, contentDescription = null, tint = AppleRed, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(s.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                            Text(s.artist, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                        }
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                }
+            }
+        }
+    }
+
+    pendingUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingUri = null },
+            title = { Text(translate("اطلاعات آهنگ", "Song info", viewModel), fontFamily = LocalAppFontFamily.current) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = upTitle, onValueChange = { upTitle = it }, label = { Text(translate("نام آهنگ", "Title", viewModel)) }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+                    OutlinedTextField(value = upArtist, onValueChange = { upArtist = it }, label = { Text(translate("نام هنرمند", "Artist", viewModel)) }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+                    OutlinedTextField(value = upCover, onValueChange = { upCover = it }, label = { Text(translate("لینک کاور (اختیاری)", "Cover URL (optional)", viewModel)) }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.adminAddToCatalog(uri, upTitle, upArtist, upCover)
+                    pendingUri = null
+                }) { Text(translate("افزودن", "Add", viewModel), color = AppleRed) }
+            },
+            dismissButton = { TextButton(onClick = { pendingUri = null }) { Text(translate("انصراف", "Cancel", viewModel), color = Color.Gray) } }
+        )
     }
 }
 

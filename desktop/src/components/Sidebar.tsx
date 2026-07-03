@@ -8,6 +8,7 @@ const NAV = [
   { id: 'playlists', label: 'پلی‌لیست‌ها', icon: '📃' },
   { id: 'starred', label: 'پسندیده‌ها', icon: '♥' },
   { id: 'search', label: 'جستجو', icon: '🔍' },
+  { id: 'catalog', label: 'کاتالوگ آنلاین', icon: '🎵' },
   { id: 'mysongs', label: 'آهنگ‌های من', icon: '➕' },
   { id: 'telegram', label: 'فضای ابری تلگرام', icon: '☁️' }
 ]

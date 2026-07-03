@@ -11,6 +11,7 @@ import { Search } from './pages/Search'
 import { Starred } from './pages/Starred'
 import { MySongs } from './pages/MySongs'
 import { Telegram } from './pages/Telegram'
+import { Catalog } from './pages/Catalog'
 import { Sidebar } from './components/Sidebar'
 import { PlayerBar } from './components/PlayerBar'
 import { Queue } from './components/Queue'
@@ -57,6 +58,8 @@ function Content({ view, param }: { view: string; param: string | null }) {
       return <MySongs />
     case 'telegram':
       return <Telegram />
+    case 'catalog':
+      return <Catalog />
     default:
       return <Home />
   }
