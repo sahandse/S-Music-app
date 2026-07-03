@@ -222,12 +222,38 @@ class PlaybackConnection(
         _playbackProgress.value = 0L
     }
 
+    private var fadeJob: Job? = null
+
     fun togglePlayPause() {
         val controller = mediaController ?: return
-        if (controller.isPlaying) {
-            controller.pause()
-        } else {
-            controller.play()
+        val fadeEnabled = context
+            .getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+            .getBoolean("fade_on_pause", false)
+        if (!fadeEnabled) {
+            if (controller.isPlaying) controller.pause() else controller.play()
+            return
+        }
+
+        // Smooth ~300ms volume ramp instead of a hard cut
+        fadeJob?.cancel()
+        fadeJob = connectionScope.launch {
+            if (controller.isPlaying) {
+                val startVolume = controller.volume.takeIf { it > 0f } ?: 1f
+                for (step in 9 downTo 0) {
+                    controller.volume = startVolume * step / 10f
+                    delay(30)
+                }
+                controller.pause()
+                controller.volume = startVolume
+            } else {
+                val targetVolume = controller.volume.takeIf { it > 0f } ?: 1f
+                controller.volume = 0f
+                controller.play()
+                for (step in 1..10) {
+                    controller.volume = targetVolume * step / 10f
+                    delay(30)
+                }
+            }
         }
     }
 

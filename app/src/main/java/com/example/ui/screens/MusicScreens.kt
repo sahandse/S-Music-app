@@ -2816,6 +2816,7 @@ fun SearchScreen(
     val history by viewModel.searchHistory.collectAsStateWithLifecycle()
     val isSearching by viewModel.isSearching.collectAsStateWithLifecycle()
     val trendingAlbums by viewModel.trendingAlbums.collectAsStateWithLifecycle()
+    val lyricsHits by viewModel.lyricsSearchHits.collectAsStateWithLifecycle()
     var activeFilter by remember { mutableStateOf("همه") }
     var selectedGenre by remember { mutableStateOf<String?>(null) }
     var selectedYear by remember { mutableStateOf<Int?>(null) }
@@ -3210,6 +3211,7 @@ fun SearchScreen(
                 val isResultEmpty = (artists.isEmpty() || !showArtists) &&
                                     (albums.isEmpty() || !showAlbums) &&
                                     (songs.isEmpty() || !showSongs) &&
+                                    (lyricsHits.isEmpty() || !showSongs) &&
                                     offlineMatches.isEmpty()
 
                 if (isResultEmpty) {
@@ -3366,7 +3368,78 @@ fun SearchScreen(
                             }
                         }
 
-                        // 4. Downloaded / Offline matches
+                        // 4. Found inside lyrics (LRCLIB free-text search)
+                        if (lyricsHits.isNotEmpty() && showSongs) {
+                            item {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    modifier = Modifier.padding(vertical = 4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Lyrics,
+                                        contentDescription = null,
+                                        tint = AppleRed,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = translate("پیدا شده در متن آهنگ", "Found in Lyrics", viewModel),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 16.sp,
+                                        color = AppleRed,
+                                        fontFamily = LocalAppFontFamily.current
+                                    )
+                                }
+                            }
+                            items(lyricsHits) { hit ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .clickable { viewModel.playLyricsHit(hit) }
+                                        .padding(vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(42.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(AppleRed.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Lyrics,
+                                            contentDescription = null,
+                                            tint = AppleRed,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "${hit.trackName} · ${hit.artistName}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontFamily = LocalAppFontFamily.current
+                                        )
+                                        if (hit.snippet.isNotBlank()) {
+                                            Text(
+                                                text = "«${hit.snippet}»",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                                fontFamily = LocalAppFontFamily.current
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // 5. Downloaded / Offline matches
                         if (offlineMatches.isNotEmpty()) {
                             item {
                                 Row(
@@ -3525,6 +3598,60 @@ fun LibraryScreen(
                     )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f), thickness = 0.5.dp, modifier = Modifier.padding(start = 50.dp))
+            }
+        }
+
+        // Smart playlists — built automatically from listening data
+        item {
+            Text(
+                text = translate("پلی‌لیست‌های هوشمند", "Smart Playlists", viewModel),
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+            )
+        }
+        val smartLists = listOf(
+            Triple("smart_top", "پرپخش‌ترین‌های من" to "Most Played", Icons.Outlined.TrendingUp),
+            Triple("smart_recent", "جدیدترین‌ها" to "Newest", Icons.Outlined.NewReleases),
+            Triple("smart_never", "هرگز گوش نداده" to "Never Played", Icons.Outlined.HourglassEmpty)
+        )
+        items(smartLists) { smart ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+                    .clickable { onItemClick(smart.first) }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Icon(
+                    imageVector = smart.third,
+                    contentDescription = null,
+                    tint = AppleRed,
+                    modifier = Modifier.size(22.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = translate(smart.second.first, smart.second.second, viewModel),
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Medium,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                    Text(
+                        text = translate("به‌روزرسانی خودکار", "Updates automatically", viewModel),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
 
@@ -3940,6 +4067,9 @@ fun SubLibraryItemsView(
         "artists" -> translate("هنرمندان من", "My Artists", viewModel)
         "all_artists" -> translate("مرور همه هنرمندان", "Browse All Artists", viewModel)
         "device_songs" -> translate("آهنگ‌های داخل گوشی", "Songs on Device", viewModel)
+        "smart_top" -> translate("پرپخش‌ترین‌های من", "Most Played", viewModel)
+        "smart_recent" -> translate("جدیدترین‌ها", "Newest", viewModel)
+        "smart_never" -> translate("هرگز گوش نداده", "Never Played", viewModel)
         else -> translate("دانلودها", "Downloads", viewModel)
     }
 
@@ -3959,6 +4089,63 @@ fun SubLibraryItemsView(
             when (type) {
                 "device_songs" -> {
                     DeviceSongsView(viewModel = viewModel)
+                }
+                "smart_top", "smart_recent", "smart_never" -> {
+                    val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
+                    val smartSongs = remember(randomSongs, type) {
+                        when (type) {
+                            "smart_top" -> randomSongs
+                                .filter { (it.playCount ?: 0L) > 0L }
+                                .sortedByDescending { it.playCount ?: 0L }
+                                .take(50)
+                            "smart_recent" -> randomSongs
+                                .filter { it.year != null }
+                                .sortedByDescending { it.year }
+                                .take(50)
+                            else -> randomSongs
+                                .filter { (it.playCount ?: 0L) == 0L }
+                                .take(50)
+                        }
+                    }
+                    if (smartSongs.isEmpty()) {
+                        EmptyStateView(message = translate("آهنگی برای این لیست پیدا نشد.", "No songs found for this list.", viewModel))
+                    } else {
+                        Column {
+                            // Play-all header
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = translate("${smartSongs.size} آهنگ", "${smartSongs.size} songs", viewModel),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                                Button(
+                                    onClick = { viewModel.playAllSongsInQueue(smartSongs) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(translate("پخش همه", "Play All", viewModel), color = Color.White, fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+                                }
+                            }
+                            LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                items(smartSongs, key = { it.id }) { song ->
+                                    TrackRowItem(
+                                        song = song,
+                                        onPlay = { viewModel.playSongDirectly(song, smartSongs) },
+                                        viewModel = viewModel
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
                 "songs" -> {
                     val tracks by viewModel.favoriteTracks.collectAsStateWithLifecycle()
@@ -7446,6 +7633,33 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
                     )
                 }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = translate("توقف و پخش نرم (Fade)", "Smooth fade on play/pause", viewModel),
+                            fontSize = 13.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = translate("صدا به‌جای قطع ناگهانی، نرم کم و زیاد می‌شود", "Volume ramps instead of cutting instantly", viewModel),
+                            fontSize = 11.sp,
+                            fontFamily = LocalAppFontFamily.current,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    }
+                    val fadeOnPause by viewModel.fadeOnPause.collectAsStateWithLifecycle()
+                    Switch(
+                        checked = fadeOnPause,
+                        onCheckedChange = { viewModel.setFadeOnPause(it) },
+                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                    )
+                }
             }
         }
 
@@ -7914,6 +8128,14 @@ fun FullscreenPlayer(
                                 tint = if (isDownloaded) AppleRed else Color.White
                             )
                         }
+                    }
+
+                    IconButton(onClick = { viewModel.shareSongCard(song) }) {
+                        Icon(
+                            imageVector = Icons.Outlined.Share,
+                            contentDescription = "اشتراک‌گذاری",
+                            tint = Color.White
+                        )
                     }
 
                     CastButton()
@@ -9613,12 +9835,20 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
         return
     }
 
-    val filtered = remember(songs, filterQuery) {
-        if (filterQuery.isBlank()) songs
+    val songDates by viewModel.deviceSongDates.collectAsStateWithLifecycle()
+    var sortMode by remember { mutableStateOf("name") } // name | newest | duration
+
+    val filtered = remember(songs, filterQuery, sortMode, songDates) {
+        val base = if (filterQuery.isBlank()) songs
         else songs.filter { s ->
             s.title.contains(filterQuery, ignoreCase = true) ||
                 s.artist?.contains(filterQuery, ignoreCase = true) == true ||
                 s.album?.contains(filterQuery, ignoreCase = true) == true
+        }
+        when (sortMode) {
+            "newest" -> base.sortedByDescending { songDates[it.id] ?: 0L }
+            "duration" -> base.sortedByDescending { it.duration ?: 0 }
+            else -> base.sortedBy { it.title.lowercase() }
         }
     }
 
@@ -9668,13 +9898,45 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
             }
         }
 
-        Text(
-            text = translate("${filtered.size} آهنگ", "${filtered.size} songs", viewModel),
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-            fontFamily = LocalAppFontFamily.current,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 2.dp)
-        )
+        // Sort chips + count
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            listOf(
+                "name" to translate("نام", "Name", viewModel),
+                "newest" to translate("جدیدترین", "Newest", viewModel),
+                "duration" to translate("مدت", "Duration", viewModel)
+            ).forEach { (mode, label) ->
+                val selected = sortMode == mode
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(if (selected) AppleRed else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                        .clickable { sortMode = mode }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 11.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                text = translate("${filtered.size} آهنگ", "${filtered.size} songs", viewModel),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                fontFamily = LocalAppFontFamily.current
+            )
+        }
 
         if (filtered.isEmpty()) {
             EmptyStateView(

@@ -46,6 +46,12 @@ data class ApplePreviewTrack(
     val previewUrl: String
 )
 
+data class LyricsSearchHit(
+    val trackName: String,
+    val artistName: String,
+    val snippet: String
+)
+
 class MusicViewModel(
     application: Application,
     private val repository: MusicRepository,
@@ -201,6 +207,9 @@ class MusicViewModel(
     private val _wifiOnlyDownload = MutableStateFlow(false)
     val wifiOnlyDownload: StateFlow<Boolean> = _wifiOnlyDownload.asStateFlow()
 
+    private val _fadeOnPause = MutableStateFlow(false)
+    val fadeOnPause: StateFlow<Boolean> = _fadeOnPause.asStateFlow()
+
     // --- Multi-server management ---
     val allServers: StateFlow<List<SavedServer>> = repository.getAllServersFlow()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -334,6 +343,7 @@ class MusicViewModel(
         _crossfadeEnabled.value = prefs.getBoolean("crossfade_enabled", false)
         _crossfadeDurationSeconds.value = prefs.getInt("crossfade_duration_seconds", 3)
         _wifiOnlyDownload.value = prefs.getBoolean("wifi_only_download", false)
+        _fadeOnPause.value = prefs.getBoolean("fade_on_pause", false)
         _autoBackupEnabled.value = prefs.getBoolean("auto_backup_enabled", false)
         loadTrendingContent()
         startAutoBackupLoop()
@@ -533,11 +543,16 @@ class MusicViewModel(
     }
 
     // --- Live Search ---
+    // --- Lyrics-content search results (LRCLIB) ---
+    private val _lyricsSearchHits = MutableStateFlow<List<LyricsSearchHit>>(emptyList())
+    val lyricsSearchHits: StateFlow<List<LyricsSearchHit>> = _lyricsSearchHits.asStateFlow()
+
     fun updateSearchQuery(query: String) {
         _searchQuery.value = query
         searchJob?.cancel()
         if (query.isBlank()) {
             _searchResults.value = SearchResult3(null, null, null)
+            _lyricsSearchHits.value = emptyList()
             _isSearching.value = false
             return
         }
@@ -546,9 +561,91 @@ class MusicViewModel(
             delay(400) // Debounce API calls
             _isSearching.value = true
             val results = repository.search(query)
-            _searchResults.value = results
+            _searchResults.value = applyFuzzyFallback(query, results)
             _isSearching.value = false
+
+            // Lyrics-content search runs after main results so it never delays them
+            try {
+                val hits = repository.searchInLyrics(query)
+                _lyricsSearchHits.value = hits.mapNotNull { t ->
+                    val name = t.trackName ?: return@mapNotNull null
+                    val snippet = t.plainLyrics
+                        ?.lineSequence()
+                        ?.firstOrNull { line -> line.contains(query, ignoreCase = true) }
+                        ?.trim()
+                        ?: ""
+                    LyricsSearchHit(trackName = name, artistName = t.artistName ?: "", snippet = snippet)
+                }
+            } catch (_: Exception) {
+                _lyricsSearchHits.value = emptyList()
+            }
         }
+    }
+
+    // Play a lyrics-search hit by locating it in the user's own server library
+    fun playLyricsHit(hit: LyricsSearchHit) {
+        viewModelScope.launch {
+            try {
+                val candidates = repository.search(hit.trackName).song ?: emptyList()
+                val song = candidates.firstOrNull { s ->
+                    s.artist != null && hit.artistName.isNotBlank() && (
+                        s.artist.contains(hit.artistName, ignoreCase = true) ||
+                            hit.artistName.contains(s.artist, ignoreCase = true)
+                        )
+                } ?: candidates.firstOrNull { it.title.equals(hit.trackName, ignoreCase = true) }
+                if (song != null) {
+                    playSongDirectly(song, listOf(song))
+                } else {
+                    _transientMessage.value = "این آهنگ در سرور شما موجود نیست"
+                }
+            } catch (_: Exception) {
+                _transientMessage.value = "این آهنگ در سرور شما موجود نیست"
+            }
+        }
+    }
+
+    // --- Typo-tolerant search: when the server finds little, fuzzy-match local pools ---
+    private fun levenshtein(a: String, b: String): Int {
+        if (a == b) return 0
+        if (a.isEmpty()) return b.length
+        if (b.isEmpty()) return a.length
+        var prev = IntArray(b.length + 1) { it }
+        val curr = IntArray(b.length + 1)
+        for (i in a.indices) {
+            curr[0] = i + 1
+            for (j in b.indices) {
+                val cost = if (a[i] == b[j]) 0 else 1
+                curr[j + 1] = minOf(curr[j] + 1, prev[j + 1] + 1, prev[j] + cost)
+            }
+            prev = curr.copyInto(IntArray(b.length + 1))
+        }
+        return prev[b.length]
+    }
+
+    private fun isFuzzyMatch(query: String, target: String): Boolean {
+        val q = query.lowercase().trim()
+        val t = target.lowercase()
+        if (q.length < 3) return t.contains(q)
+        if (t.contains(q)) return true
+        val threshold = if (q.length <= 5) 1 else 2
+        if (levenshtein(q, t) <= threshold) return true
+        return t.split(' ', '-', '_').any { token ->
+            token.length >= 3 && levenshtein(q, token) <= threshold
+        }
+    }
+
+    private fun applyFuzzyFallback(query: String, results: SearchResult3): SearchResult3 {
+        val existing = results.song ?: emptyList()
+        if (existing.size >= 3) return results
+        val pool = (_homeRandomSongs.value + _deviceSongs.value)
+        val fuzzy = pool
+            .filter { s ->
+                isFuzzyMatch(query, s.title) || (s.artist?.let { isFuzzyMatch(query, it) } == true)
+            }
+            .filter { s -> existing.none { it.id == s.id } }
+            .distinctBy { it.id }
+            .take(20)
+        return if (fuzzy.isEmpty()) results else results.copy(song = existing + fuzzy)
     }
 
     fun addSearchHistory(query: String) {
@@ -953,6 +1050,12 @@ class MusicViewModel(
         prefs.edit().putBoolean("wifi_only_download", enabled).apply()
     }
 
+    fun setFadeOnPause(enabled: Boolean) {
+        _fadeOnPause.value = enabled
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        prefs.edit().putBoolean("fade_on_pause", enabled).apply()
+    }
+
     // --- Multi-server management ---
     fun switchServer(url: String) {
         viewModelScope.launch {
@@ -1155,9 +1258,147 @@ class MusicViewModel(
         }
     }
 
+    // --- Story share card: cover + song name + app name (no URL) rendered to an image ---
+    fun shareSongCard(song: SubsonicSong) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val context = getApplication<Application>()
+                val coverUrl = repository.getCoverArtUrl(song.coverArt)
+                val request = ImageRequest.Builder(context)
+                    .data(coverUrl)
+                    .allowHardware(false)
+                    .size(800)
+                    .build()
+                val result = context.imageLoader.execute(request)
+                val cover = (result.drawable as? BitmapDrawable)?.bitmap
+
+                val w = 1080
+                val h = 1920
+                val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bmp)
+                val filterPaint = android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG)
+
+                // Background: center-cropped cover dimmed way down, else near-black
+                if (cover != null) {
+                    val scale = maxOf(w.toFloat() / cover.width, h.toFloat() / cover.height)
+                    val m = android.graphics.Matrix()
+                    m.setScale(scale, scale)
+                    m.postTranslate((w - cover.width * scale) / 2f, (h - cover.height * scale) / 2f)
+                    canvas.drawBitmap(cover, m, filterPaint)
+                    canvas.drawColor(android.graphics.Color.argb(200, 8, 8, 12))
+                } else {
+                    canvas.drawColor(android.graphics.Color.rgb(16, 16, 20))
+                }
+                val gradientPaint = android.graphics.Paint().apply {
+                    shader = android.graphics.LinearGradient(
+                        0f, h * 0.55f, 0f, h.toFloat(),
+                        android.graphics.Color.argb(0, 0, 0, 0),
+                        android.graphics.Color.argb(150, 0, 0, 0),
+                        android.graphics.Shader.TileMode.CLAMP
+                    )
+                }
+                canvas.drawRect(0f, 0f, w.toFloat(), h.toFloat(), gradientPaint)
+
+                // Big rounded cover in the center
+                if (cover != null) {
+                    val size = 760f
+                    val left = (w - size) / 2f
+                    val top = 420f
+                    val rect = android.graphics.RectF(left, top, left + size, top + size)
+                    val clip = android.graphics.Path().apply {
+                        addRoundRect(rect, 48f, 48f, android.graphics.Path.Direction.CW)
+                    }
+                    canvas.save()
+                    canvas.clipPath(clip)
+                    val cs = maxOf(size / cover.width, size / cover.height)
+                    val cm = android.graphics.Matrix()
+                    cm.setScale(cs, cs)
+                    cm.postTranslate(left + (size - cover.width * cs) / 2f, top + (size - cover.height * cs) / 2f)
+                    canvas.drawBitmap(cover, cm, filterPaint)
+                    canvas.restore()
+                    val border = android.graphics.Paint().apply {
+                        style = android.graphics.Paint.Style.STROKE
+                        strokeWidth = 3f
+                        color = android.graphics.Color.argb(70, 255, 255, 255)
+                        isAntiAlias = true
+                    }
+                    canvas.drawRoundRect(rect, 48f, 48f, border)
+                }
+
+                // Song title (up to two centered lines)
+                val titlePaint = android.text.TextPaint().apply {
+                    color = android.graphics.Color.WHITE
+                    textSize = 64f
+                    isAntiAlias = true
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                }
+                val titleLayout = android.text.StaticLayout.Builder
+                    .obtain(song.title, 0, song.title.length, titlePaint, w - 160)
+                    .setAlignment(android.text.Layout.Alignment.ALIGN_CENTER)
+                    .setMaxLines(2)
+                    .setEllipsize(android.text.TextUtils.TruncateAt.END)
+                    .build()
+                canvas.save()
+                canvas.translate(80f, 1300f)
+                titleLayout.draw(canvas)
+                canvas.restore()
+
+                // Artist
+                val artistPaint = android.text.TextPaint().apply {
+                    color = android.graphics.Color.argb(200, 255, 255, 255)
+                    textSize = 44f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                canvas.drawText(
+                    song.artist ?: "",
+                    w / 2f,
+                    1300f + titleLayout.height + 76f,
+                    artistPaint
+                )
+
+                // App name only — deliberately no web address
+                val appName = context.applicationInfo.loadLabel(context.packageManager).toString()
+                val appPaint = android.text.TextPaint().apply {
+                    color = android.graphics.Color.rgb(250, 45, 72)
+                    textSize = 42f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                    typeface = android.graphics.Typeface.create(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD)
+                }
+                canvas.drawText("♪ $appName", w / 2f, h - 110f, appPaint)
+
+                // Save to cache and hand off to the system share sheet
+                val dir = File(context.cacheDir, "share").apply { mkdirs() }
+                val file = File(dir, "share_card.png")
+                java.io.FileOutputStream(file).use { out ->
+                    bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 95, out)
+                }
+                val uri = androidx.core.content.FileProvider.getUriForFile(
+                    context, "${context.packageName}.fileprovider", file
+                )
+                val send = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(android.content.Intent.EXTRA_STREAM, uri)
+                    addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val chooser = android.content.Intent.createChooser(send, "اشتراک‌گذاری آهنگ").apply {
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(chooser)
+            } catch (e: Exception) {
+                _transientMessage.value = "خطا در ساخت کارت اشتراک‌گذاری"
+            }
+        }
+    }
+
     // --- Songs stored on the device (MediaStore) ---
     private val _deviceSongs = MutableStateFlow<List<SubsonicSong>>(emptyList())
     val deviceSongs: StateFlow<List<SubsonicSong>> = _deviceSongs.asStateFlow()
+
+    // MediaStore DATE_ADDED (epoch seconds) per song id, used by the sort menu
+    private val _deviceSongDates = MutableStateFlow<Map<String, Long>>(emptyMap())
+    val deviceSongDates: StateFlow<Map<String, Long>> = _deviceSongDates.asStateFlow()
 
     fun loadDeviceSongs() {
         viewModelScope.launch(Dispatchers.IO) {
@@ -1170,9 +1411,11 @@ class MusicViewModel(
                     android.provider.MediaStore.Audio.Media.ARTIST,
                     android.provider.MediaStore.Audio.Media.ALBUM,
                     android.provider.MediaStore.Audio.Media.DURATION,
-                    android.provider.MediaStore.Audio.Media.SIZE
+                    android.provider.MediaStore.Audio.Media.SIZE,
+                    android.provider.MediaStore.Audio.Media.DATE_ADDED
                 )
                 val songs = mutableListOf<SubsonicSong>()
+                val dates = mutableMapOf<String, Long>()
                 resolver.query(
                     media,
                     projection,
@@ -1186,13 +1429,15 @@ class MusicViewModel(
                     val albumCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.ALBUM)
                     val durationCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DURATION)
                     val sizeCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.SIZE)
+                    val dateCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DATE_ADDED)
                     while (cursor.moveToNext()) {
                         val id = cursor.getLong(idCol)
+                        val songId = "local_$id"
                         val contentUri = android.content.ContentUris.withAppendedId(media, id)
                         val rawArtist = cursor.getString(artistCol)
                         songs.add(
                             SubsonicSong(
-                                id = "local_$id",
+                                id = songId,
                                 title = cursor.getString(titleCol) ?: "",
                                 artist = if (rawArtist.isNullOrBlank() || rawArtist == "<unknown>") null else rawArtist,
                                 album = cursor.getString(albumCol),
@@ -1201,9 +1446,11 @@ class MusicViewModel(
                                 path = contentUri.toString()
                             )
                         )
+                        dates[songId] = cursor.getLong(dateCol)
                     }
                 }
                 _deviceSongs.value = songs
+                _deviceSongDates.value = dates
             } catch (_: Exception) {}
         }
     }

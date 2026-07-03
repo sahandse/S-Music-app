@@ -17,4 +17,10 @@ interface LrclibApiService {
         @Query("artist_name") artistName: String,
         @Query("track_name") trackName: String
     ): List<LrclibTrack>
+
+    // Free-text search across track names AND lyrics content
+    @GET("api/search")
+    suspend fun searchByQuery(
+        @Query("q") query: String
+    ): List<LrclibTrack>
 }

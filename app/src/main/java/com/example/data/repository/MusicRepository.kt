@@ -415,6 +415,17 @@ class MusicRepository(
         }
     }
 
+    // Free-text search across LRCLIB — finds songs by words inside their lyrics
+    suspend fun searchInLyrics(query: String): List<LrclibTrack> = withContext(Dispatchers.IO) {
+        try {
+            lrclibApiService.searchByQuery(query)
+                .filter { !it.trackName.isNullOrBlank() && !it.plainLyrics.isNullOrBlank() }
+                .take(15)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     suspend fun getTopSongs(artistName: String, artistId: String): List<SubsonicSong> = withContext(Dispatchers.IO) {
         if (artistId.startsWith("demo_") || cachedServer == null) {
             return@withContext DemoData.songs.filter { it.artistId == artistId }
