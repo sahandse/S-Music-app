@@ -3580,6 +3580,7 @@ fun LibraryScreen(
             Triple("downloads", "دانلودهای آفلاین" to "Offline Downloads", Icons.Outlined.OfflinePin),
             Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid),
             Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts),
+            Triple("telegram", "☁️ فضای ابری تلگرام" to "☁️ Telegram Cloud", Icons.Outlined.CloudUpload),
             Triple("quiz", "🎮 بازی حدس آهنگ" to "🎮 Music Quiz", Icons.Outlined.SportsEsports)
         )
 
@@ -4087,6 +4088,7 @@ fun SubLibraryItemsView(
         "smart_recent" -> translate("جدیدترین‌ها", "Newest", viewModel)
         "smart_never" -> translate("هرگز گوش نداده", "Never Played", viewModel)
         "podcasts" -> translate("پادکست", "Podcasts", viewModel)
+        "telegram" -> translate("فضای ابری تلگرام", "Telegram Cloud", viewModel)
         "quiz" -> translate("بازی حدس آهنگ", "Music Quiz", viewModel)
         else -> translate("دانلودها", "Downloads", viewModel)
     }
@@ -4113,6 +4115,9 @@ fun SubLibraryItemsView(
                 }
                 "quiz" -> {
                     MusicQuizView(viewModel = viewModel)
+                }
+                "telegram" -> {
+                    TelegramView(viewModel = viewModel)
                 }
                 "smart_top", "smart_recent", "smart_never" -> {
                     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
@@ -10553,6 +10558,190 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                 }
             }
         }
+    }
+}
+
+// --- Library: Telegram cloud storage (user's own bot, unlimited free storage) ---
+@Composable
+fun TelegramView(viewModel: MusicViewModel) {
+    val connected by viewModel.telegramConnected.collectAsStateWithLifecycle()
+    val songs by viewModel.telegramSongs.collectAsStateWithLifecycle()
+    val status by viewModel.telegramStatus.collectAsStateWithLifecycle()
+    val uploading by viewModel.isUploadingTelegram.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) { viewModel.loadTelegramState() }
+
+    if (!connected) {
+        var token by remember { mutableStateOf("") }
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp)) {
+            Icon(
+                imageVector = Icons.Outlined.CloudUpload,
+                contentDescription = null,
+                tint = AppleRed,
+                modifier = Modifier.size(48.dp)
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = translate("فضای ابری تلگرام", "Telegram Cloud", viewModel),
+                fontSize = 22.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = translate(
+                    "آهنگ‌های خود را در تلگرام (فضای نامحدود رایگان) ذخیره کنید.\n\n۱) در تلگرام از @BotFather یک بات بسازید و توکن آن را کپی کنید\n۲) به بات خود پیام /start بدهید\n۳) توکن را اینجا وارد کنید",
+                    "Store your songs on Telegram (free unlimited space).\n\n1) Create a bot via @BotFather and copy its token\n2) Send /start to your bot\n3) Paste the token here",
+                    viewModel
+                ),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                fontFamily = LocalAppFontFamily.current,
+                lineHeight = 20.sp
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(
+                value = token,
+                onValueChange = { token = it },
+                label = { Text(translate("توکن بات", "Bot token", viewModel)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+            )
+            Spacer(Modifier.height(12.dp))
+            Button(
+                onClick = { viewModel.connectTelegram(token) },
+                colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                enabled = token.isNotBlank()
+            ) {
+                Text(translate("اتصال", "Connect", viewModel), color = Color.White, fontFamily = LocalAppFontFamily.current)
+            }
+            status?.let {
+                Spacer(Modifier.height(12.dp))
+                Text(it, color = AppleRed, fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+            }
+        }
+        return
+    }
+
+    // Connected — upload + list
+    var pendingUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var upTitle by remember { mutableStateOf("") }
+    var upArtist by remember { mutableStateOf("") }
+    var upCover by remember { mutableStateOf("") }
+
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            pendingUri = uri
+            upTitle = ""
+            upArtist = ""
+            upCover = ""
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = "☁️ " + translate("${songs.size} آهنگ در تلگرام", "${songs.size} songs on Telegram", viewModel),
+                fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                fontFamily = LocalAppFontFamily.current
+            )
+            TextButton(onClick = { viewModel.disconnectTelegram() }) {
+                Text(translate("قطع اتصال", "Disconnect", viewModel), color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+            }
+        }
+
+        Button(
+            onClick = { picker.launch("audio/*") },
+            colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+            modifier = Modifier.padding(horizontal = 16.dp),
+            enabled = !uploading
+        ) {
+            Icon(Icons.Default.Add, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(translate("آپلود آهنگ جدید", "Upload new song", viewModel), color = Color.White, fontFamily = LocalAppFontFamily.current)
+        }
+
+        if (uploading) {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                CircularProgressIndicator(color = AppleRed, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                Text(translate("در حال آپلود...", "Uploading...", viewModel), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+            }
+        }
+        status?.let {
+            Text(it, color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+        }
+
+        if (songs.isEmpty()) {
+            EmptyStateView(message = translate("هنوز آهنگی آپلود نشده است.", "No songs uploaded yet.", viewModel))
+        } else {
+            LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                items(songs, key = { it.fileId }) { s ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { viewModel.playTelegramSong(s, songs) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(AppleRed.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (s.coverUrl.isNotBlank()) {
+                                AsyncImage(model = s.coverUrl, contentDescription = null, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                            } else {
+                                Icon(Icons.Default.CloudDone, contentDescription = null, tint = AppleRed, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(s.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                            Text(
+                                text = listOf(s.artist, if (s.sizeBytes > 0) "%.1f MB".format(s.sizeBytes / 1048576.0) else "").filter { it.isNotBlank() }.joinToString(" · "),
+                                fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current
+                            )
+                        }
+                        IconButton(onClick = { viewModel.removeTelegramSong(s.fileId) }) {
+                            Icon(Icons.Default.Delete, contentDescription = "حذف", tint = Color.Gray, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                }
+            }
+        }
+    }
+
+    // Metadata dialog before upload
+    pendingUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingUri = null },
+            title = { Text(translate("اطلاعات آهنگ", "Song info", viewModel), fontFamily = LocalAppFontFamily.current) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(value = upTitle, onValueChange = { upTitle = it }, label = { Text(translate("نام آهنگ", "Title", viewModel)) }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+                    OutlinedTextField(value = upArtist, onValueChange = { upArtist = it }, label = { Text(translate("نام هنرمند", "Artist", viewModel)) }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+                    OutlinedTextField(value = upCover, onValueChange = { upCover = it }, label = { Text(translate("لینک کاور (اختیاری)", "Cover URL (optional)", viewModel)) }, singleLine = true, colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed))
+                    Text(translate("توجه: تلگرام فایل تا ۲۰ مگابایت را برای پخش پشتیبانی می‌کند", "Note: Telegram supports playback for files up to 20 MB", viewModel), fontSize = 11.sp, color = Color.Gray, fontFamily = LocalAppFontFamily.current)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.uploadTelegramSong(uri, upTitle, upArtist, upCover)
+                    pendingUri = null
+                }) { Text(translate("آپلود", "Upload", viewModel), color = AppleRed) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingUri = null }) { Text(translate("انصراف", "Cancel", viewModel), color = Color.Gray) }
+            }
+        )
     }
 }
 

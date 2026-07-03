@@ -250,6 +250,11 @@ class MusicRepository(
             return@withContext song.path ?: ""
         }
 
+        // Telegram cloud songs carry a freshly-resolved temporary file URL
+        if (song.id.startsWith("tg_")) {
+            return@withContext song.path ?: ""
+        }
+
         // If downloaded offline, return its local file path URI
         val downloaded = dao.getDownloadedTrack(song.id)
         if (downloaded != null) {

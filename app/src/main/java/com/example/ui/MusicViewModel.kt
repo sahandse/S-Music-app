@@ -29,6 +29,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 
 data class MusicVideoItem(
     val id: Long,
@@ -66,6 +67,15 @@ data class PodcastEpisode(
     val durationSec: Int,
     val pubDate: String,
     val imageUrl: String
+)
+
+data class TelegramSong(
+    val fileId: String,
+    val title: String,
+    val artist: String,
+    val coverUrl: String,
+    val durationSec: Int,
+    val sizeBytes: Long
 )
 
 class MusicViewModel(
@@ -2018,6 +2028,227 @@ class MusicViewModel(
             }
             _followedPodcasts.value = items
         } catch (_: Exception) {}
+    }
+
+    // --- Telegram as free unlimited cloud storage (user's own bot, no key) ---
+    private val _telegramConnected = MutableStateFlow(false)
+    val telegramConnected: StateFlow<Boolean> = _telegramConnected.asStateFlow()
+
+    private val _telegramSongs = MutableStateFlow<List<TelegramSong>>(emptyList())
+    val telegramSongs: StateFlow<List<TelegramSong>> = _telegramSongs.asStateFlow()
+
+    private val _telegramStatus = MutableStateFlow<String?>(null)
+    val telegramStatus: StateFlow<String?> = _telegramStatus.asStateFlow()
+
+    private val _isUploadingTelegram = MutableStateFlow(false)
+    val isUploadingTelegram: StateFlow<Boolean> = _isUploadingTelegram.asStateFlow()
+
+    private fun tgPrefs() =
+        getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+
+    private fun tgToken(): String? = tgPrefs().getString("telegram_bot_token", null)
+    private fun tgChatId(): String? = tgPrefs().getString("telegram_chat_id", null)
+
+    fun loadTelegramState() {
+        _telegramConnected.value = !tgToken().isNullOrBlank() && !tgChatId().isNullOrBlank()
+        loadTelegramSongs()
+    }
+
+    fun clearTelegramStatus() { _telegramStatus.value = null }
+
+    // Validate the bot token and auto-discover the chat id from recent updates.
+    // The user must first press Start / send any message to their bot.
+    fun connectTelegram(botToken: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _telegramStatus.value = "در حال اتصال..."
+            try {
+                val token = botToken.trim()
+                val client = okhttp3.OkHttpClient()
+                val me = client.newCall(
+                    okhttp3.Request.Builder().url("https://api.telegram.org/bot$token/getMe").build()
+                ).execute().use { it.body?.string() } ?: ""
+                if (!org.json.JSONObject(me).optBoolean("ok")) {
+                    _telegramStatus.value = "توکن بات نامعتبر است"
+                    return@launch
+                }
+                val updates = client.newCall(
+                    okhttp3.Request.Builder().url("https://api.telegram.org/bot$token/getUpdates").build()
+                ).execute().use { it.body?.string() } ?: ""
+                val arr = org.json.JSONObject(updates).optJSONArray("result")
+                var chatId: String? = null
+                if (arr != null) {
+                    for (i in arr.length() - 1 downTo 0) {
+                        val msg = arr.getJSONObject(i).optJSONObject("message")
+                            ?: arr.getJSONObject(i).optJSONObject("channel_post")
+                        val id = msg?.optJSONObject("chat")?.optLong("id")
+                        if (id != null && id != 0L) { chatId = id.toString(); break }
+                    }
+                }
+                if (chatId == null) {
+                    _telegramStatus.value = "ابتدا در تلگرام به بات خود پیام /start بدهید، سپس دوباره وصل شوید"
+                    return@launch
+                }
+                tgPrefs().edit()
+                    .putString("telegram_bot_token", token)
+                    .putString("telegram_chat_id", chatId)
+                    .apply()
+                _telegramConnected.value = true
+                _telegramStatus.value = "✓ متصل شد"
+            } catch (e: Exception) {
+                _telegramStatus.value = "خطا در اتصال به تلگرام"
+            }
+        }
+    }
+
+    fun disconnectTelegram() {
+        tgPrefs().edit()
+            .remove("telegram_bot_token")
+            .remove("telegram_chat_id")
+            .apply()
+        _telegramConnected.value = false
+    }
+
+    fun uploadTelegramSong(uri: android.net.Uri, title: String, artist: String, coverUrl: String) {
+        if (_isUploadingTelegram.value) return
+        viewModelScope.launch(Dispatchers.IO) {
+            _isUploadingTelegram.value = true
+            _telegramStatus.value = "در حال آپلود..."
+            try {
+                val token = tgToken(); val chatId = tgChatId()
+                if (token == null || chatId == null) {
+                    _telegramStatus.value = "ابتدا تلگرام را متصل کنید"
+                    return@launch
+                }
+                val bytes = getApplication<Application>().contentResolver.openInputStream(uri)
+                    ?.use { it.readBytes() }
+                if (bytes == null) {
+                    _telegramStatus.value = "فایل خوانده نشد"
+                    return@launch
+                }
+                // Bot API caps downloads (getFile) at 20MB, so warn but still upload
+                val fileName = (title.ifBlank { "audio" }) + ".mp3"
+                val body = okhttp3.MultipartBody.Builder()
+                    .setType(okhttp3.MultipartBody.FORM)
+                    .addFormDataPart("chat_id", chatId)
+                    .addFormDataPart("title", title)
+                    .addFormDataPart("performer", artist)
+                    .addFormDataPart(
+                        "audio", fileName,
+                        okhttp3.RequestBody.create("audio/mpeg".toMediaTypeOrNull(), bytes)
+                    )
+                    .build()
+                val resp = okhttp3.OkHttpClient.Builder()
+                    .callTimeout(5, java.util.concurrent.TimeUnit.MINUTES)
+                    .writeTimeout(5, java.util.concurrent.TimeUnit.MINUTES)
+                    .build()
+                    .newCall(
+                        okhttp3.Request.Builder()
+                            .url("https://api.telegram.org/bot$token/sendAudio")
+                            .post(body).build()
+                    ).execute().use { it.body?.string() } ?: ""
+                val json = org.json.JSONObject(resp)
+                if (!json.optBoolean("ok")) {
+                    _telegramStatus.value = "آپلود ناموفق: " + json.optString("description")
+                    return@launch
+                }
+                val audio = json.getJSONObject("result").optJSONObject("audio")
+                    ?: json.getJSONObject("result").optJSONObject("document")
+                if (audio == null) {
+                    _telegramStatus.value = "پاسخ نامعتبر تلگرام"
+                    return@launch
+                }
+                val song = TelegramSong(
+                    fileId = audio.getString("file_id"),
+                    title = title.ifBlank { audio.optString("file_name", "آهنگ") },
+                    artist = artist,
+                    coverUrl = coverUrl,
+                    durationSec = audio.optInt("duration", 0),
+                    sizeBytes = audio.optLong("file_size", bytes.size.toLong())
+                )
+                _telegramSongs.value = listOf(song) + _telegramSongs.value
+                persistTelegramSongs()
+                _telegramStatus.value = "✓ آپلود شد"
+            } catch (e: Exception) {
+                _telegramStatus.value = "خطا در آپلود"
+            } finally {
+                _isUploadingTelegram.value = false
+            }
+        }
+    }
+
+    fun removeTelegramSong(fileId: String) {
+        _telegramSongs.value = _telegramSongs.value.filterNot { it.fileId == fileId }
+        persistTelegramSongs()
+    }
+
+    private fun persistTelegramSongs() {
+        try {
+            val arr = org.json.JSONArray()
+            _telegramSongs.value.forEach { s ->
+                arr.put(
+                    org.json.JSONObject()
+                        .put("fileId", s.fileId).put("title", s.title).put("artist", s.artist)
+                        .put("coverUrl", s.coverUrl).put("durationSec", s.durationSec)
+                        .put("sizeBytes", s.sizeBytes)
+                )
+            }
+            tgPrefs().edit().putString("telegram_songs", arr.toString()).apply()
+        } catch (_: Exception) {}
+    }
+
+    private fun loadTelegramSongs() {
+        try {
+            val json = tgPrefs().getString("telegram_songs", null) ?: return
+            val arr = org.json.JSONArray(json)
+            val list = mutableListOf<TelegramSong>()
+            for (i in 0 until arr.length()) {
+                val o = arr.getJSONObject(i)
+                list.add(
+                    TelegramSong(
+                        fileId = o.getString("fileId"),
+                        title = o.optString("title"),
+                        artist = o.optString("artist"),
+                        coverUrl = o.optString("coverUrl"),
+                        durationSec = o.optInt("durationSec", 0),
+                        sizeBytes = o.optLong("sizeBytes", 0)
+                    )
+                )
+            }
+            _telegramSongs.value = list
+        } catch (_: Exception) {}
+    }
+
+    // Telegram file links expire, so resolve a fresh one right before playing
+    fun playTelegramSong(song: TelegramSong, queue: List<TelegramSong>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val token = tgToken() ?: return@launch
+                val client = okhttp3.OkHttpClient()
+                val fileResp = client.newCall(
+                    okhttp3.Request.Builder()
+                        .url("https://api.telegram.org/bot$token/getFile?file_id=${song.fileId}")
+                        .build()
+                ).execute().use { it.body?.string() } ?: ""
+                val json = org.json.JSONObject(fileResp)
+                if (!json.optBoolean("ok")) {
+                    _telegramStatus.value = "دریافت فایل ناموفق (شاید بزرگ‌تر از ۲۰ مگابایت است)"
+                    return@launch
+                }
+                val path = json.getJSONObject("result").getString("file_path")
+                val url = "https://api.telegram.org/file/bot$token/$path"
+                val subsonicSong = SubsonicSong(
+                    id = "tg_${song.fileId}",
+                    title = song.title,
+                    artist = song.artist,
+                    coverArt = song.coverUrl.ifBlank { null },
+                    duration = song.durationSec,
+                    path = url
+                )
+                playSongDirectly(subsonicSong, listOf(subsonicSong))
+            } catch (e: Exception) {
+                _telegramStatus.value = "خطا در پخش از تلگرام"
+            }
+        }
     }
 
     override fun onCleared() {
