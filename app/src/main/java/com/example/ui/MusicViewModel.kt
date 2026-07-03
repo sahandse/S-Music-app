@@ -1563,6 +1563,10 @@ class MusicViewModel(
     private val _deviceSongDates = MutableStateFlow<Map<String, Long>>(emptyMap())
     val deviceSongDates: StateFlow<Map<String, Long>> = _deviceSongDates.asStateFlow()
 
+    // Parent folder name per song id (Telegram, Download, Music, ...)
+    private val _deviceSongFolders = MutableStateFlow<Map<String, String>>(emptyMap())
+    val deviceSongFolders: StateFlow<Map<String, String>> = _deviceSongFolders.asStateFlow()
+
     fun loadDeviceSongs() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
@@ -1575,10 +1579,12 @@ class MusicViewModel(
                     android.provider.MediaStore.Audio.Media.ALBUM,
                     android.provider.MediaStore.Audio.Media.DURATION,
                     android.provider.MediaStore.Audio.Media.SIZE,
-                    android.provider.MediaStore.Audio.Media.DATE_ADDED
+                    android.provider.MediaStore.Audio.Media.DATE_ADDED,
+                    android.provider.MediaStore.Audio.Media.DATA
                 )
                 val songs = mutableListOf<SubsonicSong>()
                 val dates = mutableMapOf<String, Long>()
+                val folderNames = mutableMapOf<String, String>()
                 resolver.query(
                     media,
                     projection,
@@ -1593,6 +1599,7 @@ class MusicViewModel(
                     val durationCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DURATION)
                     val sizeCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.SIZE)
                     val dateCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DATE_ADDED)
+                    val dataCol = cursor.getColumnIndexOrThrow(android.provider.MediaStore.Audio.Media.DATA)
                     while (cursor.moveToNext()) {
                         val id = cursor.getLong(idCol)
                         val songId = "local_$id"
@@ -1610,10 +1617,13 @@ class MusicViewModel(
                             )
                         )
                         dates[songId] = cursor.getLong(dateCol)
+                        val filePath = cursor.getString(dataCol)
+                        folderNames[songId] = filePath?.let { File(it).parentFile?.name }?.takeIf { it.isNotBlank() } ?: "سایر"
                     }
                 }
                 _deviceSongs.value = songs
                 _deviceSongDates.value = dates
+                _deviceSongFolders.value = folderNames
             } catch (_: Exception) {}
         }
     }
@@ -1715,6 +1725,80 @@ class MusicViewModel(
                 if (art.isNotBlank()) {
                     _appleArtworkCache.value = _appleArtworkCache.value + (key to art)
                 }
+            } catch (_: Exception) {}
+        }
+    }
+
+    // --- Artist biography from Persian (fallback English) Wikipedia — free, no key ---
+    private val _artistWikiBio = MutableStateFlow<String?>(null)
+    val artistWikiBio: StateFlow<String?> = _artistWikiBio.asStateFlow()
+
+    fun fetchArtistWikiBio(name: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            _artistWikiBio.value = null
+            if (name.isBlank()) return@launch
+            try {
+                val client = okhttp3.OkHttpClient()
+                fun fetchLang(lang: String): String? = try {
+                    val encoded = java.net.URLEncoder.encode(name.trim().replace(" ", "_"), "UTF-8")
+                    val url = "https://$lang.wikipedia.org/api/rest_v1/page/summary/$encoded"
+                    val body = client.newCall(
+                        okhttp3.Request.Builder().url(url)
+                            .header("User-Agent", "SMusicApp/1.0 (Android)")
+                            .build()
+                    ).execute().use { r -> if (r.isSuccessful) r.body?.string() else null }
+                    body?.let {
+                        val obj = org.json.JSONObject(it)
+                        obj.optString("extract").takeIf { e ->
+                            e.isNotBlank() && !obj.optString("type").contains("disambiguation")
+                        }
+                    }
+                } catch (_: Exception) { null }
+                _artistWikiBio.value = fetchLang("fa") ?: fetchLang("en")
+            } catch (_: Exception) {}
+        }
+    }
+
+    // --- Top charts source selection: Apple RSS per-country + Deezer genre charts (no key) ---
+    private val _topChartsKey = MutableStateFlow("us")
+    val topChartsKey: StateFlow<String> = _topChartsKey.asStateFlow()
+
+    fun fetchTopCharts(key: String) {
+        if (key == _topChartsKey.value && _appleTopSongs.value.any { it.previewUrl.isNotBlank() }) return
+        _topChartsKey.value = key
+        _appleTopSongs.value = emptyList()
+        if (key.startsWith("deezer_")) {
+            fetchDeezerChart(key.removePrefix("deezer_"))
+        } else {
+            fetchAppleTopSongs(key)
+        }
+    }
+
+    private fun fetchDeezerChart(genreId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = "https://api.deezer.com/chart/$genreId/tracks?limit=50"
+                val body = okhttp3.OkHttpClient().newCall(okhttp3.Request.Builder().url(url).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                val arr = org.json.JSONObject(body).getJSONArray("data")
+                val items = mutableListOf<ApplePreviewTrack>()
+                for (i in 0 until arr.length()) {
+                    val t = arr.getJSONObject(i)
+                    val preview = t.optString("preview", "")
+                    if (preview.isBlank()) continue
+                    val album = t.optJSONObject("album")
+                    items.add(
+                        ApplePreviewTrack(
+                            id = t.optLong("id", i.toLong()),
+                            title = t.optString("title", ""),
+                            artistName = t.optJSONObject("artist")?.optString("name").orEmpty(),
+                            artworkUrl = album?.optString("cover_xl").takeUnless { it.isNullOrBlank() }
+                                ?: album?.optString("cover_big").orEmpty(),
+                            previewUrl = preview
+                        )
+                    )
+                }
+                _appleTopSongs.value = items
             } catch (_: Exception) {}
         }
     }

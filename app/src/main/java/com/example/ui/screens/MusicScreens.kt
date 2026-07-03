@@ -5169,10 +5169,16 @@ fun ArtistDetailView(
 
     val lang = viewModel.language.value
     val details = remember(artist.name, lang) { getArtistExtraDetails(artist.name, lang) }
-    val biographyToShow = remember(bioState, artist.name, details, lang) {
+
+    // Real biography from Persian (or English) Wikipedia — free, no key
+    val wikiBio by viewModel.artistWikiBio.collectAsStateWithLifecycle()
+    LaunchedEffect(artist.name) { viewModel.fetchArtistWikiBio(artist.name) }
+
+    val biographyToShow = remember(bioState, wikiBio, artist.name, details, lang) {
         val bioText = bioState?.biography
-        if (!bioText.isNullOrBlank()) bioText
-        else getFallbackBiography(artist.name, details.country, details.birthYearOrActive, lang == "fa")
+        wikiBio
+            ?: if (!bioText.isNullOrBlank()) bioText
+            else getFallbackBiography(artist.name, details.country, details.birthYearOrActive, lang == "fa")
     }
 
     // Extract dominant color from artist cover art
@@ -9976,15 +9982,22 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
     }
 
     val songDates by viewModel.deviceSongDates.collectAsStateWithLifecycle()
+    val songFolders by viewModel.deviceSongFolders.collectAsStateWithLifecycle()
     var sortMode by remember { mutableStateOf("name") } // name | newest | duration
+    var folderView by remember { mutableStateOf(false) }
+    var selectedFolder by remember { mutableStateOf<String?>(null) }
 
-    val filtered = remember(songs, filterQuery, sortMode, songDates) {
-        val base = if (filterQuery.isBlank()) songs
-        else songs.filter { s ->
-            s.title.contains(filterQuery, ignoreCase = true) ||
-                s.artist?.contains(filterQuery, ignoreCase = true) == true ||
-                s.album?.contains(filterQuery, ignoreCase = true) == true
-        }
+    val filtered = remember(songs, filterQuery, sortMode, songDates, songFolders, selectedFolder) {
+        val base = songs
+            .filter { s -> selectedFolder == null || (songFolders[s.id] ?: "سایر") == selectedFolder }
+            .let { list ->
+                if (filterQuery.isBlank()) list
+                else list.filter { s ->
+                    s.title.contains(filterQuery, ignoreCase = true) ||
+                        s.artist?.contains(filterQuery, ignoreCase = true) == true ||
+                        s.album?.contains(filterQuery, ignoreCase = true) == true
+                }
+            }
         when (sortMode) {
             "newest" -> base.sortedByDescending { songDates[it.id] ?: 0L }
             "duration" -> base.sortedByDescending { it.duration ?: 0 }
@@ -10069,6 +10082,26 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                     )
                 }
             }
+            // Folder browsing toggle
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(if (folderView) AppleRed else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                    .clickable {
+                        folderView = !folderView
+                        selectedFolder = null
+                    }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = translate("📁 پوشه‌ها", "📁 Folders", viewModel),
+                    fontSize = 11.sp,
+                    fontWeight = if (folderView) FontWeight.Bold else FontWeight.Normal,
+                    color = if (folderView) Color.White else MaterialTheme.colorScheme.onSurface,
+                    fontFamily = LocalAppFontFamily.current
+                )
+            }
             Spacer(Modifier.weight(1f))
             Text(
                 text = translate("${filtered.size} آهنگ", "${filtered.size} songs", viewModel),
@@ -10076,6 +10109,81 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 fontFamily = LocalAppFontFamily.current
             )
+        }
+
+        // Folder browsing: list of folders (Telegram, Download, Music, ...)
+        if (folderView && selectedFolder == null) {
+            val folderGroups = remember(songs, songFolders) {
+                songs.groupBy { songFolders[it.id] ?: "سایر" }
+                    .toList()
+                    .sortedByDescending { it.second.size }
+            }
+            if (folderGroups.isEmpty()) {
+                EmptyStateView(message = translate("آهنگی در حافظه گوشی پیدا نشد.", "No songs found on this device.", viewModel))
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+                    items(folderGroups, key = { it.first }) { (folderName, folderSongs) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { selectedFolder = folderName }
+                                .padding(vertical = 12.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(AppleRed.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Folder,
+                                    contentDescription = null,
+                                    tint = AppleRed,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(folderName, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                                Text(
+                                    text = translate("${folderSongs.size} آهنگ", "${folderSongs.size} songs", viewModel),
+                                    fontSize = 12.sp,
+                                    color = Color.Gray,
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ChevronLeft,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                    }
+                }
+            }
+            return@Column
+        }
+
+        // Selected-folder header
+        selectedFolder?.let { folderName ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                IconButton(onClick = { selectedFolder = null }, modifier = Modifier.size(30.dp)) {
+                    Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "بازگشت", modifier = Modifier.size(18.dp))
+                }
+                Icon(imageVector = Icons.Outlined.Folder, contentDescription = null, tint = AppleRed, modifier = Modifier.size(18.dp))
+                Text(folderName, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
+            }
         }
 
         if (filtered.isEmpty()) {
@@ -10387,16 +10495,75 @@ fun rememberSongCoverUrl(song: SubsonicSong, viewModel: MusicViewModel): String 
 }
 
 // --- Discover: Apple Top Songs 30s preview feed (free iTunes previews, no Developer Token) ---
+// Chart sources: Apple RSS per country + Deezer genre charts (both keyless)
+private val topChartOptions = listOf(
+    "us" to ("🇺🇸 آمریکا" to "🇺🇸 US"),
+    "gb" to ("🇬🇧 انگلیس" to "🇬🇧 UK"),
+    "tr" to ("🇹🇷 ترکیه" to "🇹🇷 Turkey"),
+    "ae" to ("🇦🇪 امارات" to "🇦🇪 UAE"),
+    "fr" to ("🇫🇷 فرانسه" to "🇫🇷 France"),
+    "de" to ("🇩🇪 آلمان" to "🇩🇪 Germany"),
+    "in" to ("🇮🇳 هند" to "🇮🇳 India"),
+    "deezer_132" to ("پاپ" to "Pop"),
+    "deezer_152" to ("راک" to "Rock"),
+    "deezer_116" to ("هیپ‌هاپ" to "Hip-Hop"),
+    "deezer_113" to ("دنس" to "Dance"),
+    "deezer_106" to ("الکترو" to "Electro"),
+    "deezer_129" to ("جاز" to "Jazz")
+)
+
+@Composable
+private fun TopChartsChips(viewModel: MusicViewModel, modifier: Modifier = Modifier) {
+    val selectedKey by viewModel.topChartsKey.collectAsStateWithLifecycle()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        topChartOptions.forEach { (key, labels) ->
+            val selected = selectedKey == key
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .tvFocusable(cornerRadius = 16.dp)
+                    .background(if (selected) AppleRed else Color.Black.copy(alpha = 0.5f))
+                    .clickable { viewModel.fetchTopCharts(key) }
+                    .padding(horizontal = 13.dp, vertical = 6.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = translate(labels.first, labels.second, viewModel),
+                    color = if (selected) Color.White else Color.White.copy(alpha = 0.7f),
+                    fontSize = 12.sp,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    fontFamily = LocalAppFontFamily.current
+                )
+            }
+        }
+    }
+}
+
 @Composable
 fun AppleTopSongsFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit = {}) {
     val tracks by viewModel.appleTopSongs.collectAsStateWithLifecycle()
+    val chartsKey by viewModel.topChartsKey.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    LaunchedEffect(Unit) { viewModel.fetchAppleTopSongs() }
+    LaunchedEffect(Unit) { viewModel.fetchTopCharts(viewModel.topChartsKey.value) }
 
     if (tracks.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            TopChartsChips(
+                viewModel = viewModel,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 100.dp)
+            )
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 CircularProgressIndicator(color = AppleRed)
                 Text(translate("در حال دریافت برترین‌های جهان...", "Loading global top songs...", viewModel), color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
             }
@@ -10430,6 +10597,11 @@ fun AppleTopSongsFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit
         onDispose { previewPlayer.removeListener(listener) }
     }
 
+    // Jump back to the first song when the chart source changes
+    LaunchedEffect(chartsKey) {
+        if (pagerState.currentPage != 0) pagerState.scrollToPage(0)
+    }
+
     // Keyed on the preview URL too: the chart shows instantly with covers while
     // previews are still resolving, so playback must start once they arrive
     val currentTopTrack = tracks.getOrNull(pagerState.currentPage)
@@ -10455,6 +10627,12 @@ fun AppleTopSongsFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit
                 onArtistClick = onArtistClick
             )
         }
+
+        // Country / genre chart selector
+        TopChartsChips(
+            viewModel = viewModel,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 100.dp)
+        )
 
         // D-pad friendly previous/next controls (TV & landscape have no touch swipes)
         val configuration = LocalConfiguration.current
