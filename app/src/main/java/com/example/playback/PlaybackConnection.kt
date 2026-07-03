@@ -128,6 +128,8 @@ class PlaybackConnection(
         }
     }
 
+    private var lastSavedPodcastPos = 0L
+
     private fun startTrackingProgress() {
         progressJob?.cancel()
         progressJob = connectionScope.launch {
@@ -135,6 +137,23 @@ class PlaybackConnection(
                 mediaController?.let { controller ->
                     _playbackProgress.value = controller.currentPosition
                     _trackDuration.value = controller.duration.coerceAtLeast(0)
+
+                    // Remember podcast episode position (throttled to every ~5s)
+                    val track = _currentTrack.value
+                    if (track?.id?.startsWith("podcast_") == true) {
+                        val pos = controller.currentPosition
+                        if (kotlin.math.abs(pos - lastSavedPodcastPos) >= 5000L) {
+                            lastSavedPodcastPos = pos
+                            val duration = controller.duration
+                            val prefs = context.getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+                            if (duration > 0 && pos > duration - 15_000L) {
+                                // Episode essentially finished — restart from zero next time
+                                prefs.edit().remove("podcast_pos_${track.id}").apply()
+                            } else {
+                                prefs.edit().putLong("podcast_pos_${track.id}", pos).apply()
+                            }
+                        }
+                    }
                 }
                 delay(500)
             }
@@ -171,7 +190,12 @@ class PlaybackConnection(
 
             controller.setMediaItems(mediaItems)
             val indexToPlay = queue.indexOfFirst { it.id == song.id }.coerceAtLeast(0)
-            controller.seekTo(indexToPlay, 0)
+            // Podcast episodes resume from where the listener left off
+            val resumePosition = if (song.id.startsWith("podcast_")) {
+                context.getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+                    .getLong("podcast_pos_${song.id}", 0L)
+            } else 0L
+            controller.seekTo(indexToPlay, resumePosition)
             controller.prepare()
             controller.play()
 
@@ -288,6 +312,17 @@ class PlaybackConnection(
         val controller = mediaController ?: return
         controller.seekTo(positionMs)
         _playbackProgress.value = positionMs
+    }
+
+    // Relative seek used by the podcast ±30s buttons
+    fun seekBy(deltaMs: Long) {
+        val controller = mediaController ?: return
+        val duration = controller.duration
+        val target = (controller.currentPosition + deltaMs)
+            .coerceAtLeast(0L)
+            .let { if (duration > 0) it.coerceAtMost(duration - 1000L) else it }
+        controller.seekTo(target)
+        _playbackProgress.value = target
     }
 
     fun toggleShuffle() {

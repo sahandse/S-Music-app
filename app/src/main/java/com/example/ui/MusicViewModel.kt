@@ -1729,6 +1729,25 @@ class MusicViewModel(
         }
     }
 
+    // --- Music quiz game (guess the song from your own library) ---
+    private val _quizHighScore = MutableStateFlow(0)
+    val quizHighScore: StateFlow<Int> = _quizHighScore.asStateFlow()
+
+    fun loadQuizHighScore() {
+        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+        _quizHighScore.value = prefs.getInt("quiz_high_score", 0)
+    }
+
+    fun updateQuizHighScore(score: Int) {
+        if (score > _quizHighScore.value) {
+            _quizHighScore.value = score
+            getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
+                .edit().putInt("quiz_high_score", score).apply()
+        }
+    }
+
+    suspend fun getStreamUrlFor(song: SubsonicSong): String = repository.getStreamUrl(song)
+
     // --- Artist biography from Persian (fallback English) Wikipedia — free, no key ---
     private val _artistWikiBio = MutableStateFlow<String?>(null)
     val artistWikiBio: StateFlow<String?> = _artistWikiBio.asStateFlow()

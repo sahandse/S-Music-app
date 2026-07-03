@@ -3579,7 +3579,8 @@ fun LibraryScreen(
             Triple("all_artists", "مرور همه هنرمندان" to "Browse All Artists", Icons.Outlined.Groups),
             Triple("downloads", "دانلودهای آفلاین" to "Offline Downloads", Icons.Outlined.OfflinePin),
             Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid),
-            Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts)
+            Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts),
+            Triple("quiz", "🎮 بازی حدس آهنگ" to "🎮 Music Quiz", Icons.Outlined.SportsEsports)
         )
 
         items(categories) { cat ->
@@ -4086,6 +4087,7 @@ fun SubLibraryItemsView(
         "smart_recent" -> translate("جدیدترین‌ها", "Newest", viewModel)
         "smart_never" -> translate("هرگز گوش نداده", "Never Played", viewModel)
         "podcasts" -> translate("پادکست", "Podcasts", viewModel)
+        "quiz" -> translate("بازی حدس آهنگ", "Music Quiz", viewModel)
         else -> translate("دانلودها", "Downloads", viewModel)
     }
 
@@ -4108,6 +4110,9 @@ fun SubLibraryItemsView(
                 }
                 "podcasts" -> {
                     PodcastsView(viewModel = viewModel)
+                }
+                "quiz" -> {
+                    MusicQuizView(viewModel = viewModel)
                 }
                 "smart_top", "smart_recent", "smart_never" -> {
                     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
@@ -8684,6 +8689,34 @@ fun FullscreenPlayer(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Podcast episodes: ±30s jump buttons
+            if (song.id.startsWith("podcast_")) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { viewModel.playbackConnection.seekBy(30_000L) }) {
+                        Icon(
+                            imageVector = Icons.Default.Forward30,
+                            contentDescription = "۳۰ ثانیه جلو",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(40.dp))
+                    IconButton(onClick = { viewModel.playbackConnection.seekBy(-30_000L) }) {
+                        Icon(
+                            imageVector = Icons.Default.Replay30,
+                            contentDescription = "۳۰ ثانیه عقب",
+                            tint = Color.White,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+            }
+
             // Lower accessories toolbar (Speed dial, Queue, equalizer)
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -10243,6 +10276,253 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                         )
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                }
+            }
+        }
+    }
+}
+
+// --- Music quiz: 5-second clip from the user's own library, 4 choices, 10 rounds ---
+@Composable
+fun MusicQuizView(viewModel: MusicViewModel) {
+    val songs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
+    val highScore by viewModel.quizHighScore.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadQuizHighScore()
+        viewModel.pausePlayback()
+    }
+
+    if (songs.size < 8) {
+        EmptyStateView(message = translate("برای بازی حداقل ۸ آهنگ در کتابخانه لازم است.", "At least 8 songs are needed to play.", viewModel))
+        return
+    }
+
+    var gameState by remember { mutableStateOf("start") } // start | playing | finished
+    var round by remember { mutableStateOf(0) }
+    var score by remember { mutableStateOf(0) }
+    var options by remember { mutableStateOf<List<SubsonicSong>>(emptyList()) }
+    var correctSong by remember { mutableStateOf<SubsonicSong?>(null) }
+    var answeredId by remember { mutableStateOf<String?>(null) }
+    var roundStartTime by remember { mutableStateOf(0L) }
+    var isClipPlaying by remember { mutableStateOf(false) }
+
+    val quizPlayer = remember { ExoPlayer.Builder(context).build() }
+    DisposableEffect(quizPlayer) { onDispose { quizPlayer.release() } }
+
+    fun playClip(song: SubsonicSong) {
+        scope.launch {
+            try {
+                val url = viewModel.getStreamUrlFor(song)
+                quizPlayer.setMediaItem(MediaItem.fromUri(url))
+                quizPlayer.prepare()
+                // Jump roughly a third in so intros don't give it away (clamped for short tracks)
+                val seekMs = ((song.duration ?: 90) * 1000L / 3).coerceAtMost(60_000L)
+                quizPlayer.seekTo(seekMs)
+                quizPlayer.play()
+                isClipPlaying = true
+                delay(5_000)
+                quizPlayer.pause()
+                isClipPlaying = false
+            } catch (_: Exception) {
+                isClipPlaying = false
+            }
+        }
+    }
+
+    fun startRound() {
+        val correct = songs.random()
+        val distractors = songs.filter { it.id != correct.id }.shuffled().take(3)
+        correctSong = correct
+        options = (distractors + correct).shuffled()
+        answeredId = null
+        roundStartTime = System.currentTimeMillis()
+        playClip(correct)
+    }
+
+    fun submitAnswer(song: SubsonicSong) {
+        if (answeredId != null) return
+        answeredId = song.id
+        quizPlayer.pause()
+        isClipPlaying = false
+        if (song.id == correctSong?.id) {
+            val elapsedSec = (System.currentTimeMillis() - roundStartTime) / 1000
+            val speedBonus = ((10 - elapsedSec).coerceAtLeast(0) * 10).toInt()
+            score += 100 + speedBonus
+        }
+        scope.launch {
+            delay(1600)
+            if (round >= 9) {
+                viewModel.updateQuizHighScore(score)
+                gameState = "finished"
+            } else {
+                round++
+                startRound()
+            }
+        }
+    }
+
+    when (gameState) {
+        "start" -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text("🎮", fontSize = 64.sp)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = translate("بازی حدس آهنگ", "Music Quiz", viewModel),
+                    fontSize = 26.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = translate("۵ ثانیه از آهنگ پخش می‌شود — حدس بزن کدام است!\n۱۰ راند، پاسخ سریع‌تر = امتیاز بیشتر", "Hear 5 seconds — guess the song!\n10 rounds, faster answers earn more points", viewModel),
+                    fontSize = 14.sp, textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    fontFamily = LocalAppFontFamily.current
+                )
+                Spacer(Modifier.height(12.dp))
+                if (highScore > 0) {
+                    Text(
+                        text = translate("🏆 رکورد شما: $highScore", "🏆 Your record: $highScore", viewModel),
+                        fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AppleRed, fontFamily = LocalAppFontFamily.current
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+                Button(
+                    onClick = {
+                        score = 0; round = 0; gameState = "playing"; startRound()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                    contentPadding = PaddingValues(horizontal = 40.dp, vertical = 12.dp)
+                ) {
+                    Text(translate("شروع بازی", "Start Game", viewModel), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
+                }
+            }
+        }
+        "playing" -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = translate("راند ${round + 1} از ۱۰", "Round ${round + 1} / 10", viewModel),
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current
+                    )
+                    Text(
+                        text = translate("امتیاز: $score", "Score: $score", viewModel),
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppleRed, fontFamily = LocalAppFontFamily.current
+                    )
+                }
+                Spacer(Modifier.height(28.dp))
+
+                // Pulsing music indicator while the clip plays; tap to replay
+                val quizPulse = rememberInfiniteTransition(label = "quizPulse")
+                val quizScale by quizPulse.animateFloat(
+                    initialValue = 1f, targetValue = if (isClipPlaying) 1.15f else 1f,
+                    animationSpec = infiniteRepeatable(tween(500), RepeatMode.Reverse),
+                    label = "quizScale"
+                )
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .scale(quizScale)
+                        .clip(CircleShape)
+                        .background(AppleRed.copy(alpha = if (isClipPlaying) 0.9f else 0.5f))
+                        .clickable { correctSong?.let { playClip(it) } },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (isClipPlaying) Icons.Default.MusicNote else Icons.Default.Replay,
+                        contentDescription = "پخش دوباره",
+                        tint = Color.White,
+                        modifier = Modifier.size(46.dp)
+                    )
+                }
+                Text(
+                    text = if (isClipPlaying) translate("گوش کن...", "Listen...", viewModel) else translate("ضربه بزن تا دوباره پخش شود", "Tap to replay", viewModel),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    fontFamily = LocalAppFontFamily.current,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                Spacer(Modifier.height(24.dp))
+
+                options.forEach { option ->
+                    val isCorrect = option.id == correctSong?.id
+                    val revealed = answeredId != null
+                    val bg = when {
+                        revealed && isCorrect -> Color(0xFF34C759)
+                        revealed && option.id == answeredId -> AppleRed
+                        else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 5.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(bg)
+                            .clickable { submitAnswer(option) }
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = option.title,
+                                fontSize = 14.sp, fontWeight = FontWeight.Bold,
+                                color = if (revealed && (isCorrect || option.id == answeredId)) Color.White else MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current
+                            )
+                            Text(
+                                text = option.artist ?: "",
+                                fontSize = 12.sp,
+                                color = if (revealed && (isCorrect || option.id == answeredId)) Color.White.copy(alpha = 0.8f) else Color.Gray,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current
+                            )
+                        }
+                        if (revealed && isCorrect) {
+                            Text("✓", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        }
+        else -> {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(if (score >= highScore && score > 0) "🏆" else "🎯", fontSize = 64.sp)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = translate("امتیاز نهایی: $score", "Final score: $score", viewModel),
+                    fontSize = 24.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = if (score >= highScore && score > 0)
+                        translate("رکورد جدید! 🎉", "New record! 🎉", viewModel)
+                    else
+                        translate("رکورد شما: $highScore", "Your record: $highScore", viewModel),
+                    fontSize = 15.sp, color = AppleRed, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current
+                )
+                Spacer(Modifier.height(20.dp))
+                Button(
+                    onClick = {
+                        score = 0; round = 0; gameState = "playing"; startRound()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                    contentPadding = PaddingValues(horizontal = 40.dp, vertical = 12.dp)
+                ) {
+                    Text(translate("دوباره بازی کن", "Play Again", viewModel), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
                 }
             }
         }
