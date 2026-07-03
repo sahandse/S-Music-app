@@ -940,12 +940,19 @@ class MusicViewModel(
     }
 
     private var _discoverVideoOffset = 0
-    private var _discoverVideoQuery = "music video"
+    private var _discoverVideoSeedIndex = 0
+    // iTunes caps each search term at ~200 results, so the feed rotates
+    // across genre seeds to keep serving fresh videos indefinitely
+    private val discoverVideoSeeds = listOf(
+        "music video", "pop music video", "rock music video", "hip hop music video",
+        "dance music video", "r&b music video", "electronic music video", "latin music video",
+        "k-pop music video", "country music video", "indie music video", "persian music video"
+    )
     private val _isLoadingMoreVideos = MutableStateFlow(false)
     val isLoadingMoreVideos: StateFlow<Boolean> = _isLoadingMoreVideos.asStateFlow()
 
-    fun fetchMusicVideos(query: String = "music video") {
-        _discoverVideoQuery = query
+    fun fetchMusicVideos() {
+        _discoverVideoSeedIndex = 0
         _discoverVideoOffset = 0
         _discoverMusicVideos.value = emptyList()
         loadMusicVideosPage()
@@ -960,35 +967,72 @@ class MusicViewModel(
         viewModelScope.launch(Dispatchers.IO) {
             _isLoadingMoreVideos.value = true
             try {
-                val encoded = java.net.URLEncoder.encode(_discoverVideoQuery, "UTF-8")
-                val url = "https://itunes.apple.com/search?term=$encoded&media=musicVideo&limit=25&offset=$_discoverVideoOffset&country=us"
                 val client = okhttp3.OkHttpClient()
-                val request = okhttp3.Request.Builder().url(url).build()
-                val body = client.newCall(request).execute().use { it.body?.string() } ?: return@launch
-                val arr = org.json.JSONObject(body).getJSONArray("results")
-                val items = mutableListOf<MusicVideoItem>()
-                for (i in 0 until arr.length()) {
-                    val obj = arr.getJSONObject(i)
-                    val preview = obj.optString("previewUrl", "")
-                    if (preview.isBlank()) continue
-                    val thumb = obj.optString("artworkUrl100", "")
-                        .replace("100x100bb", "600x600bb")
-                    items.add(
-                        MusicVideoItem(
-                            id = obj.optLong("trackId", (_discoverVideoOffset + i).toLong()),
-                            title = obj.optString("trackName", ""),
-                            artistName = obj.optString("artistName", ""),
-                            thumbnailUrl = thumb,
-                            previewUrl = preview
+                var attempts = 0
+                while (attempts < 3 && _discoverVideoSeedIndex < discoverVideoSeeds.size) {
+                    val seed = discoverVideoSeeds[_discoverVideoSeedIndex]
+                    val encoded = java.net.URLEncoder.encode(seed, "UTF-8")
+                    val url = "https://itunes.apple.com/search?term=$encoded&media=musicVideo&limit=50&offset=$_discoverVideoOffset&country=us"
+                    val request = okhttp3.Request.Builder().url(url).build()
+                    val body = client.newCall(request).execute().use { it.body?.string() } ?: break
+                    val arr = org.json.JSONObject(body).getJSONArray("results")
+                    val existingIds = _discoverMusicVideos.value.map { it.id }.toSet()
+                    val items = mutableListOf<MusicVideoItem>()
+                    for (i in 0 until arr.length()) {
+                        val obj = arr.getJSONObject(i)
+                        val preview = obj.optString("previewUrl", "")
+                        if (preview.isBlank()) continue
+                        val id = obj.optLong("trackId", -1L)
+                        if (id in existingIds) continue
+                        val thumb = obj.optString("artworkUrl100", "")
+                            .replace("100x100bb", "600x600bb")
+                        items.add(
+                            MusicVideoItem(
+                                id = id,
+                                title = obj.optString("trackName", ""),
+                                artistName = obj.optString("artistName", ""),
+                                thumbnailUrl = thumb,
+                                previewUrl = preview
+                            )
                         )
-                    )
+                    }
+                    if (items.isNotEmpty()) {
+                        _discoverVideoOffset += 50
+                        _discoverMusicVideos.value = _discoverMusicVideos.value + items.distinctBy { it.id }.shuffled()
+                        break
+                    }
+                    // Seed exhausted (or only duplicates) — advance to the next query
+                    _discoverVideoSeedIndex++
+                    _discoverVideoOffset = 0
+                    attempts++
                 }
-                _discoverVideoOffset += 25
-                _discoverMusicVideos.value = _discoverMusicVideos.value + items.shuffled()
             } catch (_: Exception) {
             } finally {
                 _isLoadingMoreVideos.value = false
             }
+        }
+    }
+
+    // Server-library match for the music video currently on screen
+    private val _discoverVideoServerSong = MutableStateFlow<SubsonicSong?>(null)
+    val discoverVideoServerSong: StateFlow<SubsonicSong?> = _discoverVideoServerSong.asStateFlow()
+    private var videoMatchJob: kotlinx.coroutines.Job? = null
+
+    fun matchVideoToServerSong(video: MusicVideoItem) {
+        videoMatchJob?.cancel()
+        _discoverVideoServerSong.value = null
+        videoMatchJob = viewModelScope.launch {
+            try {
+                val cleanTitle = video.title.substringBefore("(").substringBefore("[").trim()
+                if (cleanTitle.isBlank()) return@launch
+                val songs = repository.search(cleanTitle).song ?: return@launch
+                _discoverVideoServerSong.value = songs.firstOrNull { s ->
+                    s.artist != null && (
+                        s.artist.contains(video.artistName, ignoreCase = true) ||
+                            video.artistName.contains(s.artist, ignoreCase = true)
+                        )
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -1052,6 +1096,35 @@ class MusicViewModel(
                     .execute().use { it.body?.string() } ?: return@launch
                 val byId = parseApplePreviewTracks(lookupBody).associateBy { it.id }
                 _appleTopSongs.value = ids.mapNotNull { byId[it] }
+            } catch (_: Exception) {}
+        }
+    }
+
+    // Official Apple cover art for tracks whose server entry has no artwork.
+    // Keyed by "artist|title"; each pair is looked up at most once per process.
+    private val _appleArtworkCache = MutableStateFlow<Map<String, String>>(emptyMap())
+    val appleArtworkCache: StateFlow<Map<String, String>> = _appleArtworkCache.asStateFlow()
+    private val appleArtworkRequested = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
+    fun appleArtworkKey(artist: String?, title: String) = "${artist.orEmpty()}|$title".lowercase()
+
+    fun requestAppleArtwork(artist: String?, title: String) {
+        if (title.isBlank()) return
+        val key = appleArtworkKey(artist, title)
+        if (!appleArtworkRequested.add(key)) return
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val term = java.net.URLEncoder.encode(listOfNotNull(artist, title).joinToString(" "), "UTF-8")
+                val url = "https://itunes.apple.com/search?term=$term&media=music&entity=song&limit=1&country=us"
+                val client = okhttp3.OkHttpClient()
+                val body = client.newCall(okhttp3.Request.Builder().url(url).build())
+                    .execute().use { it.body?.string() } ?: return@launch
+                val arr = org.json.JSONObject(body).getJSONArray("results")
+                if (arr.length() == 0) return@launch
+                val art = arr.getJSONObject(0).optString("artworkUrl100", "").replace("100x100bb", "600x600bb")
+                if (art.isNotBlank()) {
+                    _appleArtworkCache.value = _appleArtworkCache.value + (key to art)
+                }
             } catch (_: Exception) {}
         }
     }

@@ -956,7 +956,15 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         1 -> DiscoverFeedScreen(
                                             viewModel = viewModel,
                                             showBackButton = false,
-                                            onArtistClick = { name -> currentSubScreen = SubScreen.ArtistDetail(SubsonicArtist(id = "", name = name)) }
+                                            onArtistClick = { name -> currentSubScreen = SubScreen.ArtistDetail(SubsonicArtist(id = "", name = name)) },
+                                            onSongClick = { song ->
+                                                val albumId = song.albumId
+                                                if (albumId != null) {
+                                                    currentSubScreen = SubScreen.AlbumDetail(SubsonicAlbum(id = albumId, name = song.album ?: song.title, artist = song.artist, coverArt = song.coverArt))
+                                                } else {
+                                                    viewModel.playSongDirectly(song, listOf(song))
+                                                }
+                                            }
                                         )
                                         2 -> LibraryScreen(
                                             viewModel = viewModel,
@@ -1188,7 +1196,15 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     1 -> DiscoverFeedScreen(
                                         viewModel = viewModel,
                                         showBackButton = false,
-                                        onArtistClick = { name -> currentSubScreen = SubScreen.ArtistDetail(SubsonicArtist(id = "", name = name)) }
+                                        onArtistClick = { name -> currentSubScreen = SubScreen.ArtistDetail(SubsonicArtist(id = "", name = name)) },
+                                        onSongClick = { song ->
+                                            val albumId = song.albumId
+                                            if (albumId != null) {
+                                                currentSubScreen = SubScreen.AlbumDetail(SubsonicAlbum(id = albumId, name = song.album ?: song.title, artist = song.artist, coverArt = song.coverArt))
+                                            } else {
+                                                viewModel.playSongDirectly(song, listOf(song))
+                                            }
+                                        }
                                     )
                                     2 -> LibraryScreen(
                                         viewModel = viewModel,
@@ -1293,7 +1309,7 @@ fun MiniPlayer(
                 modifier = Modifier.weight(1f)
             ) {
                 AsyncImage(
-                    model = viewModel.getCoverArtUrl(song.coverArt),
+                    model = rememberSongCoverUrl(song, viewModel),
                     contentDescription = song.title,
                     modifier = Modifier
                         .size(46.dp)
@@ -1866,7 +1882,7 @@ fun HomeScreen(
                         VerticalBigCard(
                             title = song.title,
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, topSongs) }
                         )
                     }
@@ -1932,7 +1948,7 @@ fun HomeScreen(
                         VerticalBigCard(
                             title = song.title,
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, newestTracks) }
                         )
                     }
@@ -1950,7 +1966,7 @@ fun HomeScreen(
                         VerticalBigCard(
                             title = song.title,
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, tasteMixSongs) }
                         )
                     }
@@ -1968,7 +1984,7 @@ fun HomeScreen(
                         VerticalBigCard(
                             title = song.title,
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, discoverWeeklySongs) }
                         )
                     }
@@ -2004,7 +2020,7 @@ fun HomeScreen(
                         VerticalBigCard(
                             title = song.title,
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, remixSongs) }
                         )
                     }
@@ -2022,7 +2038,7 @@ fun HomeScreen(
                         VerticalBigCard(
                             title = song.title,
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, instrumentalSongs) }
                         )
                     }
@@ -2040,7 +2056,7 @@ fun HomeScreen(
                         VerticalBigCard(
                             title = song.title,
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, energeticSongs) }
                         )
                     }
@@ -2058,7 +2074,7 @@ fun HomeScreen(
                         VerticalBigCard(
                             title = song.title,
                             subtitle = song.artist ?: translate("هنرمند ناشناس", "Unknown Artist", viewModel),
-                            imageUrl = viewModel.getCoverArtUrl(song.coverArt),
+                            imageUrl = rememberSongCoverUrl(song, viewModel),
                             onClick = { viewModel.playSongDirectly(song, chillSongs) }
                         )
                     }
@@ -2413,7 +2429,7 @@ fun DownloadedTrackRow(
                 .clip(RoundedCornerShape(10.dp))
         ) {
             AsyncImage(
-                model = viewModel.getCoverArtUrl(song.coverArt),
+                model = rememberSongCoverUrl(song, viewModel),
                 contentDescription = song.title,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -2603,7 +2619,7 @@ fun TrackRowItem(
         ) {
             Box(modifier = Modifier.size(50.dp)) {
                 AsyncImage(
-                    model = viewModel.getCoverArtUrl(song.coverArt),
+                    model = rememberSongCoverUrl(song, viewModel),
                     contentDescription = song.title,
                     modifier = Modifier
                         .size(50.dp)
@@ -7570,16 +7586,17 @@ fun FullscreenPlayer(
 
     // Palette-based dominant color that animates on track change (Apple Music style)
     val context = LocalContext.current
+    val fullscreenCoverUrl = rememberSongCoverUrl(song, viewModel)
     var dominantColor by remember(song.id) { mutableStateOf(Color(0xFF0D0D0D)) }
     val dominantColorAnimated by animateColorAsState(
         targetValue = dominantColor,
         animationSpec = tween(durationMillis = 1200),
         label = "DominantColor"
     )
-    LaunchedEffect(song.id) {
+    LaunchedEffect(song.id, fullscreenCoverUrl) {
         try {
             val req = ImageRequest.Builder(context)
-                .data(viewModel.getCoverArtUrl(song.coverArt))
+                .data(fullscreenCoverUrl)
                 .allowHardware(false)
                 .size(256)
                 .build()
@@ -7602,7 +7619,7 @@ fun FullscreenPlayer(
     ) {
         // Heavy-blur album art fill — Apple Music full-bleed ambient style
         AsyncImage(
-            model = viewModel.getCoverArtUrl(song.coverArt),
+            model = rememberSongCoverUrl(song, viewModel),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
@@ -7813,7 +7830,7 @@ fun FullscreenPlayer(
                         )
 
                         AsyncImage(
-                            model = viewModel.getCoverArtUrl(song.coverArt),
+                            model = rememberSongCoverUrl(song, viewModel),
                             contentDescription = song.title,
                             modifier = Modifier
                                 .size(270.dp)
@@ -8785,7 +8802,8 @@ fun DiscoverFeedScreen(
     viewModel: MusicViewModel,
     onBack: () -> Unit = {},
     showBackButton: Boolean = true,
-    onArtistClick: (String) -> Unit = {}
+    onArtistClick: (String) -> Unit = {},
+    onSongClick: (SubsonicSong) -> Unit = {}
 ) {
     // 0 = audio library, 1 = Apple Music video previews
     var feedTab by remember { mutableStateOf(0) }
@@ -8796,7 +8814,7 @@ fun DiscoverFeedScreen(
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         when (feedTab) {
-            1 -> MusicVideoFeed(viewModel = viewModel, onArtistClick = onArtistClick)
+            1 -> MusicVideoFeed(viewModel = viewModel, onArtistClick = onArtistClick, onOpenServerSong = onSongClick)
             else -> AudioDiscoverFeed(viewModel = viewModel, showBackButton = showBackButton, onBack = onBack, onArtistClick = onArtistClick)
         }
 
@@ -8914,9 +8932,14 @@ private fun AudioDiscoverFeed(
 }
 
 @Composable
-fun MusicVideoFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit = {}) {
+fun MusicVideoFeed(
+    viewModel: MusicViewModel,
+    onArtistClick: (String) -> Unit = {},
+    onOpenServerSong: (SubsonicSong) -> Unit = {}
+) {
     val videos by viewModel.discoverMusicVideos.collectAsStateWithLifecycle()
     val isLoadingMore by viewModel.isLoadingMoreVideos.collectAsStateWithLifecycle()
+    val serverSong by viewModel.discoverVideoServerSong.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
@@ -8950,6 +8973,8 @@ fun MusicVideoFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit = 
         exoPlayer.setMediaItem(MediaItem.fromUri(video.previewUrl))
         exoPlayer.prepare()
         exoPlayer.play()
+        // Check whether the server library has this song
+        viewModel.matchVideoToServerSong(video)
         // Load next page when 5 videos remain
         if (pagerState.currentPage >= videos.size - 5) {
             viewModel.fetchMoreMusicVideos()
@@ -8966,7 +8991,9 @@ fun MusicVideoFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit = 
                 exoPlayer = exoPlayer,
                 isMuted = isMuted,
                 onToggleMute = { isMuted = !isMuted },
-                onArtistClick = onArtistClick
+                onArtistClick = onArtistClick,
+                serverSong = if (page == pagerState.currentPage) serverSong else null,
+                onOpenServerSong = onOpenServerSong
             )
         }
         if (isLoadingMore) {
@@ -8986,8 +9013,25 @@ fun MusicVideoPage(
     exoPlayer: ExoPlayer,
     isMuted: Boolean,
     onToggleMute: () -> Unit,
-    onArtistClick: (String) -> Unit = {}
+    onArtistClick: (String) -> Unit = {},
+    serverSong: SubsonicSong? = null,
+    onOpenServerSong: (SubsonicSong) -> Unit = {}
 ) {
+    var isVideoPlaying by remember(video.id, isActive) { mutableStateOf(true) }
+    var positionMs by remember(video.id) { mutableStateOf(0L) }
+    var durationMs by remember(video.id) { mutableStateOf(0L) }
+
+    // Poll playback position while this page is the active one
+    LaunchedEffect(isActive, video.id) {
+        if (!isActive) return@LaunchedEffect
+        while (true) {
+            positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+            durationMs = exoPlayer.duration.coerceAtLeast(0L)
+            isVideoPlaying = exoPlayer.isPlaying
+            delay(400L)
+        }
+    }
+
     Box(Modifier.fillMaxSize()) {
         // Blurred thumbnail background
         AsyncImage(
@@ -8997,7 +9041,7 @@ fun MusicVideoPage(
             contentScale = ContentScale.Crop
         )
 
-        // Video surface (only active page renders the player)
+        // Video surface (only active page renders the player); tap toggles play/pause
         if (isActive) {
             AndroidView(
                 factory = { ctx ->
@@ -9010,6 +9054,30 @@ fun MusicVideoPage(
                     .aspectRatio(16f / 9f)
                     .align(Alignment.Center)
             )
+            // Transparent tap layer over the video for play/pause
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .align(Alignment.Center)
+                    .clickable {
+                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                        isVideoPlaying = exoPlayer.isPlaying
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                if (!isVideoPlaying) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "پخش",
+                        tint = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                            .padding(12.dp)
+                    )
+                }
+            }
         } else {
             AsyncImage(
                 model = video.thumbnailUrl,
@@ -9023,32 +9091,105 @@ fun MusicVideoPage(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(180.dp)
+                .height(220.dp)
                 .align(Alignment.BottomCenter)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.9f))))
         )
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp, vertical = 20.dp),
-            verticalAlignment = Alignment.Bottom,
-            horizontalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 16.dp, vertical = 16.dp)
         ) {
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current, maxLines = 2, modifier = Modifier.clickable { onArtistClick(video.artistName) })
-                Text(video.artistName, color = Color.White.copy(0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current, modifier = Modifier.clickable { onArtistClick(video.artistName) })
-                Text("Apple Music · پیش‌نمایش", color = Color.White.copy(0.45f), fontSize = 10.sp, fontFamily = LocalAppFontFamily.current)
+            // "This song is on your server" shortcut
+            if (serverSong != null) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(AppleRed)
+                        .clickable { onOpenServerSong(serverSong) }
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MusicNote,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "این آهنگ تو سرور هست — برو به آهنگ",
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
             }
-            IconButton(onClick = onToggleMute) {
-                Icon(
-                    imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                    contentDescription = if (isMuted) "صدا روشن" else "بی‌صدا",
-                    tint = Color.White
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current, maxLines = 2, modifier = Modifier.clickable { onArtistClick(video.artistName) })
+                    Text(video.artistName, color = Color.White.copy(0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current, modifier = Modifier.clickable { onArtistClick(video.artistName) })
+                    Text("Apple Music · پیش‌نمایش", color = Color.White.copy(0.45f), fontSize = 10.sp, fontFamily = LocalAppFontFamily.current)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = {
+                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                        isVideoPlaying = exoPlayer.isPlaying
+                    }) {
+                        Icon(
+                            imageVector = if (isVideoPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            contentDescription = if (isVideoPlaying) "توقف" else "پخش",
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(onClick = onToggleMute) {
+                        Icon(
+                            imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                            contentDescription = if (isMuted) "صدا روشن" else "بی‌صدا",
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+
+            // Seek bar + timing (active page only)
+            if (isActive && durationMs > 0) {
+                Slider(
+                    value = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f),
+                    onValueChange = { frac ->
+                        exoPlayer.seekTo((frac * durationMs).toLong())
+                        positionMs = (frac * durationMs).toLong()
+                    },
+                    colors = SliderDefaults.colors(
+                        thumbColor = AppleRed,
+                        activeTrackColor = AppleRed,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+                    ),
+                    modifier = Modifier.fillMaxWidth().height(24.dp)
                 )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(formatVideoTime(positionMs), color = Color.White.copy(0.6f), fontSize = 10.sp)
+                    Text(formatVideoTime(durationMs), color = Color.White.copy(0.6f), fontSize = 10.sp)
+                }
             }
         }
     }
+}
+
+private fun formatVideoTime(ms: Long): String {
+    val totalSec = (ms / 1000).coerceAtLeast(0)
+    return "%d:%02d".format(totalSec / 60, totalSec % 60)
 }
 
 @Composable
@@ -9098,7 +9239,7 @@ fun DiscoverPage(
     Box(modifier = Modifier.fillMaxSize()) {
         // Blurred album art background
         AsyncImage(
-            model = viewModel.getCoverArtUrl(song.coverArt),
+            model = rememberSongCoverUrl(song, viewModel),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
@@ -9138,7 +9279,7 @@ fun DiscoverPage(
             )
             // Album art centered on vinyl
             AsyncImage(
-                model = viewModel.getCoverArtUrl(song.coverArt),
+                model = rememberSongCoverUrl(song, viewModel),
                 contentDescription = song.title,
                 modifier = Modifier
                     .size(160.dp)
@@ -9264,6 +9405,21 @@ fun DiscoverPage(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 60.dp)
         )
+    }
+}
+
+// Server cover art when available, otherwise official Apple artwork looked up
+// (and cached) via the free iTunes Search API, otherwise the generic placeholder.
+@Composable
+fun rememberSongCoverUrl(song: SubsonicSong, viewModel: MusicViewModel): String {
+    val appleArt by viewModel.appleArtworkCache.collectAsStateWithLifecycle()
+    LaunchedEffect(song.id, song.coverArt) {
+        if (song.coverArt == null) viewModel.requestAppleArtwork(song.artist, song.title)
+    }
+    return if (song.coverArt != null) {
+        viewModel.getCoverArtUrl(song.coverArt)
+    } else {
+        appleArt[viewModel.appleArtworkKey(song.artist, song.title)] ?: viewModel.getCoverArtUrl(null)
     }
 }
 
