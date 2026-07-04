@@ -10,7 +10,6 @@ import { Playlists, PlaylistDetail } from './pages/Playlists'
 import { Search } from './pages/Search'
 import { Starred } from './pages/Starred'
 import { MySongs } from './pages/MySongs'
-import { Telegram } from './pages/Telegram'
 import { Catalog } from './pages/Catalog'
 import { Sidebar } from './components/Sidebar'
 import { PlayerBar } from './components/PlayerBar'
@@ -56,8 +55,6 @@ function Content({ view, param }: { view: string; param: string | null }) {
       return <Search />
     case 'mysongs':
       return <MySongs />
-    case 'telegram':
-      return <Telegram />
     case 'catalog':
       return <Catalog />
     default:

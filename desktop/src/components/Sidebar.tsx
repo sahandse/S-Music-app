@@ -9,8 +9,7 @@ const NAV = [
   { id: 'starred', label: 'پسندیده‌ها', icon: '♥' },
   { id: 'search', label: 'جستجو', icon: '🔍' },
   { id: 'catalog', label: 'کاتالوگ آنلاین', icon: '🎵' },
-  { id: 'mysongs', label: 'آهنگ‌های من', icon: '➕' },
-  { id: 'telegram', label: 'فضای ابری تلگرام', icon: '☁️' }
+  { id: 'mysongs', label: 'آهنگ‌های من', icon: '➕' }
 ]
 
 export function Sidebar() {
@@ -33,7 +32,7 @@ export function Sidebar() {
       <div className="sidebar-footer">
         <div className="nav-sep" />
         <div className="card-sub" style={{ padding: '0 12px 8px' }}>
-          {creds?.username} @ {hostOf(creds?.url)}
+          {creds?.username}
         </div>
         <div className="nav-item" onClick={logout}>
           <span className="ico">⎋</span> خروج
@@ -41,13 +40,4 @@ export function Sidebar() {
       </div>
     </aside>
   )
-}
-
-function hostOf(url?: string): string {
-  if (!url) return ''
-  try {
-    return new URL(url).host
-  } catch {
-    return url
-  }
 }
