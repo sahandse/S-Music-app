@@ -3,6 +3,7 @@ import { useApp } from '../store'
 import { makeCreds, ping } from '../api'
 import { t } from '../i18n'
 import { getSettings, setSettings } from '../settings'
+import { bridge } from '../desktop'
 
 // The server is fixed; users only enter their username + password.
 const SERVER_URL = 'https://soundtron.ir'
@@ -21,6 +22,12 @@ export function Login() {
   const toggleLang = () => {
     setSettings({ lang: lang === 'fa' ? 'en' : 'fa' })
     force((n) => n + 1)
+  }
+
+  const openTelegram = () => {
+    const b = bridge()
+    if (b) b.openExternal(SIGNUP_TELEGRAM)
+    else window.open(SIGNUP_TELEGRAM, '_blank')
   }
 
   const submit = async (e: React.FormEvent) => {
@@ -71,11 +78,11 @@ export function Login() {
         </button>
         {error && <div className="login-error">{error}</div>}
 
-        <div style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'var(--text-dim)' }}>
-          {t('login.noAccount')}{' '}
-          <a href={SIGNUP_TELEGRAM} style={{ color: 'var(--accent)', fontWeight: 700 }}>
-            {t('login.signup')}
-          </a>
+        <div className="login-signup">
+          <span>{t('login.noAccount')}</span>
+          <button type="button" className="btn-telegram" onClick={openTelegram}>
+            <span className="tg-ico">✈</span> {t('login.signup')}
+          </button>
         </div>
       </form>
     </div>

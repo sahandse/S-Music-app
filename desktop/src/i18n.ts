@@ -110,8 +110,8 @@ const DICT: Record<string, [string, string]> = {
   'login.needUsername': ['نام کاربری لازم است', 'Username is required'],
   'login.connectFail': ['اتصال ناموفق: ', 'Connection failed: '],
   'login.wrongCreds': ['نام کاربری یا رمز اشتباه است', 'Wrong username or password'],
-  'login.noAccount': ['حساب ندارید؟', "Don't have an account?"],
-  'login.signup': ['ثبت‌نام از طریق تلگرام', 'Sign up via Telegram'],
+  'login.noAccount': ['برای ثبت‌نام حساب جدید:', 'To register a new account:'],
+  'login.signup': ['به تلگرام پیام بده', 'Message us on Telegram'],
 
   // settings
   'set.title': ['تنظیمات', 'Settings'],

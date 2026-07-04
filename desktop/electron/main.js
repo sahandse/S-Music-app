@@ -53,12 +53,10 @@ function createWindow() {
     return { action: 'allow' }
   })
 
-  // Closing the window hides it to the tray instead of quitting
-  win.on('close', (e) => {
-    if (!isQuitting) {
-      e.preventDefault()
-      win.hide()
-    }
+  // Closing the window quits the whole app (no background/tray persistence)
+  win.on('closed', () => {
+    isQuitting = true
+    app.quit()
   })
 
   if (isDev) {
@@ -238,7 +236,7 @@ app.on('will-quit', () => {
   globalShortcut.unregisterAll()
 })
 
-// Keep running in the tray when all windows are closed
+// Closing the last window fully quits the app
 app.on('window-all-closed', () => {
-  // On Windows we stay alive in the tray; only quit when the user asks.
+  app.quit()
 })
