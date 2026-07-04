@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
-import { Album, Artist, getArtist, getTopSongs, Song } from '../api'
+import { Album, Artist, getArtist, getTopSongs, star, unstar, Song } from '../api'
 import { Cover, TrackList } from '../components/common'
 import { t } from '../i18n'
 import { fetchArtistBio } from '../wiki'
@@ -13,7 +13,19 @@ export function ArtistDetail({ id }: { id: string }) {
   const [top, setTop] = useState<Song[]>([])
   const [bio, setBio] = useState('')
   const [bioOpen, setBioOpen] = useState(false)
+  const [following, setFollowing] = useState(false)
   const [loading, setLoading] = useState(true)
+
+  const toggleFollow = async () => {
+    if (!creds) return
+    const on = !following
+    setFollowing(on)
+    try {
+      on ? await star(creds, id) : await unstar(creds, id)
+    } catch {
+      setFollowing(!on)
+    }
+  }
 
   useEffect(() => {
     if (!creds) return
@@ -24,6 +36,7 @@ export function ArtistDetail({ id }: { id: string }) {
       .then(async ({ artist, albums }) => {
         setArtist(artist)
         setAlbums(albums)
+        setFollowing(!!artist.starred)
         fetchArtistBio(artist.name).then(setBio)
         try {
           setTop(await getTopSongs(creds, artist.name, 10))
@@ -48,11 +61,16 @@ export function ArtistDetail({ id }: { id: string }) {
           <div className="sub">
             {albums.length} {t('album.albums')}
           </div>
-          {top.length > 0 && (
-            <button className="btn" onClick={() => playQueue(top, 0)}>
-              ▶ {t('artist.topPlay')}
+          <div className="row-actions">
+            {top.length > 0 && (
+              <button className="btn" onClick={() => playQueue(top, 0)}>
+                ▶ {t('artist.topPlay')}
+              </button>
+            )}
+            <button className={`btn ghost follow-btn ${following ? 'on' : ''}`} onClick={toggleFollow}>
+              {following ? '✓ ' + t('artist.following') : '+ ' + t('artist.follow')}
             </button>
-          )}
+          </div>
         </div>
       </div>
 

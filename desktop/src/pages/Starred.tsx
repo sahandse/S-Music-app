@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
-import { getStarred, Song, Album } from '../api'
+import { getStarred, Song, Album, Artist } from '../api'
 import { Cover, TrackList } from '../components/common'
 import { t } from '../i18n'
 
@@ -9,15 +9,17 @@ export function Starred() {
   void settings.lang
   const [songs, setSongs] = useState<Song[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
+  const [artists, setArtists] = useState<Artist[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!creds) return
     setLoading(true)
     getStarred(creds)
-      .then(({ songs, albums }) => {
+      .then(({ songs, albums, artists }) => {
         setSongs(songs)
         setAlbums(albums)
+        setArtists(artists)
       })
       .catch(() => {})
       .finally(() => setLoading(false))
@@ -28,6 +30,19 @@ export function Starred() {
   return (
     <div>
       <div className="page-title">{t('nav.starred')}</div>
+      {artists.length > 0 && (
+        <>
+          <div className="section-title">{t('starred.followedArtists')}</div>
+          <div className="grid">
+            {artists.map((a) => (
+              <div key={a.id} className="card round" onClick={() => navigate('artist', a.id)}>
+                <Cover id={a.coverArt} />
+                <div className="card-title">{a.name}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       {albums.length > 0 && (
         <>
           <div className="section-title">{t('starred.likedAlbums')}</div>

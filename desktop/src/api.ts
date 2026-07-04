@@ -40,6 +40,7 @@ export interface Album {
   duration?: number
   year?: number
   genre?: string
+  starred?: string
 }
 
 export interface Artist {
@@ -48,6 +49,7 @@ export interface Artist {
   coverArt?: string
   albumCount?: number
   artistImageUrl?: string
+  starred?: string
 }
 
 export interface Playlist {

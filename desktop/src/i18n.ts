@@ -83,6 +83,11 @@ const DICT: Record<string, [string, string]> = {
   'artist.bio': ['بیوگرافی', 'Biography'],
   'artist.more': ['بیشتر', 'Show more'],
   'artist.less': ['کمتر', 'Show less'],
+  'artist.follow': ['دنبال کردن', 'Follow'],
+  'artist.following': ['دنبال می‌کنید', 'Following'],
+  'album.like': ['پسندیدن', 'Like'],
+  'album.liked': ['پسندیده', 'Liked'],
+  'starred.followedArtists': ['هنرمندان دنبال‌شده', 'Followed artists'],
 
   // podcasts
   'pod.placeholder': ['جستجوی پادکست...', 'Search podcasts…'],

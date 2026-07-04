@@ -859,3 +859,7 @@ input[type='range'] { direction: ltr; }
 }
 .artist-bio.open p { -webkit-line-clamp: unset; }
 .bio-toggle { color: var(--accent); font-size: 13px; font-weight: 700; margin-top: 6px; }
+
+/* ===== Follow / like buttons ===== */
+.follow-btn.on { background: var(--accent); color: #fff; }
+.follow-btn.on:hover { filter: brightness(1.08); }
