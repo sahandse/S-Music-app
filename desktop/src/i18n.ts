@@ -49,6 +49,29 @@ const DICT: Record<string, [string, string]> = {
   'player.noLyrics': ['متن آهنگ یافت نشد', 'No lyrics found'],
   'player.remove': ['حذف', 'Remove'],
 
+  // sleep timer
+  'sleep.title': ['تایمر خواب', 'Sleep timer'],
+  'sleep.off': ['خاموش', 'Off'],
+  'sleep.track': ['پایان آهنگ', 'End of track'],
+  'sleep.min': ['{n} دقیقه', '{n} min'],
+
+  // queue actions
+  'queue.save': ['ذخیره به‌عنوان پلی‌لیست', 'Save as playlist'],
+  'queue.clear': ['پاک کردن صف', 'Clear queue'],
+  'queue.saved': ['✓ پلی‌لیست ساخته شد', '✓ Playlist created'],
+  'queue.saveErr': ['خطا در ساخت پلی‌لیست', 'Failed to create playlist'],
+  'queue.saveLocalErr': ['فقط آهنگ‌های سرور قابل ذخیره‌اند', 'Only server tracks can be saved'],
+
+  // shortcuts help
+  'sc.title': ['میانبرهای کیبورد', 'Keyboard shortcuts'],
+  'sc.playPause': ['پخش / توقف', 'Play / Pause'],
+  'sc.seek': ['جلو / عقب ۵ ثانیه', 'Seek ±5s'],
+  'sc.volume': ['کم / زیاد کردن صدا', 'Volume up / down'],
+  'sc.nextPrev': ['بعدی / قبلی', 'Next / Previous'],
+  'sc.search': ['جستجو', 'Search'],
+  'sc.help': ['این راهنما', 'This help'],
+  'sc.close': ['بستن', 'Close'],
+
   // home
   'home.newest': ['تازه‌ترین‌ها', 'Newest'],
   'home.frequent': ['پرشنیده‌ها', 'Most played'],

@@ -2,11 +2,31 @@ import React, { useState } from 'react'
 import { useApp } from '../store'
 import { Cover } from './common'
 import { t } from '../i18n'
+import { createPlaylist } from '../api'
 
 export function Queue({ onClose }: { onClose: () => void }) {
-  const { queue, index, jumpTo, current, reorderQueue, removeFromQueue } = useApp()
+  const { queue, index, jumpTo, current, reorderQueue, removeFromQueue, clearQueue, creds } = useApp()
   const [drag, setDrag] = useState<number | null>(null)
   const [over, setOver] = useState<number | null>(null)
+  const [saved, setSaved] = useState('')
+
+  const saveAsPlaylist = async () => {
+    if (!creds || queue.length === 0) return
+    // Only server tracks can be saved into a server playlist
+    const ids = queue.filter((s) => !s.directUrl).map((s) => s.id)
+    if (ids.length === 0) {
+      setSaved(t('queue.saveLocalErr'))
+      return
+    }
+    const name = 'High Music — ' + new Date().toLocaleString()
+    try {
+      await createPlaylist(creds, name, ids)
+      setSaved(t('queue.saved'))
+    } catch {
+      setSaved(t('queue.saveErr'))
+    }
+    setTimeout(() => setSaved(''), 3000)
+  }
 
   const drop = (to: number) => {
     if (drag !== null && drag !== to) reorderQueue(drag, to)
@@ -22,6 +42,13 @@ export function Queue({ onClose }: { onClose: () => void }) {
           ✕
         </button>
       </div>
+      {queue.length > 0 && (
+        <div className="queue-actions">
+          <button onClick={saveAsPlaylist}>💾 {t('queue.save')}</button>
+          <button onClick={clearQueue}>🗑 {t('queue.clear')}</button>
+        </div>
+      )}
+      {saved && <div className="card-sub" style={{ padding: '0 0 8px' }}>{saved}</div>}
       {queue.length === 0 && <div className="empty">{t('player.emptyQueue')}</div>}
       {queue.map((s, i) => (
         <div

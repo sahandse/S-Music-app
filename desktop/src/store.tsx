@@ -32,6 +32,7 @@ interface AppState {
   addToQueue: (songs: Song[]) => void
   removeFromQueue: (i: number) => void
   reorderQueue: (from: number, to: number) => void
+  clearQueue: () => void
   togglePlay: () => void
   next: () => void
   prev: () => void
@@ -45,6 +46,11 @@ interface AppState {
   fullscreen: boolean
   setFullscreen: (v: boolean) => void
   mini: boolean
+
+  // sleep timer: 'off' | 'track' | minutes(number)
+  sleep: 'off' | 'track' | number
+  setSleep: (v: 'off' | 'track' | number) => void
+  sleepRemaining: number // seconds left for a timed sleep, 0 otherwise
 }
 
 const Ctx = createContext<AppState | null>(null)
@@ -71,7 +77,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   })
 
-  const [view, setView] = useState('home')
+  const [view, setView] = useState(() => localStorage.getItem('highmusic.view') || 'home')
   const [param, setParam] = useState<string | null>(null)
 
   const [queue, setQueue] = useState<Song[]>([])
@@ -89,6 +95,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettingsState] = useState<Settings>(() => getSettings())
   const [fullscreen, setFullscreen] = useState(false)
   const [mini, setMini] = useState(false)
+  const [sleep, setSleepState] = useState<'off' | 'track' | number>('off')
+  const [sleepRemaining, setSleepRemaining] = useState(0)
+  const sleepRef = useRef<{ mode: 'off' | 'track' | 'time'; deadline: number }>({ mode: 'off', deadline: 0 })
 
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const graphRef = useRef<AudioGraph | null>(null)
@@ -114,6 +123,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const navigate = useCallback((v: string, p: string | null = null) => {
     setView(v)
     setParam(p)
+    // Remember the last top-level view so the app reopens where you left off
+    if (!p) localStorage.setItem('highmusic.view', v)
   }, [])
 
   // Apply theme once + subscribe to settings changes
@@ -196,6 +207,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const handleEnded = () => {
+    // Sleep-at-end-of-track: stop instead of advancing
+    if (sleepRef.current.mode === 'track') {
+      sleepRef.current = { mode: 'off', deadline: 0 }
+      setSleepState('off')
+      audioRef.current?.pause()
+      return
+    }
     const { repeat: rp } = stateRef.current
     if (rp === 'one') {
       const audio = audioRef.current
@@ -318,6 +336,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIndex((cur) => (i < cur ? cur - 1 : cur))
   }, [])
 
+  const clearQueue = useCallback(() => {
+    audioRef.current?.pause()
+    setQueue([])
+    setIndex(0)
+  }, [])
+
+  const setSleep = useCallback((v: 'off' | 'track' | number) => {
+    setSleepState(v)
+    if (v === 'off') {
+      sleepRef.current = { mode: 'off', deadline: 0 }
+      setSleepRemaining(0)
+    } else if (v === 'track') {
+      sleepRef.current = { mode: 'track', deadline: 0 }
+      setSleepRemaining(0)
+    } else {
+      sleepRef.current = { mode: 'time', deadline: Date.now() + v * 60000 }
+      setSleepRemaining(v * 60)
+    }
+  }, [])
+
+  // Tick down a timed sleep and pause when it elapses
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (sleepRef.current.mode !== 'time') return
+      const left = Math.max(0, Math.round((sleepRef.current.deadline - Date.now()) / 1000))
+      setSleepRemaining(left)
+      if (left <= 0) {
+        sleepRef.current = { mode: 'off', deadline: 0 }
+        setSleepState('off')
+        audioRef.current?.pause()
+      }
+    }, 1000)
+    return () => clearInterval(id)
+  }, [])
+
   const reorderQueue = useCallback((from: number, to: number) => {
     setQueue((q) => {
       if (from === to || from < 0 || to < 0 || from >= q.length || to >= q.length) return q
@@ -421,6 +474,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToQueue,
     removeFromQueue,
     reorderQueue,
+    clearQueue,
     togglePlay,
     next,
     prev,
@@ -432,7 +486,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     settings,
     fullscreen,
     setFullscreen,
-    mini
+    mini,
+    sleep,
+    setSleep,
+    sleepRemaining
   }
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

@@ -18,11 +18,13 @@ import { PlayerBar } from './components/PlayerBar'
 import { Queue } from './components/Queue'
 import { NowPlaying } from './components/NowPlaying'
 import { MiniPlayer } from './components/MiniPlayer'
+import { ShortcutsHelp } from './components/ShortcutsHelp'
 
 export function App() {
   const { creds, view, param, fullscreen, mini } = useApp()
   const [showQueue, setShowQueue] = useState(false)
-  useKeyboardShortcuts()
+  const [showHelp, setShowHelp] = useState(false)
+  useKeyboardShortcuts(() => setShowHelp((v) => !v), () => setShowHelp(false))
 
   if (!creds) return <Login />
 
@@ -37,13 +39,13 @@ export function App() {
       <PlayerBar onToggleQueue={() => setShowQueue((v) => !v)} />
       {showQueue && <Queue onClose={() => setShowQueue(false)} />}
       {fullscreen && <NowPlaying />}
-      {/* Escape handling for the overlay is wired in the shortcuts hook */}
+      {showHelp && <ShortcutsHelp onClose={() => setShowHelp(false)} />}
       <span style={{ display: 'none' }} data-nav={view} />
     </div>
   )
 }
 
-function useKeyboardShortcuts() {
+function useKeyboardShortcuts(toggleHelp: () => void, closeHelp: () => void) {
   const {
     togglePlay,
     next,
@@ -68,6 +70,11 @@ function useKeyboardShortcuts() {
         return
       }
       if (typing) return
+      if (e.key === '?') {
+        e.preventDefault()
+        toggleHelp()
+        return
+      }
       switch (e.key) {
         case ' ':
           e.preventDefault()
@@ -96,13 +103,14 @@ function useKeyboardShortcuts() {
           prev()
           break
         case 'Escape':
+          closeHelp()
           if (fullscreen) setFullscreen(false)
           break
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [togglePlay, next, prev, seek, progress, volume, setVolume, fullscreen, setFullscreen, navigate])
+  }, [togglePlay, next, prev, seek, progress, volume, setVolume, fullscreen, setFullscreen, navigate, toggleHelp, closeHelp])
 }
 
 function Content({ view, param }: { view: string; param: string | null }) {

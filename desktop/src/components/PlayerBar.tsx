@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useApp } from '../store'
 import { fmtDuration } from '../api'
 import { Cover } from './common'
@@ -23,9 +23,22 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
     cycleRepeat,
     navigate,
     setFullscreen,
-    settings
+    settings,
+    sleep,
+    setSleep,
+    sleepRemaining
   } = useApp()
   void settings.lang
+  const [sleepMenu, setSleepMenu] = useState(false)
+
+  const sleepActive = sleep !== 'off'
+  const sleepLabel =
+    sleep === 'track'
+      ? t('sleep.track')
+      : typeof sleep === 'number'
+        ? fmtDuration(sleepRemaining)
+        : ''
+  const SLEEP_OPTS: Array<'off' | 'track' | number> = ['off', 15, 30, 45, 60, 'track']
 
   return (
     <div className="player">
@@ -105,6 +118,31 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
             value={volume}
             onChange={(e) => setVolume(parseFloat(e.target.value))}
           />
+        </div>
+        <div className="sleep-wrap">
+          <button
+            className={sleepActive ? 'active' : ''}
+            onClick={() => setSleepMenu((v) => !v)}
+            title={t('sleep.title')}
+          >
+            ⏱{sleepActive && <span className="sleep-badge">{sleepLabel}</span>}
+          </button>
+          {sleepMenu && (
+            <div className="sleep-menu" onMouseLeave={() => setSleepMenu(false)}>
+              {SLEEP_OPTS.map((o) => (
+                <div
+                  key={String(o)}
+                  className={`sleep-item ${sleep === o ? 'on' : ''}`}
+                  onClick={() => {
+                    setSleep(o)
+                    setSleepMenu(false)
+                  }}
+                >
+                  {o === 'off' ? t('sleep.off') : o === 'track' ? t('sleep.track') : t('sleep.min', { n: o })}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <button onClick={() => setFullscreen(true)} title={t('player.fullscreenLyrics')}>
           ⤢

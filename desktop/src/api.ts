@@ -190,6 +190,17 @@ export async function getStarred(c: Creds): Promise<{ songs: Song[]; albums: Alb
   return { songs: s.song ?? [], albums: s.album ?? [], artists: s.artist ?? [] }
 }
 
+export async function createPlaylist(c: Creds, name: string, songIds: string[]): Promise<void> {
+  const usp = authParams(c)
+  usp.set('name', name)
+  for (const id of songIds) usp.append('songId', id)
+  const res = await fetch(`${c.url}/rest/createPlaylist.view?${usp.toString()}`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const json = await res.json()
+  const sub = json['subsonic-response']
+  if (!sub || sub.status !== 'ok') throw new Error(sub?.error?.message || 'Server error')
+}
+
 export async function star(c: Creds, id: string): Promise<void> {
   await call(c, 'star.view', { id })
 }
