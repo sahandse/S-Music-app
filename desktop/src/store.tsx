@@ -3,7 +3,6 @@ import { Creds, Song, streamUrl, coverUrl } from './api'
 import { AudioGraph } from './audioGraph'
 import { getSettings, onSettings, applyTheme, Settings } from './settings'
 import { bridge } from './desktop'
-import { nowPlaying as lfmNowPlaying, scrobble as lfmScrobble } from './lastfm'
 
 const CREDS_KEY = 'highmusic.creds'
 
@@ -104,8 +103,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const current = queue[index] ?? null
 
-  // Scrobble bookkeeping
-  const playedRef = useRef({ song: null as Song | null, listened: 0, scrobbled: false })
   const transitioningRef = useRef(false)
 
   const setCreds = useCallback((c: Creds | null) => {
@@ -135,9 +132,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!audio || !current) return
     const src = srcFor(creds, current)
     if (!src) return
-    // finalize scrobble for the previous track before switching
-    maybeScrobble()
-    playedRef.current = { song: current, listened: 0, scrobbled: false }
 
     audio.src = src
     if (!graphRef.current) graphRef.current = new AudioGraph(audio)
@@ -154,7 +148,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .then(() => {
         setIsPlaying(true)
         if (cf > 0) g.fadeTo(volume, Math.min(cf, 2))
-        lfmNowPlaying(current.title, current.artist || '', current.album)
       })
       .catch(() => setIsPlaying(false))
     transitioningRef.current = false
@@ -169,9 +162,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let lastTime = 0
     const onTime = () => {
       setProgress(audio.currentTime)
-      // accumulate listened time for scrobble threshold
-      const dt = audio.currentTime - lastTime
-      if (dt > 0 && dt < 2) playedRef.current.listened += dt
       lastTime = audio.currentTime
       updatePosition(audio)
       handleCrossfade(audio)
@@ -194,17 +184,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  const maybeScrobble = () => {
-    const p = playedRef.current
-    if (!p.song || p.scrobbled) return
-    const dur = p.song.duration || 0
-    const enough = p.listened >= 240 || (dur > 0 && p.listened >= dur * 0.5) || (dur === 0 && p.listened > 30)
-    if (enough) {
-      p.scrobbled = true
-      lfmScrobble(p.song.title, p.song.artist || '', p.song.album)
-    }
-  }
 
   const handleCrossfade = (audio: HTMLAudioElement) => {
     const { settings: s } = stateRef.current

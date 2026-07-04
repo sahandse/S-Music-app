@@ -136,36 +136,13 @@ function setMini(on) {
   send('mini-mode', on)
 }
 
-// --- Auto-update (guarded; no-op if the release repo isn't reachable) ---
-function initUpdater() {
-  if (isDev) return
-  try {
-    const { autoUpdater } = require('electron-updater')
-    autoUpdater.autoDownload = false
-    autoUpdater.on('update-available', (info) => send('update-status', { state: 'available', version: info?.version }))
-    autoUpdater.on('update-not-available', () => send('update-status', { state: 'none' }))
-    autoUpdater.on('error', () => send('update-status', { state: 'error' }))
-    autoUpdater.on('download-progress', (p) => send('update-status', { state: 'downloading', percent: Math.round(p.percent) }))
-    autoUpdater.on('update-downloaded', () => send('update-status', { state: 'ready' }))
-    ipcMain.handle('update-check', async () => {
-      try { await autoUpdater.checkForUpdates(); return true } catch { return false }
-    })
-    ipcMain.handle('update-download', async () => {
-      try { await autoUpdater.downloadUpdate(); return true } catch { return false }
-    })
-    ipcMain.handle('update-install', () => { isQuitting = true; autoUpdater.quitAndInstall() })
-    // A quiet check on startup
-    setTimeout(() => { autoUpdater.checkForUpdates().catch(() => {}) }, 8000)
-  } catch (_) {
-    // electron-updater missing or failed — updates simply unavailable
-    ipcMain.handle('update-check', async () => false)
-  }
-}
-
 // --- IPC: dialogs, file import, downloads ---
 function initIpc() {
   ipcMain.on('window-mini', (_e, on) => setMini(!!on))
   ipcMain.on('window-hide', () => win && win.hide())
+  ipcMain.on('open-external', (_e, url) => {
+    if (typeof url === 'string' && url.startsWith('http')) shell.openExternal(url)
+  })
 
   // Pick local audio files to add to the queue
   ipcMain.handle('pick-audio', async () => {
@@ -246,7 +223,6 @@ if (!gotLock) {
     buildTray()
     registerMediaKeys()
     initIpc()
-    initUpdater()
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
       else showWindow()

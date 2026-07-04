@@ -13,11 +13,6 @@ export interface Settings {
   eqEnabled: boolean
   eqBands: number[] // gain dB per band, see EQ_FREQS
   downloadFolder: string
-  lastfmEnabled: boolean
-  lastfmKey: string
-  lastfmSecret: string
-  lastfmSession: string
-  lastfmUser: string
 }
 
 export const EQ_FREQS = [60, 230, 910, 3600, 14000]
@@ -32,12 +27,7 @@ const DEFAULTS: Settings = {
   crossfadeSec: 0,
   eqEnabled: false,
   eqBands: [0, 0, 0, 0, 0],
-  downloadFolder: '',
-  lastfmEnabled: false,
-  lastfmKey: '',
-  lastfmSecret: '',
-  lastfmSession: '',
-  lastfmUser: ''
+  downloadFolder: ''
 }
 
 let current: Settings = load()

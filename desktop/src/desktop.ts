@@ -8,27 +8,18 @@ export interface LocalFile {
   name: string
 }
 
-export interface UpdateStatus {
-  state: 'available' | 'none' | 'error' | 'downloading' | 'ready'
-  version?: string
-  percent?: number
-}
-
 interface DesktopBridge {
   platform: string
   version: string
   onMediaControl: (cb: (action: string) => void) => () => void
   onMiniMode: (cb: (on: boolean) => void) => () => void
-  onUpdateStatus: (cb: (s: UpdateStatus) => void) => () => void
   setMini: (on: boolean) => void
   hideWindow: () => void
+  openExternal: (url: string) => void
   pickAudio: () => Promise<LocalFile[]>
   saveText: (defaultName: string, content: string) => Promise<boolean>
   pickFolder: () => Promise<string | null>
   downloadFile: (url: string, folder: string, filename: string) => Promise<string>
-  checkUpdate: () => Promise<boolean>
-  downloadUpdate: () => Promise<boolean>
-  installUpdate: () => void
 }
 
 declare global {

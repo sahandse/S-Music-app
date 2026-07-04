@@ -1,8 +1,7 @@
-import React, { useState } from 'react'
+import React from 'react'
 import { useApp } from '../store'
 import { setSettings, EQ_FREQS, ThemeMode, Lang } from '../settings'
-import { bridge, isDesktop, UpdateStatus } from '../desktop'
-import { lastfmLogin, lastfmLogout } from '../lastfm'
+import { bridge, isDesktop } from '../desktop'
 import { t } from '../i18n'
 
 const ACCENTS = ['#e0264e', '#7c5cff', '#1db954', '#ff7a00', '#00b4d8', '#ff3b7f']
@@ -15,20 +14,11 @@ const EQ_PRESETS: Array<{ key: string; bands: number[] }> = [
   { key: 'eq.clear', bands: [-2, 0, 2, 4, 3] }
 ]
 
+const RELEASES_URL = 'https://github.com/sahandse/s-music-app/releases/tag/latest-windows-build'
+
 export function Settings() {
   const { settings } = useApp()
   const s = settings
-
-  const [lfmUser, setLfmUser] = useState('')
-  const [lfmPass, setLfmPass] = useState('')
-  const [lfmMsg, setLfmMsg] = useState('')
-  const [upd, setUpd] = useState<UpdateStatus | null>(null)
-
-  React.useEffect(() => {
-    const b = bridge()
-    if (!b) return
-    return b.onUpdateStatus(setUpd)
-  }, [])
 
   const setEqBand = (i: number, v: number) => {
     const bands = s.eqBands.slice()
@@ -43,23 +33,10 @@ export function Settings() {
     if (f) setSettings({ downloadFolder: f })
   }
 
-  const doLastfmLogin = async () => {
-    setLfmMsg('')
-    try {
-      const name = await lastfmLogin(lfmUser, lfmPass)
-      setLfmMsg(t('lfm.connected') + name)
-      setLfmPass('')
-    } catch (e: any) {
-      setLfmMsg(e?.message || t('lfm.error'))
-    }
-  }
-
-  const checkUpdate = async () => {
+  const openReleases = () => {
     const b = bridge()
-    if (!b) return
-    setUpd({ state: 'downloading', percent: 0 })
-    const ok = await b.checkUpdate()
-    if (!ok) setUpd({ state: 'error' })
+    if (b) b.openExternal(RELEASES_URL)
+    else window.open(RELEASES_URL, '_blank')
   }
 
   return (
@@ -188,62 +165,7 @@ export function Settings() {
         </section>
       )}
 
-      {/* Last.fm */}
-      <section className="settings-card">
-        <h3>{t('set.lastfm')}</h3>
-        {s.lastfmEnabled ? (
-          <div className="set-row">
-            <span>
-              {t('set.connectedTo')}
-              {s.lastfmUser}
-            </span>
-            <button className="btn-sm" onClick={lastfmLogout}>
-              {t('set.disconnect')}
-            </button>
-          </div>
-        ) : (
-          <>
-            <p className="card-sub" style={{ marginBottom: 8 }}>
-              {t('set.lastfmDesc')}
-            </p>
-            <input
-              className="inp"
-              placeholder={t('set.apiKey')}
-              dir="ltr"
-              value={s.lastfmKey}
-              onChange={(e) => setSettings({ lastfmKey: e.target.value })}
-            />
-            <input
-              className="inp"
-              placeholder={t('set.apiSecret')}
-              dir="ltr"
-              value={s.lastfmSecret}
-              onChange={(e) => setSettings({ lastfmSecret: e.target.value })}
-            />
-            <input
-              className="inp"
-              placeholder={t('set.lastfmUser')}
-              dir="ltr"
-              value={lfmUser}
-              onChange={(e) => setLfmUser(e.target.value)}
-            />
-            <input
-              className="inp"
-              type="password"
-              placeholder={t('set.lastfmPass')}
-              dir="ltr"
-              value={lfmPass}
-              onChange={(e) => setLfmPass(e.target.value)}
-            />
-            <button className="btn-sm" onClick={doLastfmLogin}>
-              {t('set.connect')}
-            </button>
-          </>
-        )}
-        {lfmMsg && <div className="card-sub" style={{ marginTop: 8 }}>{lfmMsg}</div>}
-      </section>
-
-      {/* Updates */}
+      {/* Version / releases */}
       {isDesktop() && (
         <section className="settings-card">
           <h3>{t('set.updates')}</h3>
@@ -251,26 +173,14 @@ export function Settings() {
             <span>
               {t('set.currentVersion')}
               {bridge()?.version || '—'}
-              {upd?.state === 'available' && t('set.updateAvailable', { v: upd.version || '' })}
-              {upd?.state === 'none' && t('set.upToDate')}
-              {upd?.state === 'downloading' && t('set.downloading', { p: upd.percent ?? 0 })}
-              {upd?.state === 'ready' && t('set.readyInstall')}
-              {upd?.state === 'error' && t('set.checkFailed')}
             </span>
-            {upd?.state === 'available' ? (
-              <button className="btn-sm" onClick={() => bridge()?.downloadUpdate()}>
-                {t('set.downloadBtn')}
-              </button>
-            ) : upd?.state === 'ready' ? (
-              <button className="btn-sm" onClick={() => bridge()?.installUpdate()}>
-                {t('set.installBtn')}
-              </button>
-            ) : (
-              <button className="btn-sm" onClick={checkUpdate}>
-                {t('set.checkBtn')}
-              </button>
-            )}
+            <button className="btn-sm" onClick={openReleases}>
+              {t('set.openReleases')}
+            </button>
           </div>
+          <p className="card-sub" style={{ marginTop: 4 }}>
+            {t('set.releasesHint')}
+          </p>
         </section>
       )}
     </div>

@@ -121,6 +121,11 @@ const DICT: Record<string, [string, string]> = {
   'set.disconnect': ['قطع اتصال', 'Disconnect'],
   'set.updates': ['به‌روزرسانی', 'Updates'],
   'set.currentVersion': ['نسخه فعلی: ', 'Current version: '],
+  'set.openReleases': ['دریافت آخرین نسخه', 'Get latest version'],
+  'set.releasesHint': [
+    'برای به‌روزرسانی، آخرین نصب‌کننده را از صفحه‌ی ریلیز دانلود و نصب کنید.',
+    'To update, download and run the latest installer from the releases page.'
+  ],
   'set.updateAvailable': [' — نسخه {v} موجود است', ' — version {v} available'],
   'set.upToDate': [' — به‌روز هستید', ' — up to date'],
   'set.downloading': [' — دانلود {p}%', ' — downloading {p}%'],
