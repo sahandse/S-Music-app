@@ -2271,9 +2271,9 @@ class MusicViewModel(
     private val _isCatalogBusy = MutableStateFlow(false)
     val isCatalogBusy: StateFlow<Boolean> = _isCatalogBusy.asStateFlow()
 
-    // Default public catalog, overridable in prefs
+    // Default public catalog (separate public repo), overridable in prefs
     private val defaultCatalogUrl =
-        "https://raw.githubusercontent.com/sahandse/S-Music-app/claude/music-app-fonts-q1foo3/catalog/catalog.json"
+        "https://raw.githubusercontent.com/sahandse/himusic-catalog/main/catalog.json"
 
     fun catalogUrl(): String =
         tgPrefs().getString("catalog_url", null)?.takeIf { it.isNotBlank() } ?: defaultCatalogUrl

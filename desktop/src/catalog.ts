@@ -6,7 +6,7 @@ import { Song } from './api'
 const URL_KEY = 'highmusic.catalog.url'
 
 const DEFAULT_CATALOG_URL =
-  'https://raw.githubusercontent.com/sahandse/S-Music-app/claude/music-app-fonts-q1foo3/catalog/catalog.json'
+  'https://raw.githubusercontent.com/sahandse/himusic-catalog/main/catalog.json'
 
 export interface CatalogSong {
   title: string
