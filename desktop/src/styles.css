@@ -778,3 +778,20 @@ input[type='range'] { direction: ltr; }
 
 /* RTL/LTR-safe nav active accent bar */
 .nav-item.active { border-inline-start: 3px solid var(--accent); padding-inline-start: 9px; }
+
+/* ===== Extra minimal polish ===== */
+/* Calmer active nav: accent bar + text only, no filled background */
+.nav-item.active { background: transparent; }
+.nav-item .ico { opacity: 0.9; font-size: 15px; }
+.sidebar { padding: 22px 10px; gap: 2px; }
+.brand { font-size: 19px; padding: 4px 10px 20px; }
+.nav-item { padding: 9px 12px; font-weight: 500; }
+.nav-item.active { font-weight: 700; }
+/* softer cards */
+.card { background: transparent; padding: 8px; }
+.card:hover { background: var(--bg-hover); }
+.card img, .card .cover-fallback { border-radius: 10px; }
+/* thinner scrollbar for a cleaner look */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+/* quiet chips */
+.chip { border-radius: 20px; }
