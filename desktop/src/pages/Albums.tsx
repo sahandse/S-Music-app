@@ -2,17 +2,19 @@ import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { Album, getAlbumList } from '../api'
 import { Cover } from '../components/common'
+import { t } from '../i18n'
 
 const SORTS = [
-  { id: 'newest', label: 'تازه‌ترین' },
-  { id: 'frequent', label: 'پرشنیده' },
-  { id: 'recent', label: 'اخیراً پخش‌شده' },
-  { id: 'alphabeticalByName', label: 'الفبا' },
-  { id: 'random', label: 'تصادفی' }
+  { id: 'newest', key: 'sort.newest' },
+  { id: 'frequent', key: 'sort.frequent' },
+  { id: 'recent', key: 'sort.recent' },
+  { id: 'alphabeticalByName', key: 'sort.alpha' },
+  { id: 'random', key: 'sort.random' }
 ]
 
 export function Albums() {
-  const { creds, navigate } = useApp()
+  const { creds, navigate, settings } = useApp()
+  void settings.lang
   const [sort, setSort] = useState('newest')
   const [albums, setAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
@@ -28,7 +30,7 @@ export function Albums() {
 
   return (
     <div>
-      <div className="page-title">آلبوم‌ها</div>
+      <div className="page-title">{t('nav.albums')}</div>
       <div style={{ marginBottom: 20 }}>
         {SORTS.map((s) => (
           <span
@@ -36,12 +38,12 @@ export function Albums() {
             className={`chip ${sort === s.id ? 'active' : ''}`}
             onClick={() => setSort(s.id)}
           >
-            {s.label}
+            {t(s.key)}
           </span>
         ))}
       </div>
       {loading ? (
-        <div className="empty">در حال بارگذاری...</div>
+        <div className="empty">{t('common.loading')}</div>
       ) : (
         <div className="grid">
           {albums.map((a) => (

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useApp } from '../store'
 import { coverUrl, fmtDuration } from '../api'
 import { fetchLyrics, LyricLine } from '../lyrics'
+import { t } from '../i18n'
 
 export function NowPlaying() {
   const {
@@ -85,7 +86,7 @@ export function NowPlaying() {
 
   return (
     <div className="nowplaying" style={{ background: `linear-gradient(160deg, ${bg}, #0b0b0e 85%)` }}>
-      <button className="np-close" onClick={() => setFullscreen(false)} title="بستن">
+      <button className="np-close" onClick={() => setFullscreen(false)} title={t('player.close')}>
         ⌄
       </button>
       <div className="np-body">
@@ -122,7 +123,7 @@ export function NowPlaying() {
           </div>
         </div>
         <div className="np-lyrics" ref={lyricsRef}>
-          {lyrics.length === 0 && <div className="empty">متن آهنگ یافت نشد</div>}
+          {lyrics.length === 0 && <div className="empty">{t('player.noLyrics')}</div>}
           {lyrics.map((l, i) => (
             <div
               key={i}

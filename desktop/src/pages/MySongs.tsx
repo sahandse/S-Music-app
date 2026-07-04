@@ -10,11 +10,13 @@ import {
   removeCustomSong,
   toSong
 } from '../customSongs'
+import { t } from '../i18n'
 
 // User-added songs: paste a cover URL, artist, title, and a direct audio link.
 // Everything is stored locally and plays through the normal player.
 export function MySongs() {
-  const { playQueue, current } = useApp()
+  const { playQueue, current, settings } = useApp()
+  void settings.lang
   const [list, setList] = useState<CustomSong[]>(() => loadCustomSongs())
 
   const [title, setTitle] = useState('')
@@ -29,7 +31,7 @@ export function MySongs() {
     e.preventDefault()
     setMsg('')
     if (!title.trim() || !url.trim()) {
-      setMsg('حداقل نام آهنگ و لینک مستقیم لازم است')
+      setMsg(t('my.minRequired'))
       return
     }
     const next = addCustomSong({
@@ -43,7 +45,7 @@ export function MySongs() {
     setArtist('')
     setCover('')
     setUrl('')
-    setMsg('✓ اضافه شد')
+    setMsg(t('my.added'))
   }
 
   const doImport = () => {
@@ -52,9 +54,9 @@ export function MySongs() {
       setList(next)
       setImportText('')
       setShowImport(false)
-      setMsg('✓ لیست وارد شد')
+      setMsg(t('my.listImported'))
     } catch (err: any) {
-      setMsg('خطا در وارد کردن: ' + (err?.message || ''))
+      setMsg(t('my.importErr') + (err?.message || ''))
     }
   }
 
@@ -62,10 +64,9 @@ export function MySongs() {
 
   return (
     <div>
-      <div className="page-title">آهنگ‌های من</div>
+      <div className="page-title">{t('my.title')}</div>
       <p className="card-sub" style={{ marginBottom: 20, maxWidth: 620 }}>
-        کاور، نام هنرمند و لینک مستقیم آهنگ را وارد کنید تا به برنامه اضافه شود. لینک باید مستقیم
-        به فایل صوتی (mp3، m4a، ...) اشاره کند.
+        {t('my.desc')}
       </p>
 
       <form
@@ -80,36 +81,36 @@ export function MySongs() {
       >
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div className="field">
-            <label>نام آهنگ *</label>
+            <label>{t('my.songName')} *</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="field">
-            <label>نام هنرمند</label>
+            <label>{t('my.artistName')}</label>
             <input value={artist} onChange={(e) => setArtist(e.target.value)} />
           </div>
         </div>
         <div className="field">
-          <label>لینک کاور (URL تصویر)</label>
+          <label>{t('my.coverLink')}</label>
           <input value={cover} onChange={(e) => setCover(e.target.value)} dir="ltr" placeholder="https://…/cover.jpg" />
         </div>
         <div className="field">
-          <label>لینک مستقیم آهنگ *</label>
+          <label>{t('my.directLink')} *</label>
           <input value={url} onChange={(e) => setUrl(e.target.value)} dir="ltr" placeholder="https://…/song.mp3" />
         </div>
         <div className="row-actions">
           <button className="btn" type="submit">
-            + افزودن آهنگ
+            + {t('my.addSong')}
           </button>
           <button
             className="btn ghost"
             type="button"
             onClick={() => setShowImport((v) => !v)}
           >
-            وارد کردن گروهی (JSON)
+            {t('my.bulkImport')}
           </button>
           {songs.length > 0 && (
             <button className="btn ghost" type="button" onClick={() => playQueue(songs, 0)}>
-              ▶ پخش همه
+              ▶ {t('common.playAll')}
             </button>
           )}
         </div>
@@ -139,15 +140,17 @@ export function MySongs() {
               placeholder='[{"title":"...","artist":"...","coverImageUrl":"...","directUrl":"..."}]'
             />
             <button className="btn" type="button" style={{ marginTop: 8 }} onClick={doImport}>
-              وارد کردن
+              {t('my.import')}
             </button>
           </div>
         )}
       </form>
 
-      <div className="section-title">لیست ({list.length})</div>
+      <div className="section-title">
+        {t('my.list')} ({list.length})
+      </div>
       {list.length === 0 ? (
-        <div className="empty">هنوز آهنگی اضافه نکرده‌اید</div>
+        <div className="empty">{t('my.empty')}</div>
       ) : (
         <div>
           {list.map((c, i) => (
@@ -174,7 +177,7 @@ export function MySongs() {
               <div
                 className="t-star"
                 style={{ opacity: 1 }}
-                title="حذف"
+                title={t('player.remove')}
                 onClick={() => setList(removeCustomSong(c.id))}
               >
                 🗑

@@ -2,6 +2,7 @@ import React from 'react'
 import { useApp } from '../store'
 import { Cover } from './common'
 import { bridge } from '../desktop'
+import { t } from '../i18n'
 
 // Compact always-on-top player shown when the window is in mini mode.
 export function MiniPlayer() {
@@ -17,7 +18,7 @@ export function MiniPlayer() {
           <div className="cover-fallback mini-cover">♪</div>
         )}
         <div className="mini-info">
-          <div className="p-title">{current ? current.title : 'چیزی پخش نمی‌شود'}</div>
+          <div className="p-title">{current ? current.title : t('player.nothing2')}</div>
           <div className="card-sub">{current?.artist}</div>
         </div>
         <div className="mini-controls">
@@ -26,7 +27,7 @@ export function MiniPlayer() {
             {isPlaying ? '⏸' : '▶'}
           </button>
           <button onClick={next}>⏭</button>
-          <button title="بازگشت به حالت عادی" onClick={() => bridge()?.setMini(false)}>
+          <button title={t('player.restore')} onClick={() => bridge()?.setMini(false)}>
             ⤢
           </button>
         </div>

@@ -3,6 +3,7 @@ import { useApp } from '../store'
 import { coverUrl, streamUrl, Song, fmtDuration, star, unstar } from '../api'
 import { bridge, isDesktop } from '../desktop'
 import { getSettings, setSettings } from '../settings'
+import { t } from '../i18n'
 
 // Cover image that falls back to a music-note glyph when there's no art.
 // `directUrl` (for user-added songs) takes priority over the Subsonic id.
@@ -35,9 +36,15 @@ export function TrackList({
   songs: Song[]
   showAlbum?: boolean
 }) {
-  const { playQueue, current, isPlaying, creds } = useApp()
+  const { playQueue, current, isPlaying, creds, setFullscreen } = useApp()
   const [starred, setStarred] = React.useState<Record<string, boolean>>({})
   const [dl, setDl] = React.useState<Record<string, 'busy' | 'done' | 'err'>>({})
+
+  // Clicking a track plays it and opens the full-screen player with lyrics.
+  const openAndPlay = (i: number) => {
+    playQueue(songs, i)
+    setFullscreen(true)
+  }
 
   const toggleStar = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -72,7 +79,7 @@ export function TrackList({
     }
   }
 
-  if (!songs.length) return <div className="empty">آهنگی نیست</div>
+  if (!songs.length) return <div className="empty">{t('common.noSongs')}</div>
 
   return (
     <div>
@@ -82,12 +89,12 @@ export function TrackList({
           <div
             key={s.id + i}
             className={`track-row ${active ? 'playing' : ''}`}
-            onDoubleClick={() => playQueue(songs, i)}
+            onDoubleClick={() => openAndPlay(i)}
           >
-            <div className="t-index" onClick={() => playQueue(songs, i)}>
+            <div className="t-index" onClick={() => openAndPlay(i)}>
               {active && isPlaying ? '▶' : i + 1}
             </div>
-            <div className="t-title" onClick={() => playQueue(songs, i)}>
+            <div className="t-title" onClick={() => openAndPlay(i)}>
               {s.title}
               <div className="card-sub" style={{ marginTop: 2 }}>
                 {s.artist}
@@ -99,7 +106,7 @@ export function TrackList({
               <div
                 className="t-star"
                 onClick={(e) => download(e, s)}
-                title="دانلود روی کامپیوتر"
+                title={t('common.download')}
               >
                 {dl[s.id] === 'busy' ? '…' : dl[s.id] === 'done' ? '✓' : dl[s.id] === 'err' ? '⚠' : '⬇'}
               </div>
@@ -107,7 +114,7 @@ export function TrackList({
             <div
               className={`t-star ${starred[s.id] ? 'on' : ''}`}
               onClick={(e) => toggleStar(e, s.id)}
-              title="پسندیدن"
+              title={t('common.like')}
             >
               {starred[s.id] ? '♥' : '♡'}
             </div>

@@ -3,6 +3,7 @@ import { useApp } from '../store'
 import { fmtDuration } from '../api'
 import { Cover } from './common'
 import { bridge, isDesktop } from '../desktop'
+import { t } from '../i18n'
 
 export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
   const {
@@ -21,8 +22,10 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
     repeat,
     cycleRepeat,
     navigate,
-    setFullscreen
+    setFullscreen,
+    settings
   } = useApp()
+  void settings.lang
 
   return (
     <div className="player">
@@ -30,14 +33,17 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
         {current ? (
           <>
             <div
+              className="player-cover-btn"
               onClick={() => setFullscreen(true)}
-              title="نمای تمام‌صفحه"
-              style={{ cursor: 'pointer', display: 'flex' }}
+              title={t('player.fullscreen')}
             >
               <Cover id={current.coverArt} directUrl={current.coverImageUrl} size={120} />
+              <span className="cover-expand">⤢</span>
             </div>
             <div className="info">
-              <div className="p-title">{current.title}</div>
+              <div className="p-title" onClick={() => setFullscreen(true)}>
+                {current.title}
+              </div>
               <div
                 className="p-artist"
                 style={{ cursor: current.artistId ? 'pointer' : 'default' }}
@@ -48,28 +54,28 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
             </div>
           </>
         ) : (
-          <div className="p-artist">چیزی در حال پخش نیست</div>
+          <div className="p-artist">{t('player.nothing')}</div>
         )}
       </div>
 
       <div className="player-center">
         <div className="controls">
-          <button className={shuffle ? 'active' : ''} onClick={toggleShuffle} title="تصادفی">
+          <button className={shuffle ? 'active' : ''} onClick={toggleShuffle} title={t('player.shuffle')}>
             🔀
           </button>
-          <button onClick={prev} title="قبلی">
+          <button onClick={prev} title={t('player.prev')}>
             ⏮
           </button>
-          <button className="play-btn" onClick={togglePlay} title="پخش/توقف">
+          <button className="play-btn" onClick={togglePlay} title={t('player.playPause')}>
             {isPlaying ? '⏸' : '▶'}
           </button>
-          <button onClick={next} title="بعدی">
+          <button onClick={next} title={t('player.next')}>
             ⏭
           </button>
           <button
             className={repeat !== 'off' ? 'active' : ''}
             onClick={cycleRepeat}
-            title="تکرار"
+            title={t('player.repeat')}
           >
             {repeat === 'one' ? '🔂' : '🔁'}
           </button>
@@ -100,15 +106,15 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
             onChange={(e) => setVolume(parseFloat(e.target.value))}
           />
         </div>
-        <button onClick={() => setFullscreen(true)} title="تمام‌صفحه + متن آهنگ">
+        <button onClick={() => setFullscreen(true)} title={t('player.fullscreenLyrics')}>
           ⤢
         </button>
         {isDesktop() && (
-          <button onClick={() => bridge()?.setMini(true)} title="پخش‌کننده کوچک">
+          <button onClick={() => bridge()?.setMini(true)} title={t('player.mini')}>
             ▭
           </button>
         )}
-        <button onClick={onToggleQueue} title="صف پخش">
+        <button onClick={onToggleQueue} title={t('player.queue')}>
           ☰
         </button>
       </div>

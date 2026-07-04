@@ -1,23 +1,25 @@
 import React from 'react'
 import { useApp } from '../store'
-
 import { isDesktop } from '../desktop'
+import { t } from '../i18n'
 
 const NAV = [
-  { id: 'home', label: 'خانه', icon: '🏠' },
-  { id: 'albums', label: 'آلبوم‌ها', icon: '💿' },
-  { id: 'artists', label: 'هنرمندان', icon: '🎤' },
-  { id: 'playlists', label: 'پلی‌لیست‌ها', icon: '📃' },
-  { id: 'starred', label: 'پسندیده‌ها', icon: '♥' },
-  { id: 'search', label: 'جستجو', icon: '🔍' },
-  { id: 'catalog', label: 'کاتالوگ آنلاین', icon: '🎵' },
-  { id: 'mysongs', label: 'آهنگ‌های من', icon: '➕' },
-  ...(isDesktop() ? [{ id: 'local', label: 'آهنگ‌های محلی', icon: '📁' }] : []),
-  { id: 'settings', label: 'تنظیمات', icon: '⚙' }
+  { id: 'home', icon: '🏠' },
+  { id: 'albums', icon: '💿' },
+  { id: 'artists', icon: '🎤' },
+  { id: 'playlists', icon: '📃' },
+  { id: 'starred', icon: '♥' },
+  { id: 'search', icon: '🔍' },
+  { id: 'catalog', icon: '🎵' },
+  { id: 'mysongs', icon: '➕' },
+  ...(isDesktop() ? [{ id: 'local', icon: '📁' }] : []),
+  { id: 'settings', icon: '⚙' }
 ]
 
 export function Sidebar() {
-  const { view, navigate, logout, creds } = useApp()
+  const { view, navigate, logout, creds, settings } = useApp()
+  // read settings so the sidebar re-renders when language changes
+  void settings.lang
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -30,7 +32,7 @@ export function Sidebar() {
           onClick={() => navigate(n.id)}
         >
           <span className="ico">{n.icon}</span>
-          {n.label}
+          {t('nav.' + n.id)}
         </div>
       ))}
       <div className="sidebar-footer">
@@ -39,7 +41,7 @@ export function Sidebar() {
           {creds?.username}
         </div>
         <div className="nav-item" onClick={logout}>
-          <span className="ico">⎋</span> خروج
+          <span className="ico">⎋</span> {t('nav.logout')}
         </div>
       </div>
     </aside>

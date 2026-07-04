@@ -3,6 +3,7 @@ import { useApp } from '../store'
 import { getPlaylist, getPlaylists, streamUrl, Playlist, Song, fmtDuration } from '../api'
 import { Cover, TrackList } from '../components/common'
 import { bridge, isDesktop } from '../desktop'
+import { t } from '../i18n'
 
 export function Playlists() {
   const { creds, navigate } = useApp()
@@ -20,18 +21,20 @@ export function Playlists() {
 
   return (
     <div>
-      <div className="page-title">پلی‌لیست‌ها</div>
+      <div className="page-title">{t('nav.playlists')}</div>
       {loading ? (
-        <div className="empty">در حال بارگذاری...</div>
+        <div className="empty">{t('common.loading')}</div>
       ) : playlists.length === 0 ? (
-        <div className="empty">پلی‌لیستی وجود ندارد</div>
+        <div className="empty">{t('playlists.none')}</div>
       ) : (
         <div className="grid">
           {playlists.map((p) => (
             <div key={p.id} className="card" onClick={() => navigate('playlist', p.id)}>
               <Cover id={p.coverArt} />
               <div className="card-title">{p.name}</div>
-              <div className="card-sub">{p.songCount || 0} آهنگ</div>
+              <div className="card-sub">
+                {p.songCount || 0} {t('common.songs')}
+              </div>
             </div>
           ))}
         </div>
@@ -58,8 +61,8 @@ export function PlaylistDetail({ id }: { id: string }) {
       .finally(() => setLoading(false))
   }, [creds, id])
 
-  if (loading) return <div className="empty">در حال بارگذاری...</div>
-  if (!playlist) return <div className="empty">پلی‌لیست پیدا نشد</div>
+  if (loading) return <div className="empty">{t('common.loading')}</div>
+  if (!playlist) return <div className="empty">{t('playlist.notFound')}</div>
 
   const total = songs.reduce((a, s) => a + (s.duration || 0), 0)
 
@@ -88,17 +91,17 @@ export function PlaylistDetail({ id }: { id: string }) {
       <div className="detail-head">
         <Cover id={playlist.coverArt} size={400} />
         <div className="detail-meta">
-          <div className="kind">پلی‌لیست</div>
+          <div className="kind">{t('playlist.kind')}</div>
           <h1>{playlist.name}</h1>
           <div className="sub">
-            {songs.length} آهنگ · {fmtDuration(total)}
+            {songs.length} {t('common.songs')} · {fmtDuration(total)}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn" onClick={() => playQueue(songs, 0)}>
-              ▶ پخش
+              ▶ {t('common.play')}
             </button>
             <button className="btn ghost" onClick={exportM3u}>
-              {isDesktop() ? 'خروجی M3U' : 'دانلود M3U'}
+              {isDesktop() ? t('playlist.exportM3u') : t('playlist.downloadM3u')}
             </button>
           </div>
         </div>

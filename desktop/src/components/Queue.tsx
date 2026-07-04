@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useApp } from '../store'
 import { Cover } from './common'
+import { t } from '../i18n'
 
 export function Queue({ onClose }: { onClose: () => void }) {
   const { queue, index, jumpTo, current, reorderQueue, removeFromQueue } = useApp()
@@ -16,12 +17,12 @@ export function Queue({ onClose }: { onClose: () => void }) {
   return (
     <div className="queue-panel">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>صف پخش</h2>
+        <h2>{t('player.queue')}</h2>
         <button style={{ fontSize: 18, color: 'var(--text-dim)' }} onClick={onClose}>
           ✕
         </button>
       </div>
-      {queue.length === 0 && <div className="empty">صف خالی است</div>}
+      {queue.length === 0 && <div className="empty">{t('player.emptyQueue')}</div>}
       {queue.map((s, i) => (
         <div
           key={s.id + i}
@@ -41,7 +42,7 @@ export function Queue({ onClose }: { onClose: () => void }) {
           }`}
           onClick={() => jumpTo(i)}
         >
-          <span className="q-grip" title="کشیدن برای جابجایی">⠿</span>
+          <span className="q-grip" title={t('player.dragReorder')}>⠿</span>
           <Cover id={s.coverArt} directUrl={s.coverImageUrl} size={80} />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div className="p-title">{s.title}</div>
@@ -49,7 +50,7 @@ export function Queue({ onClose }: { onClose: () => void }) {
           </div>
           <button
             className="q-remove"
-            title="حذف از صف"
+            title={t('player.removeFromQueue')}
             onClick={(e) => {
               e.stopPropagation()
               removeFromQueue(i)

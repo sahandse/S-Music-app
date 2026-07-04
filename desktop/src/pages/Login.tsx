@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { useApp } from '../store'
 import { makeCreds, ping } from '../api'
+import { t } from '../i18n'
+import { getSettings, setSettings } from '../settings'
 
 // The server is fixed; users only enter their username + password.
 const SERVER_URL = 'https://soundtron.ir'
@@ -13,12 +15,19 @@ export function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [, force] = useState(0)
+  const lang = getSettings().lang
+
+  const toggleLang = () => {
+    setSettings({ lang: lang === 'fa' ? 'en' : 'fa' })
+    force((n) => n + 1)
+  }
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     if (!username) {
-      setError('نام کاربری لازم است')
+      setError(t('login.needUsername'))
       return
     }
     setBusy(true)
@@ -27,25 +36,28 @@ export function Login() {
       await ping(creds)
       setCreds(creds)
     } catch (err: any) {
-      setError('اتصال ناموفق: ' + (err?.message || 'نام کاربری یا رمز اشتباه است'))
+      setError(t('login.connectFail') + (err?.message || t('login.wrongCreds')))
       setBusy(false)
     }
   }
 
   return (
     <div className="login-wrap">
+      <button className="lang-toggle" onClick={toggleLang} type="button">
+        {lang === 'fa' ? 'English' : 'فارسی'}
+      </button>
       <form className="login-card" onSubmit={submit}>
         <h1>
           High<span className="dot">Music</span>
         </h1>
-        <p>برای ورود، نام کاربری و رمز خود را وارد کنید</p>
+        <p>{t('login.subtitle')}</p>
 
         <div className="field">
-          <label>نام کاربری</label>
+          <label>{t('login.username')}</label>
           <input value={username} onChange={(e) => setUsername(e.target.value)} dir="ltr" autoFocus />
         </div>
         <div className="field">
-          <label>رمز عبور</label>
+          <label>{t('login.password')}</label>
           <input
             type="password"
             value={password}
@@ -55,14 +67,14 @@ export function Login() {
         </div>
 
         <button className="btn" type="submit" disabled={busy}>
-          {busy ? 'در حال اتصال...' : 'ورود'}
+          {busy ? t('login.connecting') : t('login.connect')}
         </button>
         {error && <div className="login-error">{error}</div>}
 
         <div style={{ textAlign: 'center', marginTop: 18, fontSize: 13, color: 'var(--text-dim)' }}>
-          حساب ندارید؟{' '}
+          {t('login.noAccount')}{' '}
           <a href={SIGNUP_TELEGRAM} style={{ color: 'var(--accent)', fontWeight: 700 }}>
-            ثبت‌نام از طریق تلگرام
+            {t('login.signup')}
           </a>
         </div>
       </form>

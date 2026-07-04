@@ -2,9 +2,11 @@
 // pub/sub lets components react to changes without a heavier state library.
 
 export type ThemeMode = 'dark' | 'light'
+export type Lang = 'fa' | 'en'
 
 export interface Settings {
   theme: ThemeMode
+  lang: Lang
   accent: string
   fadeOnPause: boolean
   crossfadeSec: number // 0 = off
@@ -24,6 +26,7 @@ const KEY = 'highmusic.settings'
 
 const DEFAULTS: Settings = {
   theme: 'dark',
+  lang: 'fa',
   accent: '#e0264e',
   fadeOnPause: true,
   crossfadeSec: 0,
@@ -65,9 +68,12 @@ export function onSettings(cb: (s: Settings) => void): () => void {
   return () => listeners.delete(cb)
 }
 
-// Reflect theme + accent onto the document root so CSS variables update live.
+// Reflect theme + accent + text direction onto the document root so the whole
+// UI updates live (CSS variables + rtl/ltr for the language switch).
 export function applyTheme(s: Settings = current) {
   if (typeof document === 'undefined') return
   document.documentElement.setAttribute('data-theme', s.theme)
+  document.documentElement.setAttribute('dir', s.lang === 'en' ? 'ltr' : 'rtl')
+  document.documentElement.setAttribute('lang', s.lang)
   document.documentElement.style.setProperty('--accent', s.accent)
 }

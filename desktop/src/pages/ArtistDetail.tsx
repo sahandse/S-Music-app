@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { Album, Artist, getArtist, getTopSongs, Song } from '../api'
 import { Cover, TrackList } from '../components/common'
+import { t } from '../i18n'
 
 export function ArtistDetail({ id }: { id: string }) {
   const { creds, navigate, playQueue } = useApp()
@@ -27,20 +28,22 @@ export function ArtistDetail({ id }: { id: string }) {
       .finally(() => setLoading(false))
   }, [creds, id])
 
-  if (loading) return <div className="empty">در حال بارگذاری...</div>
-  if (!artist) return <div className="empty">هنرمند پیدا نشد</div>
+  if (loading) return <div className="empty">{t('common.loading')}</div>
+  if (!artist) return <div className="empty">{t('artists.notFound')}</div>
 
   return (
     <div>
       <div className="detail-head round">
         <Cover id={artist.coverArt} size={400} />
         <div className="detail-meta">
-          <div className="kind">هنرمند</div>
+          <div className="kind">{t('artist.kind')}</div>
           <h1>{artist.name}</h1>
-          <div className="sub">{albums.length} آلبوم</div>
+          <div className="sub">
+            {albums.length} {t('album.albums')}
+          </div>
           {top.length > 0 && (
             <button className="btn" onClick={() => playQueue(top, 0)}>
-              ▶ پخش برترین‌ها
+              ▶ {t('artist.topPlay')}
             </button>
           )}
         </div>
@@ -48,12 +51,12 @@ export function ArtistDetail({ id }: { id: string }) {
 
       {top.length > 0 && (
         <>
-          <div className="section-title">برترین آهنگ‌ها</div>
+          <div className="section-title">{t('artist.topSongs')}</div>
           <TrackList songs={top} />
         </>
       )}
 
-      <div className="section-title">آلبوم‌ها</div>
+      <div className="section-title">{t('nav.albums')}</div>
       <div className="grid">
         {albums.map((a) => (
           <div key={a.id} className="card" onClick={() => navigate('album', a.id)}>

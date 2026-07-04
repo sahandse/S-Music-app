@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { Album, getAlbumList, getRandomSongs, Song } from '../api'
 import { Cover, TrackList } from '../components/common'
+import { t } from '../i18n'
 
 export function Home() {
-  const { creds, navigate, playQueue } = useApp()
+  const { creds, navigate, playQueue, settings } = useApp()
+  void settings.lang
   const [recent, setRecent] = useState<Album[]>([])
   const [frequent, setFrequent] = useState<Album[]>([])
   const [random, setRandom] = useState<Song[]>([])
@@ -27,23 +29,23 @@ export function Home() {
       .finally(() => setLoading(false))
   }, [creds])
 
-  if (loading) return <div className="empty">در حال بارگذاری...</div>
+  if (loading) return <div className="empty">{t('common.loading')}</div>
 
   return (
     <div>
-      <div className="page-title">خانه</div>
+      <div className="page-title">{t('nav.home')}</div>
 
-      <AlbumRow title="تازه‌ترین‌ها" albums={recent} onOpen={(id) => navigate('album', id)} />
-      <AlbumRow title="پرشنیده‌ها" albums={frequent} onOpen={(id) => navigate('album', id)} />
+      <AlbumRow title={t('home.newest')} albums={recent} onOpen={(id) => navigate('album', id)} />
+      <AlbumRow title={t('home.frequent')} albums={frequent} onOpen={(id) => navigate('album', id)} />
 
       <div className="section-title">
-        آهنگ‌های تصادفی{' '}
+        {t('home.random')}{' '}
         <button
           className="chip active"
-          style={{ marginRight: 12 }}
+          style={{ marginInlineStart: 12 }}
           onClick={() => playQueue(random, 0)}
         >
-          پخش همه
+          {t('common.playAll')}
         </button>
       </div>
       <TrackList songs={random} />

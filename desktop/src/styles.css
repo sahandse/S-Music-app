@@ -738,3 +738,43 @@ input[type='range']::-webkit-slider-thumb {
 }
 .mini-bar { height: 4px; background: var(--bg-hover); }
 .mini-bar-fill { height: 100%; background: var(--accent); }
+
+/* ===== Minimal player refinements ===== */
+.app-shell { grid-template-rows: 1fr 84px; }
+.player {
+  padding: 0 22px;
+  background: var(--bg-elevated);
+  gap: 24px;
+}
+.player-cover-btn { position: relative; cursor: pointer; line-height: 0; }
+.player-cover-btn img,
+.player-cover-btn .cover-fallback { width: 52px; height: 52px; border-radius: 8px; }
+.player-cover-btn .cover-expand {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,0.45); color: #fff; opacity: 0; border-radius: 8px; transition: opacity 0.15s; font-size: 18px;
+}
+.player-cover-btn:hover .cover-expand { opacity: 1; }
+.player-track .p-title { cursor: pointer; }
+.player-track .p-title:hover { color: var(--accent); }
+.controls { gap: 22px; }
+.controls button { font-size: 17px; }
+.controls .play-btn {
+  width: 44px; height: 44px; background: var(--accent); color: #fff;
+}
+.controls .play-btn:hover { color: #fff; filter: brightness(1.08); }
+.seek .time { font-variant-numeric: tabular-nums; }
+/* keep sliders left-to-right even in RTL so time flows naturally */
+input[type='range'] { direction: ltr; }
+.eq-band input[type='range'] { direction: rtl; }
+
+/* language toggle on login */
+.lang-toggle {
+  position: absolute; top: 20px; inset-inline-end: 22px;
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 700;
+  background: var(--bg-hover); color: var(--text);
+}
+.lang-toggle:hover { color: var(--accent); }
+.login-wrap { position: relative; }
+
+/* RTL/LTR-safe nav active accent bar */
+.nav-item.active { border-inline-start: 3px solid var(--accent); padding-inline-start: 9px; }

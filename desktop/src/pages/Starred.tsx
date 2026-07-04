@@ -2,9 +2,11 @@ import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { getStarred, Song, Album } from '../api'
 import { Cover, TrackList } from '../components/common'
+import { t } from '../i18n'
 
 export function Starred() {
-  const { creds, navigate, playQueue } = useApp()
+  const { creds, navigate, playQueue, settings } = useApp()
+  void settings.lang
   const [songs, setSongs] = useState<Song[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
   const [loading, setLoading] = useState(true)
@@ -21,14 +23,14 @@ export function Starred() {
       .finally(() => setLoading(false))
   }, [creds])
 
-  if (loading) return <div className="empty">در حال بارگذاری...</div>
+  if (loading) return <div className="empty">{t('common.loading')}</div>
 
   return (
     <div>
-      <div className="page-title">پسندیده‌ها</div>
+      <div className="page-title">{t('nav.starred')}</div>
       {albums.length > 0 && (
         <>
-          <div className="section-title">آلبوم‌های پسندیده</div>
+          <div className="section-title">{t('starred.likedAlbums')}</div>
           <div className="grid">
             {albums.map((a) => (
               <div key={a.id} className="card" onClick={() => navigate('album', a.id)}>
@@ -41,14 +43,14 @@ export function Starred() {
         </>
       )}
       <div className="section-title">
-        آهنگ‌های پسندیده{' '}
+        {t('nav.starred')}{' '}
         {songs.length > 0 && (
-          <button className="chip active" style={{ marginRight: 12 }} onClick={() => playQueue(songs, 0)}>
-            پخش همه
+          <button className="chip active" style={{ marginInlineStart: 12 }} onClick={() => playQueue(songs, 0)}>
+            {t('common.playAll')}
           </button>
         )}
       </div>
-      {songs.length ? <TrackList songs={songs} /> : <div className="empty">آهنگ پسندیده‌ای نیست</div>}
+      {songs.length ? <TrackList songs={songs} /> : <div className="empty">{t('starred.noLiked')}</div>}
     </div>
   )
 }

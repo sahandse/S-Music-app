@@ -1,18 +1,19 @@
 import React, { useState } from 'react'
 import { useApp } from '../store'
-import { getSettings, setSettings, EQ_FREQS, ThemeMode } from '../settings'
+import { setSettings, EQ_FREQS, ThemeMode, Lang } from '../settings'
 import { bridge, isDesktop, UpdateStatus } from '../desktop'
 import { lastfmLogin, lastfmLogout } from '../lastfm'
+import { t } from '../i18n'
 
 const ACCENTS = ['#e0264e', '#7c5cff', '#1db954', '#ff7a00', '#00b4d8', '#ff3b7f']
 const EQ_LABELS = ['60', '230', '910', '3.6k', '14k']
-const EQ_PRESETS: Record<string, number[]> = {
-  'خنثی': [0, 0, 0, 0, 0],
-  'بیس‌دار': [6, 4, 0, 0, 2],
-  'پاپ': [-1, 2, 4, 2, -1],
-  'راک': [4, 2, -1, 2, 4],
-  'صدای واضح': [-2, 0, 2, 4, 3]
-}
+const EQ_PRESETS: Array<{ key: string; bands: number[] }> = [
+  { key: 'eq.neutral', bands: [0, 0, 0, 0, 0] },
+  { key: 'eq.bass', bands: [6, 4, 0, 0, 2] },
+  { key: 'eq.pop', bands: [-1, 2, 4, 2, -1] },
+  { key: 'eq.rock', bands: [4, 2, -1, 2, 4] },
+  { key: 'eq.clear', bands: [-2, 0, 2, 4, 3] }
+]
 
 export function Settings() {
   const { settings } = useApp()
@@ -46,10 +47,10 @@ export function Settings() {
     setLfmMsg('')
     try {
       const name = await lastfmLogin(lfmUser, lfmPass)
-      setLfmMsg('متصل شد: ' + name)
+      setLfmMsg(t('lfm.connected') + name)
       setLfmPass('')
     } catch (e: any) {
-      setLfmMsg(e?.message || 'خطا')
+      setLfmMsg(e?.message || t('lfm.error'))
     }
   }
 
@@ -63,27 +64,33 @@ export function Settings() {
 
   return (
     <div className="page settings-page">
-      <h1>تنظیمات</h1>
+      <h1>{t('set.title')}</h1>
 
-      {/* Appearance */}
+      {/* Appearance + language */}
       <section className="settings-card">
-        <h3>ظاهر</h3>
+        <h3>{t('set.appearance')}</h3>
         <div className="set-row">
-          <span>پوسته</span>
+          <span>{t('set.language')}</span>
           <div className="seg">
-            {(['dark', 'light'] as ThemeMode[]).map((t) => (
-              <button
-                key={t}
-                className={s.theme === t ? 'on' : ''}
-                onClick={() => setSettings({ theme: t })}
-              >
-                {t === 'dark' ? 'تیره' : 'روشن'}
+            {(['fa', 'en'] as Lang[]).map((l) => (
+              <button key={l} className={s.lang === l ? 'on' : ''} onClick={() => setSettings({ lang: l })}>
+                {l === 'fa' ? 'فارسی' : 'English'}
               </button>
             ))}
           </div>
         </div>
         <div className="set-row">
-          <span>رنگ لهجه</span>
+          <span>{t('set.theme')}</span>
+          <div className="seg">
+            {(['dark', 'light'] as ThemeMode[]).map((th) => (
+              <button key={th} className={s.theme === th ? 'on' : ''} onClick={() => setSettings({ theme: th })}>
+                {th === 'dark' ? t('set.dark') : t('set.light')}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="set-row">
+          <span>{t('set.accent')}</span>
           <div className="swatches">
             {ACCENTS.map((c) => (
               <button
@@ -97,7 +104,7 @@ export function Settings() {
               type="color"
               value={s.accent}
               onChange={(e) => setSettings({ accent: e.target.value })}
-              title="رنگ دلخواه"
+              title={t('set.customColor')}
             />
           </div>
         </div>
@@ -105,9 +112,9 @@ export function Settings() {
 
       {/* Playback */}
       <section className="settings-card">
-        <h3>پخش</h3>
+        <h3>{t('set.playback')}</h3>
         <label className="set-row toggle">
-          <span>محو تدریجی هنگام توقف/پخش</span>
+          <span>{t('set.fadeOnPause')}</span>
           <input
             type="checkbox"
             checked={s.fadeOnPause}
@@ -115,7 +122,9 @@ export function Settings() {
           />
         </label>
         <div className="set-row">
-          <span>محو بین آهنگ‌ها (Crossfade): {s.crossfadeSec}s</span>
+          <span>
+            {t('set.crossfade')}: {s.crossfadeSec}s
+          </span>
           <input
             type="range"
             min={0}
@@ -129,9 +138,9 @@ export function Settings() {
 
       {/* Equalizer */}
       <section className="settings-card">
-        <h3>اکولایزر</h3>
+        <h3>{t('set.eq')}</h3>
         <label className="set-row toggle">
-          <span>فعال</span>
+          <span>{t('set.enabled')}</span>
           <input
             type="checkbox"
             checked={s.eqEnabled}
@@ -139,9 +148,9 @@ export function Settings() {
           />
         </label>
         <div className="eq-presets">
-          {Object.entries(EQ_PRESETS).map(([name, bands]) => (
-            <button key={name} onClick={() => setSettings({ eqBands: bands, eqEnabled: true })}>
-              {name}
+          {EQ_PRESETS.map((p) => (
+            <button key={p.key} onClick={() => setSettings({ eqBands: p.bands, eqEnabled: true })}>
+              {t(p.key)}
             </button>
           ))}
         </div>
@@ -155,7 +164,6 @@ export function Settings() {
                 step={1}
                 value={s.eqBands[i]}
                 onChange={(e) => setEqBand(i, parseInt(e.target.value))}
-                // vertical slider
                 style={{ writingMode: 'vertical-lr' as any, direction: 'rtl' }}
               />
               <span className="eq-val">{s.eqBands[i] > 0 ? '+' + s.eqBands[i] : s.eqBands[i]}</span>
@@ -168,13 +176,13 @@ export function Settings() {
       {/* Downloads */}
       {isDesktop() && (
         <section className="settings-card">
-          <h3>دانلود</h3>
+          <h3>{t('set.download')}</h3>
           <div className="set-row">
             <span style={{ direction: 'ltr', fontSize: 12, color: 'var(--text-dim)' }}>
-              {s.downloadFolder || 'پوشه‌ای انتخاب نشده'}
+              {s.downloadFolder || t('set.noFolder')}
             </span>
             <button className="btn-sm" onClick={pickFolder}>
-              انتخاب پوشه
+              {t('set.pickFolder')}
             </button>
           </div>
         </section>
@@ -182,36 +190,39 @@ export function Settings() {
 
       {/* Last.fm */}
       <section className="settings-card">
-        <h3>Last.fm (اسکروبل)</h3>
+        <h3>{t('set.lastfm')}</h3>
         {s.lastfmEnabled ? (
           <div className="set-row">
-            <span>متصل به: {s.lastfmUser}</span>
+            <span>
+              {t('set.connectedTo')}
+              {s.lastfmUser}
+            </span>
             <button className="btn-sm" onClick={lastfmLogout}>
-              قطع اتصال
+              {t('set.disconnect')}
             </button>
           </div>
         ) : (
           <>
             <p className="card-sub" style={{ marginBottom: 8 }}>
-              کلید API و Secret را از last.fm/api بگیرید، سپس با حساب Last.fm خود وارد شوید.
+              {t('set.lastfmDesc')}
             </p>
             <input
               className="inp"
-              placeholder="API Key"
+              placeholder={t('set.apiKey')}
               dir="ltr"
               value={s.lastfmKey}
               onChange={(e) => setSettings({ lastfmKey: e.target.value })}
             />
             <input
               className="inp"
-              placeholder="API Secret"
+              placeholder={t('set.apiSecret')}
               dir="ltr"
               value={s.lastfmSecret}
               onChange={(e) => setSettings({ lastfmSecret: e.target.value })}
             />
             <input
               className="inp"
-              placeholder="نام کاربری Last.fm"
+              placeholder={t('set.lastfmUser')}
               dir="ltr"
               value={lfmUser}
               onChange={(e) => setLfmUser(e.target.value)}
@@ -219,13 +230,13 @@ export function Settings() {
             <input
               className="inp"
               type="password"
-              placeholder="رمز Last.fm"
+              placeholder={t('set.lastfmPass')}
               dir="ltr"
               value={lfmPass}
               onChange={(e) => setLfmPass(e.target.value)}
             />
             <button className="btn-sm" onClick={doLastfmLogin}>
-              اتصال
+              {t('set.connect')}
             </button>
           </>
         )}
@@ -235,27 +246,28 @@ export function Settings() {
       {/* Updates */}
       {isDesktop() && (
         <section className="settings-card">
-          <h3>به‌روزرسانی</h3>
+          <h3>{t('set.updates')}</h3>
           <div className="set-row">
             <span>
-              نسخه فعلی: {bridge()?.version || '—'}
-              {upd?.state === 'available' && ` — نسخه ${upd.version} موجود است`}
-              {upd?.state === 'none' && ' — به‌روز هستید'}
-              {upd?.state === 'downloading' && ` — دانلود ${upd.percent ?? 0}%`}
-              {upd?.state === 'ready' && ' — آماده نصب'}
-              {upd?.state === 'error' && ' — بررسی ناموفق'}
+              {t('set.currentVersion')}
+              {bridge()?.version || '—'}
+              {upd?.state === 'available' && t('set.updateAvailable', { v: upd.version || '' })}
+              {upd?.state === 'none' && t('set.upToDate')}
+              {upd?.state === 'downloading' && t('set.downloading', { p: upd.percent ?? 0 })}
+              {upd?.state === 'ready' && t('set.readyInstall')}
+              {upd?.state === 'error' && t('set.checkFailed')}
             </span>
             {upd?.state === 'available' ? (
               <button className="btn-sm" onClick={() => bridge()?.downloadUpdate()}>
-                دانلود
+                {t('set.downloadBtn')}
               </button>
             ) : upd?.state === 'ready' ? (
               <button className="btn-sm" onClick={() => bridge()?.installUpdate()}>
-                نصب و راه‌اندازی مجدد
+                {t('set.installBtn')}
               </button>
             ) : (
               <button className="btn-sm" onClick={checkUpdate}>
-                بررسی به‌روزرسانی
+                {t('set.checkBtn')}
               </button>
             )}
           </div>

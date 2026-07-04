@@ -3,6 +3,7 @@ import { useApp } from '../store'
 import { Song } from '../api'
 import { bridge, isDesktop } from '../desktop'
 import { Cover } from '../components/common'
+import { t } from '../i18n'
 
 const KEY = 'highmusic.localFiles'
 
@@ -25,7 +26,7 @@ function save(list: LocalItem[]) {
 }
 
 function toSong(it: LocalItem): Song {
-  return { id: 'local_' + it.id, title: it.title, artist: 'فایل محلی', directUrl: it.url }
+  return { id: 'local_' + it.id, title: it.title, artist: t('local.fileSource'), directUrl: it.url }
 }
 
 export function Local() {
@@ -56,8 +57,8 @@ export function Local() {
   if (!isDesktop()) {
     return (
       <div className="page">
-        <h1>آهنگ‌های محلی</h1>
-        <div className="empty">این بخش فقط در نسخه دسکتاپ کار می‌کند.</div>
+        <h1>{t('local.title')}</h1>
+        <div className="empty">{t('local.desktopOnly')}</div>
       </div>
     )
   }
@@ -67,21 +68,19 @@ export function Local() {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>آهنگ‌های محلی</h1>
+        <h1>{t('local.title')}</h1>
         <div style={{ display: 'flex', gap: 8 }}>
           {items.length > 0 && (
             <button className="btn-sm" onClick={() => playQueue(songs, 0)}>
-              ▶ پخش همه
+              ▶ {t('common.playAll')}
             </button>
           )}
           <button className="btn-sm" onClick={pick}>
-            + افزودن فایل
+            + {t('local.addFile')}
           </button>
         </div>
       </div>
-      {items.length === 0 && (
-        <div className="empty">فایل صوتی از کامپیوتر خود اضافه کنید (MP3, FLAC, ...).</div>
-      )}
+      {items.length === 0 && <div className="empty">{t('local.empty')}</div>}
       <div>
         {items.map((it, i) => (
           <div key={it.id} className="track-row">
@@ -94,10 +93,10 @@ export function Local() {
                 {it.path}
               </div>
             </div>
-            <div className="t-star" title="افزودن به صف" onClick={() => addToQueue([toSong(it)])}>
+            <div className="t-star" title={t('player.addToQueue')} onClick={() => addToQueue([toSong(it)])}>
               ＋
             </div>
-            <div className="t-star" title="حذف" onClick={() => remove(it.id)}>
+            <div className="t-star" title={t('player.remove')} onClick={() => remove(it.id)}>
               ✕
             </div>
           </div>

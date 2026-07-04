@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { Cover } from '../components/common'
 import { catalogToSong, CatalogSong, fetchCatalog } from '../catalog'
+import { t } from '../i18n'
 
 // Shared online catalog: read a public catalog.json and play direct URLs.
 export function Catalog() {
-  const { playQueue, current } = useApp()
+  const { playQueue, current, settings } = useApp()
+  void settings.lang
   const [songs, setSongs] = useState<CatalogSong[]>([])
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
@@ -16,7 +18,7 @@ export function Catalog() {
     try {
       setSongs(await fetchCatalog())
     } catch (e: any) {
-      setErr(e?.message || 'خطا در دریافت کاتالوگ')
+      setErr(e?.message || t('catalog.error'))
     } finally {
       setBusy(false)
     }
@@ -34,35 +36,35 @@ export function Catalog() {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="page-title" style={{ marginBottom: 0 }}>
-          🎵 کاتالوگ آنلاین
+          🎵 {t('catalog.title')}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {songs.length > 0 && (
             <button className="chip active" onClick={() => playAll(0)}>
-              ▶ پخش همه
+              ▶ {t('common.playAll')}
             </button>
           )}
           <button className="chip" onClick={reload}>
-            بروزرسانی
+            {t('catalog.refresh')}
           </button>
         </div>
       </div>
       <p className="card-sub" style={{ margin: '8px 0 16px' }}>
-        {songs.length} آهنگ · آهنگ‌های اشتراکی که ادمین در کانال منتشر می‌کند
+        {songs.length} {t('common.songs')} · {t('catalog.subtitle')}
       </p>
 
       {busy && songs.length === 0 ? (
-        <div className="empty">در حال بارگذاری...</div>
+        <div className="empty">{t('common.loading')}</div>
       ) : err ? (
         <div className="empty">{err}</div>
       ) : songs.length === 0 ? (
-        <div className="empty">کاتالوگ هنوز خالی است</div>
+        <div className="empty">{t('catalog.empty')}</div>
       ) : (
         <div>
           {songs.map((s, i) => (
             <div
               key={s.audioUrl}
-              className={`track-row ${current === 'cat_' + s.audioUrl ? 'playing' : ''}`}
+              className={`track-row ${current?.id === 'cat_' + s.audioUrl ? 'playing' : ''}`}
               style={{ gridTemplateColumns: '48px 1fr 40px' }}
             >
               <div
