@@ -11,6 +11,7 @@ function createWindow() {
     minHeight: 600,
     backgroundColor: '#0d0d10',
     title: 'High Music',
+    icon: path.join(__dirname, '..', 'build', 'icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
