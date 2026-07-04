@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
-import { Album, getAlbumList, getRandomSongs, Song } from '../api'
+import { Album, getAlbumList, getGenres, getRandomSongs, getSongsByGenre, Song } from '../api'
 import { Cover, TrackList } from '../components/common'
 import { t } from '../i18n'
 
@@ -10,6 +10,9 @@ export function Home() {
   const [recent, setRecent] = useState<Album[]>([])
   const [frequent, setFrequent] = useState<Album[]>([])
   const [random, setRandom] = useState<Song[]>([])
+  const [genres, setGenres] = useState<string[]>([])
+  const [genre, setGenre] = useState<string>('')
+  const [genreSongs, setGenreSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -27,7 +30,20 @@ export function Home() {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
+    getGenres(creds)
+      .then((g) => {
+        setGenres(g)
+        if (g.length) setGenre(g[0])
+      })
+      .catch(() => setGenres([]))
   }, [creds])
+
+  useEffect(() => {
+    if (!creds || !genre) return
+    getSongsByGenre(creds, genre, 20)
+      .then(setGenreSongs)
+      .catch(() => setGenreSongs([]))
+  }, [creds, genre])
 
   if (loading) return <div className="empty">{t('common.loading')}</div>
 
@@ -49,6 +65,24 @@ export function Home() {
         </button>
       </div>
       <TrackList songs={random} />
+
+      {genres.length > 0 && (
+        <>
+          <div className="section-title">{t('home.genres')}</div>
+          <div style={{ marginBottom: 14 }}>
+            {genres.map((g) => (
+              <span
+                key={g}
+                className={`chip ${genre === g ? 'active' : ''}`}
+                onClick={() => setGenre(g)}
+              >
+                {g}
+              </span>
+            ))}
+          </div>
+          <TrackList songs={genreSongs} />
+        </>
+      )}
     </div>
   )
 }

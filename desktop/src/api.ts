@@ -152,6 +152,20 @@ export async function getTopSongs(c: Creds, artist: string, count = 20): Promise
   return r.topSongs?.song ?? []
 }
 
+export async function getGenres(c: Creds): Promise<string[]> {
+  const r = await call(c, 'getGenres.view')
+  const list = r.genres?.genre ?? []
+  return list
+    .map((g: any) => (typeof g === 'string' ? g : g.value || g.name))
+    .filter(Boolean)
+    .slice(0, 24)
+}
+
+export async function getSongsByGenre(c: Creds, genre: string, count = 20): Promise<Song[]> {
+  const r = await call(c, 'getSongsByGenre.view', { genre, count })
+  return r.songsByGenre?.song ?? []
+}
+
 export async function getPlaylists(c: Creds): Promise<Playlist[]> {
   const r = await call(c, 'getPlaylists.view')
   return r.playlists?.playlist ?? []

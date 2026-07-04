@@ -10,6 +10,7 @@ const NAV = [
   { id: 'playlists', icon: '📃' },
   { id: 'starred', icon: '♥' },
   { id: 'search', icon: '🔍' },
+  { id: 'podcasts', icon: '🎙' },
   { id: 'catalog', icon: '🎵' },
   { id: 'mysongs', icon: '➕' },
   ...(isDesktop() ? [{ id: 'local', icon: '📁' }] : []),

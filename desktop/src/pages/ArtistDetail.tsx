@@ -3,21 +3,28 @@ import { useApp } from '../store'
 import { Album, Artist, getArtist, getTopSongs, Song } from '../api'
 import { Cover, TrackList } from '../components/common'
 import { t } from '../i18n'
+import { fetchArtistBio } from '../wiki'
 
 export function ArtistDetail({ id }: { id: string }) {
-  const { creds, navigate, playQueue } = useApp()
+  const { creds, navigate, playQueue, settings } = useApp()
+  void settings.lang
   const [artist, setArtist] = useState<Artist | null>(null)
   const [albums, setAlbums] = useState<Album[]>([])
   const [top, setTop] = useState<Song[]>([])
+  const [bio, setBio] = useState('')
+  const [bioOpen, setBioOpen] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!creds) return
     setLoading(true)
+    setBio('')
+    setBioOpen(false)
     getArtist(creds, id)
       .then(async ({ artist, albums }) => {
         setArtist(artist)
         setAlbums(albums)
+        fetchArtistBio(artist.name).then(setBio)
         try {
           setTop(await getTopSongs(creds, artist.name, 10))
         } catch {
@@ -26,7 +33,7 @@ export function ArtistDetail({ id }: { id: string }) {
       })
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [creds, id])
+  }, [creds, id, settings.lang])
 
   if (loading) return <div className="empty">{t('common.loading')}</div>
   if (!artist) return <div className="empty">{t('artists.notFound')}</div>
@@ -48,6 +55,18 @@ export function ArtistDetail({ id }: { id: string }) {
           )}
         </div>
       </div>
+
+      {bio && (
+        <div className={`artist-bio ${bioOpen ? 'open' : ''}`}>
+          <div className="section-title">{t('artist.bio')}</div>
+          <p>{bio}</p>
+          {bio.length > 280 && (
+            <button className="bio-toggle" onClick={() => setBioOpen((v) => !v)}>
+              {bioOpen ? t('artist.less') : t('artist.more')}
+            </button>
+          )}
+        </div>
+      )}
 
       {top.length > 0 && (
         <>

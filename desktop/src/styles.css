@@ -850,3 +850,12 @@ input[type='range'] { direction: ltr; }
 }
 .btn-telegram:hover { filter: brightness(1.08); transform: translateY(-1px); }
 .btn-telegram .tg-ico { font-size: 16px; }
+
+/* ===== Artist biography ===== */
+.artist-bio { max-width: 820px; margin-bottom: 8px; }
+.artist-bio p {
+  color: var(--text-dim); line-height: 1.8; font-size: 14px;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden;
+}
+.artist-bio.open p { -webkit-line-clamp: unset; }
+.bio-toggle { color: var(--accent); font-size: 13px; font-weight: 700; margin-top: 6px; }

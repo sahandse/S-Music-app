@@ -14,6 +14,7 @@ const DICT: Record<string, [string, string]> = {
   'nav.catalog': ['کاتالوگ آنلاین', 'Online Catalog'],
   'nav.mysongs': ['آهنگ‌های من', 'My Songs'],
   'nav.local': ['آهنگ‌های محلی', 'Local Files'],
+  'nav.podcasts': ['پادکست‌ها', 'Podcasts'],
   'nav.settings': ['تنظیمات', 'Settings'],
   'nav.logout': ['خروج', 'Log out'],
 
@@ -76,6 +77,18 @@ const DICT: Record<string, [string, string]> = {
   'home.newest': ['تازه‌ترین‌ها', 'Newest'],
   'home.frequent': ['پرشنیده‌ها', 'Most played'],
   'home.random': ['آهنگ‌های تصادفی', 'Random songs'],
+  'home.genres': ['ژانرها', 'Genres'],
+
+  // artist bio
+  'artist.bio': ['بیوگرافی', 'Biography'],
+  'artist.more': ['بیشتر', 'Show more'],
+  'artist.less': ['کمتر', 'Show less'],
+
+  // podcasts
+  'pod.placeholder': ['جستجوی پادکست...', 'Search podcasts…'],
+  'pod.back': ['بازگشت', 'Back'],
+  'pod.searchErr': ['خطا در جستجو', 'Search failed'],
+  'pod.feedErr': ['خطا در دریافت قسمت‌ها', 'Failed to load episodes'],
 
   // albums / artists / album
   'albums.notFound': ['آلبوم پیدا نشد', 'Album not found'],

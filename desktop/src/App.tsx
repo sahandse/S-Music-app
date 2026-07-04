@@ -11,6 +11,7 @@ import { Search } from './pages/Search'
 import { Starred } from './pages/Starred'
 import { MySongs } from './pages/MySongs'
 import { Catalog } from './pages/Catalog'
+import { Podcasts } from './pages/Podcasts'
 import { Local } from './pages/Local'
 import { Settings } from './pages/Settings'
 import { Sidebar } from './components/Sidebar'
@@ -137,6 +138,8 @@ function Content({ view, param }: { view: string; param: string | null }) {
       return <MySongs />
     case 'catalog':
       return <Catalog />
+    case 'podcasts':
+      return <Podcasts />
     case 'local':
       return <Local />
     case 'settings':
