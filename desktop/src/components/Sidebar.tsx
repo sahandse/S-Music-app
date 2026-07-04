@@ -1,6 +1,8 @@
 import React from 'react'
 import { useApp } from '../store'
 
+import { isDesktop } from '../desktop'
+
 const NAV = [
   { id: 'home', label: 'خانه', icon: '🏠' },
   { id: 'albums', label: 'آلبوم‌ها', icon: '💿' },
@@ -9,7 +11,9 @@ const NAV = [
   { id: 'starred', label: 'پسندیده‌ها', icon: '♥' },
   { id: 'search', label: 'جستجو', icon: '🔍' },
   { id: 'catalog', label: 'کاتالوگ آنلاین', icon: '🎵' },
-  { id: 'mysongs', label: 'آهنگ‌های من', icon: '➕' }
+  { id: 'mysongs', label: 'آهنگ‌های من', icon: '➕' },
+  ...(isDesktop() ? [{ id: 'local', label: 'آهنگ‌های محلی', icon: '📁' }] : []),
+  { id: 'settings', label: 'تنظیمات', icon: '⚙' }
 ]
 
 export function Sidebar() {

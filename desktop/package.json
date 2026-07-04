@@ -1,6 +1,6 @@
 {
   "name": "high-music-desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "High Music — Windows desktop client for your Subsonic/Navidrome server",
   "author": "High Music",
   "license": "MIT",
@@ -12,7 +12,8 @@
     "start": "electron ."
   },
   "dependencies": {
-    "blueimp-md5": "^2.19.0"
+    "blueimp-md5": "^2.19.0",
+    "electron-updater": "^6.2.1"
   },
   "devDependencies": {
     "@types/blueimp-md5": "^2.18.2",
@@ -31,7 +32,13 @@
   "build": {
     "appId": "ir.music.high.desktop",
     "productName": "High Music",
-    "publish": null,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "sahandse",
+        "repo": "s-music-app"
+      }
+    ],
     "directories": {
       "output": "release"
     },

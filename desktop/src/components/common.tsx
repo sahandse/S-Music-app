@@ -1,6 +1,8 @@
 import React from 'react'
 import { useApp } from '../store'
-import { coverUrl, Song, fmtDuration, star, unstar } from '../api'
+import { coverUrl, streamUrl, Song, fmtDuration, star, unstar } from '../api'
+import { bridge, isDesktop } from '../desktop'
+import { getSettings, setSettings } from '../settings'
 
 // Cover image that falls back to a music-note glyph when there's no art.
 // `directUrl` (for user-added songs) takes priority over the Subsonic id.
@@ -35,6 +37,7 @@ export function TrackList({
 }) {
   const { playQueue, current, isPlaying, creds } = useApp()
   const [starred, setStarred] = React.useState<Record<string, boolean>>({})
+  const [dl, setDl] = React.useState<Record<string, 'busy' | 'done' | 'err'>>({})
 
   const toggleStar = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
@@ -45,6 +48,27 @@ export function TrackList({
       on ? await star(creds, id) : await unstar(creds, id)
     } catch {
       setStarred((s) => ({ ...s, [id]: !on }))
+    }
+  }
+
+  const download = async (e: React.MouseEvent, s: Song) => {
+    e.stopPropagation()
+    const b = bridge()
+    if (!b || !creds) return
+    let folder = getSettings().downloadFolder
+    if (!folder) {
+      folder = (await b.pickFolder()) || ''
+      if (!folder) return
+      setSettings({ downloadFolder: folder })
+    }
+    const url = s.directUrl || streamUrl(creds, s.id)
+    const name = `${(s.artist || '').trim()} - ${s.title}`.trim().replace(/^ - /, '') + '.mp3'
+    setDl((d) => ({ ...d, [s.id]: 'busy' }))
+    try {
+      await b.downloadFile(url, folder, name)
+      setDl((d) => ({ ...d, [s.id]: 'done' }))
+    } catch {
+      setDl((d) => ({ ...d, [s.id]: 'err' }))
     }
   }
 
@@ -71,6 +95,15 @@ export function TrackList({
             </div>
             <div className="t-album">{showAlbum ? s.album : ''}</div>
             <div className="t-dur">{fmtDuration(s.duration)}</div>
+            {isDesktop() && (
+              <div
+                className="t-star"
+                onClick={(e) => download(e, s)}
+                title="دانلود روی کامپیوتر"
+              >
+                {dl[s.id] === 'busy' ? '…' : dl[s.id] === 'done' ? '✓' : dl[s.id] === 'err' ? '⚠' : '⬇'}
+              </div>
+            )}
             <div
               className={`t-star ${starred[s.id] ? 'on' : ''}`}
               onClick={(e) => toggleStar(e, s.id)}

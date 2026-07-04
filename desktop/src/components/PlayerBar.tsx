@@ -2,6 +2,7 @@ import React from 'react'
 import { useApp } from '../store'
 import { fmtDuration } from '../api'
 import { Cover } from './common'
+import { bridge, isDesktop } from '../desktop'
 
 export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
   const {
@@ -19,7 +20,8 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
     toggleShuffle,
     repeat,
     cycleRepeat,
-    navigate
+    navigate,
+    setFullscreen
   } = useApp()
 
   return (
@@ -27,7 +29,13 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
       <div className="player-track">
         {current ? (
           <>
-            <Cover id={current.coverArt} size={120} />
+            <div
+              onClick={() => setFullscreen(true)}
+              title="نمای تمام‌صفحه"
+              style={{ cursor: 'pointer', display: 'flex' }}
+            >
+              <Cover id={current.coverArt} directUrl={current.coverImageUrl} size={120} />
+            </div>
             <div className="info">
               <div className="p-title">{current.title}</div>
               <div
@@ -92,6 +100,14 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
             onChange={(e) => setVolume(parseFloat(e.target.value))}
           />
         </div>
+        <button onClick={() => setFullscreen(true)} title="تمام‌صفحه + متن آهنگ">
+          ⤢
+        </button>
+        {isDesktop() && (
+          <button onClick={() => bridge()?.setMini(true)} title="پخش‌کننده کوچک">
+            ▭
+          </button>
+        )}
         <button onClick={onToggleQueue} title="صف پخش">
           ☰
         </button>
