@@ -1,0 +1,49 @@
+name: Sync Music Catalog
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' # every 15 minutes
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+# Avoid overlapping runs (they share the getUpdates offset + catalog file)
+concurrency:
+  group: catalog-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: claude/music-app-fonts-q1foo3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Sync catalog from Telegram channel
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHANNEL: '@himusicapp'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node tools/catalog-sync.js
+
+      - name: Commit catalog changes
+        run: |
+          git config user.name "catalog-bot"
+          git config user.email "catalog-bot@users.noreply.github.com"
+          if [ -n "$(git status --porcelain catalog)" ]; then
+            git add catalog/catalog.json catalog/state.json
+            # [skip ci] so this commit doesn't trigger the APK / Windows builds
+            git commit -m "chore(catalog): sync from Telegram channel [skip ci]"
+            git push origin HEAD:claude/music-app-fonts-q1foo3
+          else
+            echo "No catalog changes."
+          fi

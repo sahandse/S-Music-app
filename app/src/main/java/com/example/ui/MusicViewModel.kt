@@ -79,10 +79,10 @@ data class TelegramSong(
 )
 
 data class CatalogSong(
-    val fileId: String,
     val title: String,
     val artist: String,
     val coverUrl: String,
+    val audioUrl: String,
     val durationSec: Int
 )
 
@@ -2259,15 +2259,11 @@ class MusicViewModel(
         }
     }
 
-    // --- Shared online catalog: admin curates a Telegram channel, all users read it ---
-    // The catalog lives as a pinned catalog.json document in the channel; a single
-    // shared bot streams the audio. No secret is bundled — the admin enters the bot
-    // token + channel, optionally distributed to users via a remote config URL.
+    // --- Shared online catalog: a public catalog.json (kept up to date by a
+    // GitHub Actions worker from the Telegram channel) with direct audio URLs.
+    // The client only reads a public JSON and plays direct links — no token. ---
     private val _catalogSongs = MutableStateFlow<List<CatalogSong>>(emptyList())
     val catalogSongs: StateFlow<List<CatalogSong>> = _catalogSongs.asStateFlow()
-
-    private val _catalogConfigured = MutableStateFlow(false)
-    val catalogConfigured: StateFlow<Boolean> = _catalogConfigured.asStateFlow()
 
     private val _catalogStatus = MutableStateFlow<String?>(null)
     val catalogStatus: StateFlow<String?> = _catalogStatus.asStateFlow()
@@ -2275,117 +2271,47 @@ class MusicViewModel(
     private val _isCatalogBusy = MutableStateFlow(false)
     val isCatalogBusy: StateFlow<Boolean> = _isCatalogBusy.asStateFlow()
 
-    private fun catToken(): String? = tgPrefs().getString("catalog_bot_token", null)
-    private fun catChannel(): String? = tgPrefs().getString("catalog_channel_id", null)
+    // Default public catalog, overridable in prefs
+    private val defaultCatalogUrl =
+        "https://raw.githubusercontent.com/sahandse/S-Music-app/claude/music-app-fonts-q1foo3/catalog/catalog.json"
 
-    fun clearCatalogStatus() { _catalogStatus.value = null }
+    fun catalogUrl(): String =
+        tgPrefs().getString("catalog_url", null)?.takeIf { it.isNotBlank() } ?: defaultCatalogUrl
 
-    fun loadCatalogState() {
-        val configured = !catToken().isNullOrBlank() && !catChannel().isNullOrBlank()
-        _catalogConfigured.value = configured
-        // Try a saved remote config URL first (lets end users auto-configure)
-        val remote = tgPrefs().getString("catalog_config_url", null)
-        if (!configured && !remote.isNullOrBlank()) {
-            applyCatalogConfigUrl(remote)
-        } else if (configured) {
-            fetchCatalog()
-        }
-    }
-
-    // Fetch { botToken, channelId } from a URL the admin hosts, then load the catalog
-    fun applyCatalogConfigUrl(url: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val body = okhttp3.OkHttpClient().newCall(okhttp3.Request.Builder().url(url.trim()).build())
-                    .execute().use { it.body?.string() } ?: return@launch
-                val obj = org.json.JSONObject(body)
-                val token = obj.optString("botToken").ifBlank { obj.optString("token") }
-                val channel = obj.optString("channelId").ifBlank { obj.optString("channel") }
-                if (token.isNotBlank() && channel.isNotBlank()) {
-                    tgPrefs().edit()
-                        .putString("catalog_bot_token", token)
-                        .putString("catalog_channel_id", channel)
-                        .putString("catalog_config_url", url.trim())
-                        .apply()
-                    _catalogConfigured.value = true
-                    fetchCatalog()
-                }
-            } catch (_: Exception) {}
-        }
-    }
-
-    fun configureCatalog(token: String, channel: String) {
-        tgPrefs().edit()
-            .putString("catalog_bot_token", token.trim())
-            .putString("catalog_channel_id", channel.trim())
-            .apply()
-        _catalogConfigured.value = true
+    fun setCatalogUrl(url: String) {
+        tgPrefs().edit().putString("catalog_url", url.trim()).apply()
         fetchCatalog()
     }
 
-    fun disconnectCatalog() {
-        tgPrefs().edit()
-            .remove("catalog_bot_token")
-            .remove("catalog_channel_id")
-            .remove("catalog_config_url")
-            .apply()
-        _catalogConfigured.value = false
-        _catalogSongs.value = emptyList()
-    }
+    fun clearCatalogStatus() { _catalogStatus.value = null }
 
-    private fun parseCatalogJson(json: String): List<CatalogSong> {
-        val arr = org.json.JSONObject(json).optJSONArray("songs") ?: return emptyList()
-        val list = mutableListOf<CatalogSong>()
-        for (i in 0 until arr.length()) {
-            val o = arr.getJSONObject(i)
-            list.add(
-                CatalogSong(
-                    fileId = o.optString("fileId"),
-                    title = o.optString("title"),
-                    artist = o.optString("artist"),
-                    coverUrl = o.optString("coverUrl"),
-                    durationSec = o.optInt("durationSec", 0)
-                )
-            )
-        }
-        return list
-    }
+    fun loadCatalogState() { fetchCatalog() }
 
     fun fetchCatalog() {
         viewModelScope.launch(Dispatchers.IO) {
             _isCatalogBusy.value = true
             try {
-                val token = catToken(); val channel = catChannel()
-                if (token == null || channel == null) return@launch
-                val client = okhttp3.OkHttpClient()
-                val chatResp = client.newCall(
-                    okhttp3.Request.Builder()
-                        .url("https://api.telegram.org/bot$token/getChat?chat_id=${java.net.URLEncoder.encode(channel, "UTF-8")}")
-                        .build()
-                ).execute().use { it.body?.string() } ?: ""
-                val chat = org.json.JSONObject(chatResp)
-                if (!chat.optBoolean("ok")) {
-                    _catalogStatus.value = "دسترسی به کانال ممکن نشد"
-                    return@launch
+                // Cache-buster so the newest catalog is always fetched
+                val url = catalogUrl() + "?t=" + System.currentTimeMillis()
+                val body = okhttp3.OkHttpClient().newCall(okhttp3.Request.Builder().url(url).build())
+                    .execute().use { it.body?.string() } ?: "{}"
+                val arr = org.json.JSONObject(body).optJSONArray("songs") ?: org.json.JSONArray()
+                val list = mutableListOf<CatalogSong>()
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val audio = o.optString("audioUrl")
+                    if (audio.isBlank()) continue
+                    list.add(
+                        CatalogSong(
+                            title = o.optString("title"),
+                            artist = o.optString("artist"),
+                            coverUrl = o.optString("coverUrl"),
+                            audioUrl = audio,
+                            durationSec = o.optInt("durationSec", 0)
+                        )
+                    )
                 }
-                val pinned = chat.getJSONObject("result").optJSONObject("pinned_message")
-                val docFileId = pinned?.optJSONObject("document")?.optString("file_id")
-                if (docFileId.isNullOrBlank()) {
-                    _catalogSongs.value = emptyList()
-                    return@launch
-                }
-                val fileResp = client.newCall(
-                    okhttp3.Request.Builder()
-                        .url("https://api.telegram.org/bot$token/getFile?file_id=$docFileId")
-                        .build()
-                ).execute().use { it.body?.string() } ?: ""
-                val path = org.json.JSONObject(fileResp).getJSONObject("result").getString("file_path")
-                val catalogJson = client.newCall(
-                    okhttp3.Request.Builder()
-                        .url("https://api.telegram.org/file/bot$token/$path")
-                        .build()
-                ).execute().use { it.body?.string() } ?: "{}"
-                _catalogSongs.value = parseCatalogJson(catalogJson)
+                _catalogSongs.value = list
             } catch (e: Exception) {
                 _catalogStatus.value = "خطا در دریافت کاتالوگ"
             } finally {
@@ -2394,123 +2320,20 @@ class MusicViewModel(
         }
     }
 
-    // Admin: upload a song to the channel and republish the pinned catalog
-    fun adminAddToCatalog(uri: android.net.Uri, title: String, artist: String, coverUrl: String) {
-        if (_isCatalogBusy.value) return
-        viewModelScope.launch(Dispatchers.IO) {
-            _isCatalogBusy.value = true
-            _catalogStatus.value = "در حال آپلود..."
-            try {
-                val token = catToken(); val channel = catChannel()
-                if (token == null || channel == null) {
-                    _catalogStatus.value = "ابتدا کاتالوگ را پیکربندی کنید"
-                    return@launch
-                }
-                val bytes = getApplication<Application>().contentResolver.openInputStream(uri)
-                    ?.use { it.readBytes() } ?: return@launch
-                val client = okhttp3.OkHttpClient.Builder()
-                    .callTimeout(5, java.util.concurrent.TimeUnit.MINUTES)
-                    .writeTimeout(5, java.util.concurrent.TimeUnit.MINUTES)
-                    .build()
-
-                // 1) upload the audio to the channel
-                val audioBody = okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
-                    .addFormDataPart("chat_id", channel)
-                    .addFormDataPart("title", title)
-                    .addFormDataPart("performer", artist)
-                    .addFormDataPart("audio", "${title.ifBlank { "audio" }}.mp3",
-                        okhttp3.RequestBody.create("audio/mpeg".toMediaTypeOrNull(), bytes))
-                    .build()
-                val audioResp = client.newCall(
-                    okhttp3.Request.Builder().url("https://api.telegram.org/bot$token/sendAudio").post(audioBody).build()
-                ).execute().use { it.body?.string() } ?: ""
-                val audioJson = org.json.JSONObject(audioResp)
-                if (!audioJson.optBoolean("ok")) {
-                    _catalogStatus.value = "آپلود آهنگ ناموفق: " + audioJson.optString("description")
-                    return@launch
-                }
-                val audio = audioJson.getJSONObject("result").optJSONObject("audio")
-                    ?: audioJson.getJSONObject("result").optJSONObject("document")
-                val newSong = CatalogSong(
-                    fileId = audio!!.getString("file_id"),
-                    title = title.ifBlank { audio.optString("file_name", "آهنگ") },
-                    artist = artist,
-                    coverUrl = coverUrl,
-                    durationSec = audio.optInt("duration", 0)
-                )
-
-                // 2) rebuild catalog.json (existing + new) and send it as a document
-                val updated = listOf(newSong) + _catalogSongs.value
-                val arr = org.json.JSONArray()
-                updated.forEach { s ->
-                    arr.put(
-                        org.json.JSONObject()
-                            .put("fileId", s.fileId).put("title", s.title).put("artist", s.artist)
-                            .put("coverUrl", s.coverUrl).put("durationSec", s.durationSec)
-                    )
-                }
-                val catalogBytes = org.json.JSONObject().put("songs", arr).toString().toByteArray()
-                val docBody = okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
-                    .addFormDataPart("chat_id", channel)
-                    .addFormDataPart("document", "catalog.json",
-                        okhttp3.RequestBody.create("application/json".toMediaTypeOrNull(), catalogBytes))
-                    .build()
-                val docResp = client.newCall(
-                    okhttp3.Request.Builder().url("https://api.telegram.org/bot$token/sendDocument").post(docBody).build()
-                ).execute().use { it.body?.string() } ?: ""
-                val docJson = org.json.JSONObject(docResp)
-                if (!docJson.optBoolean("ok")) {
-                    _catalogStatus.value = "انتشار کاتالوگ ناموفق: " + docJson.optString("description")
-                    return@launch
-                }
-                val msgId = docJson.getJSONObject("result").optLong("message_id")
-
-                // 3) pin the new catalog so all clients pick it up
-                client.newCall(
-                    okhttp3.Request.Builder()
-                        .url("https://api.telegram.org/bot$token/pinChatMessage?chat_id=${java.net.URLEncoder.encode(channel, "UTF-8")}&message_id=$msgId&disable_notification=true")
-                        .build()
-                ).execute().use { it.body?.string() }
-
-                _catalogSongs.value = updated
-                _catalogStatus.value = "✓ به کاتالوگ اضافه شد"
-            } catch (e: Exception) {
-                _catalogStatus.value = "خطا در افزودن به کاتالوگ"
-            } finally {
-                _isCatalogBusy.value = false
-            }
-        }
-    }
-
     fun playCatalogSong(song: CatalogSong, queue: List<CatalogSong>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val token = catToken() ?: return@launch
-                val fileResp = okhttp3.OkHttpClient().newCall(
-                    okhttp3.Request.Builder()
-                        .url("https://api.telegram.org/bot$token/getFile?file_id=${song.fileId}")
-                        .build()
-                ).execute().use { it.body?.string() } ?: ""
-                val json = org.json.JSONObject(fileResp)
-                if (!json.optBoolean("ok")) {
-                    _catalogStatus.value = "پخش ناموفق (فایل بزرگ‌تر از ۲۰ مگابایت؟)"
-                    return@launch
-                }
-                val path = json.getJSONObject("result").getString("file_path")
-                val url = "https://api.telegram.org/file/bot$token/$path"
-                val subsonic = SubsonicSong(
-                    id = "tg_${song.fileId}",
-                    title = song.title,
-                    artist = song.artist,
-                    coverArt = song.coverUrl.ifBlank { null },
-                    duration = song.durationSec,
-                    path = url
-                )
-                playSongDirectly(subsonic, listOf(subsonic))
-            } catch (e: Exception) {
-                _catalogStatus.value = "خطا در پخش"
-            }
+        val songs = queue.ifEmpty { listOf(song) }
+        val subsonicQueue = songs.map { s ->
+            SubsonicSong(
+                id = "cat_${s.audioUrl.hashCode()}",
+                title = s.title,
+                artist = s.artist,
+                coverArt = s.coverUrl.ifBlank { null },
+                duration = s.durationSec,
+                path = s.audioUrl
+            )
         }
+        val startIndex = songs.indexOfFirst { it.audioUrl == song.audioUrl }.coerceAtLeast(0)
+        playSongDirectly(subsonicQueue[startIndex], subsonicQueue)
     }
 
     override fun onCleared() {

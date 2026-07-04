@@ -255,6 +255,11 @@ class MusicRepository(
             return@withContext song.path ?: ""
         }
 
+        // Shared-catalog songs play from their direct (GitHub-hosted) URL
+        if (song.id.startsWith("cat_")) {
+            return@withContext song.path ?: ""
+        }
+
         // If downloaded offline, return its local file path URI
         val downloaded = dao.getDownloadedTrack(song.id)
         if (downloaded != null) {
