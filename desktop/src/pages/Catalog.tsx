@@ -9,12 +9,10 @@ export function Catalog() {
   const { playQueue, current, settings } = useApp()
   void settings.lang
   const [songs, setSongs] = useState<CatalogSong[]>([])
-  const [cat, setCat] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
-  const genres = Array.from(new Set(songs.map((s) => (s.genre || '').trim()).filter(Boolean)))
-  const shown = cat ? songs.filter((s) => (s.genre || '').trim() === cat) : songs
+  const shown = songs
 
   const reload = async () => {
     setBusy(true)
@@ -53,22 +51,9 @@ export function Catalog() {
           </button>
         </div>
       </div>
-      <p className="card-sub" style={{ margin: '8px 0 12px' }}>
+      <p className="card-sub" style={{ margin: '8px 0 16px' }}>
         {shown.length} {t('common.songs')} · {t('catalog.subtitle')}
       </p>
-
-      {genres.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <span className={`chip ${cat === '' ? 'active' : ''}`} onClick={() => setCat('')}>
-            {t('catalog.all')}
-          </span>
-          {genres.map((g) => (
-            <span key={g} className={`chip ${cat === g ? 'active' : ''}`} onClick={() => setCat(g)}>
-              {g}
-            </span>
-          ))}
-        </div>
-      )}
 
       {busy && songs.length === 0 ? (
         <div className="empty">{t('common.loading')}</div>

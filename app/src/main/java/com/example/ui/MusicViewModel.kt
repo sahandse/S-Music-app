@@ -83,8 +83,7 @@ data class CatalogSong(
     val artist: String,
     val coverUrl: String,
     val audioUrl: String,
-    val durationSec: Int,
-    val genre: String = ""
+    val durationSec: Int
 )
 
 class MusicViewModel(
@@ -2308,8 +2307,7 @@ class MusicViewModel(
                             artist = o.optString("artist"),
                             coverUrl = o.optString("coverUrl"),
                             audioUrl = audio,
-                            durationSec = o.optInt("durationSec", 0),
-                            genre = o.optString("genre")
+                            durationSec = o.optInt("durationSec", 0)
                         )
                     )
                 }

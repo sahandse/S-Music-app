@@ -156,26 +156,10 @@ function clean(s) {
     .trim()
 }
 
-// Map common genre words (fa/en, with/without #) to a canonical label.
-function normGenre(raw) {
-  const g = (raw || '').replace(/^#/, '').trim().toLowerCase()
-  const map = {
-    'pop': 'پاپ', 'پاپ': 'پاپ',
-    'rap': 'رپ', 'hiphop': 'رپ', 'hip-hop': 'رپ', 'رپ': 'رپ', 'هیپ‌هاپ': 'رپ', 'هیپ هاپ': 'رپ',
-    'rock': 'راک', 'راک': 'راک',
-    'traditional': 'سنتی', 'سنتی': 'سنتی',
-    'classic': 'کلاسیک', 'classical': 'کلاسیک', 'کلاسیک': 'کلاسیک',
-    'electronic': 'الکترونیک', 'edm': 'الکترونیک', 'الکترونیک': 'الکترونیک',
-    'instrumental': 'بی‌کلام', 'بی‌کلام': 'بی‌کلام', 'بیکلام': 'بی‌کلام'
-  }
-  return map[g] || (raw ? raw.replace(/^#/, '').trim() : '')
-}
-
 function songMeta(audio, post) {
   // 1) Caption first — if you caption the post, it wins over messy file tags.
   let title = ''
   let artist = ''
-  let genre = ''
   const cap = (post.caption || '').trim()
   if (cap) {
     const lines = cap
@@ -186,15 +170,8 @@ function songMeta(audio, post) {
     for (const line of lines) {
       const a = line.match(/^(خواننده|هنرمند|صدا|artist|singer)\s*[:：]\s*(.+)$/i)
       const s = line.match(/^(آهنگ|ترانه|عنوان|نام|title|song|track|name)\s*[:：]\s*(.+)$/i)
-      const g = line.match(/^(ژانر|سبک|دسته|genre|category)\s*[:：]\s*(.+)$/i)
       if (a) artist = a[2].trim()
       else if (s) title = s[2].trim()
-      else if (g) genre = normGenre(g[2])
-    }
-    // hashtag genre, e.g. "#پاپ" or "#rap"
-    if (!genre) {
-      const tag = cap.match(/#([\p{L}\-]+)/u)
-      if (tag) genre = normGenre(tag[1])
     }
     if (!title && !artist) {
       // Ignore hashtag/label lines when guessing artist & title
@@ -217,8 +194,7 @@ function songMeta(audio, post) {
   // 2) Fall back to the file's own tags, cleaned of promo junk.
   title = clean(title) || clean(audio.title) || clean(audio.file_name) || 'آهنگ'
   artist = clean(artist) || clean(audio.performer) || ''
-  genre = genre || normGenre(audio.genre || '')
-  return { title, artist, genre }
+  return { title, artist }
 }
 
 async function main() {
@@ -321,17 +297,16 @@ async function main() {
         }
       }
 
-      const { title, artist, genre } = songMeta(audio, post)
+      const { title, artist } = songMeta(audio, post)
       catalog.songs.unshift({
         title,
         artist,
-        genre,
         coverUrl,
         audioUrl,
         durationSec: audio.duration || 0
       })
       added++
-      console.log(`+ Added: ${artist ? artist + ' — ' : ''}${title}${genre ? ' [' + genre + ']' : ''}`)
+      console.log(`+ Added: ${artist ? artist + ' — ' : ''}${title}`)
     } catch (e) {
       console.error('Failed on update', u.update_id, e.message)
     }
