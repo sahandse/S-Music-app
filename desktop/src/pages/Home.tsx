@@ -38,10 +38,15 @@ export function Home() {
         if (g.length) setGenre(g[0])
       })
       .catch(() => setGenres([]))
-    // Latest shared-catalog songs ("New songs")
-    fetchCatalog()
-      .then((list) => setNewSongs(list.slice(0, 12).map(catalogToSong)))
-      .catch(() => setNewSongs([]))
+    // Latest shared-catalog songs ("Newest Iranian"), refreshed periodically so
+    // songs newly posted to the channel appear without a manual reload.
+    const loadCatalog = () =>
+      fetchCatalog()
+        .then((list) => setNewSongs(list.slice(0, 12).map(catalogToSong)))
+        .catch(() => {})
+    loadCatalog()
+    const id = setInterval(loadCatalog, 60000)
+    return () => clearInterval(id)
   }, [creds])
 
   useEffect(() => {

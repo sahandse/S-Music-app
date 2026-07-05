@@ -1409,7 +1409,14 @@ fun HomeScreen(
 ) {
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val catalogSongs by viewModel.catalogSongs.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { viewModel.fetchCatalog() }
+    // Auto-refresh the online catalog while Home is open so newly-posted songs
+    // appear in the "Newest Iranian" row without any manual action.
+    LaunchedEffect(Unit) {
+        while (true) {
+            viewModel.fetchCatalog()
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
     val artists by viewModel.artistsList.collectAsStateWithLifecycle()
     val favoriteArtists by viewModel.favoriteArtists.collectAsStateWithLifecycle()

@@ -5,7 +5,7 @@ const { contextBridge, ipcRenderer } = require('electron')
 // local files and downloads, mini-player mode, and the auto-updater.
 contextBridge.exposeInMainWorld('desktop', {
   platform: process.platform,
-  version: '1.10.0',
+  version: '1.11.0',
 
   // main -> renderer: media key / tray commands ("playpause" | "next" | "prev" | "pause")
   onMediaControl: (cb) => {
