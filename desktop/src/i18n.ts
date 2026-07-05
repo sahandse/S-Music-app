@@ -79,6 +79,7 @@ const DICT: Record<string, [string, string]> = {
   'home.random': ['آهنگ‌های تصادفی', 'Random songs'],
   'home.genres': ['ژانرها', 'Genres'],
   'home.newSongs': ['آهنگ‌های جدید', 'New songs'],
+  'home.newestIranian': ['جدیدترین ایرانی', 'Newest Iranian'],
   'catalog.all': ['همه', 'All'],
 
   // artist bio

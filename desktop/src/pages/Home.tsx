@@ -60,7 +60,7 @@ export function Home() {
       {newSongs.length > 0 && (
         <>
           <div className="section-title">
-            {t('home.newSongs')}{' '}
+            {t('home.newestIranian')}{' '}
             <button
               className="chip active"
               style={{ marginInlineStart: 12 }}
