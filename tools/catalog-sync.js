@@ -22,6 +22,12 @@ const PAT = process.env.CATALOG_PAT
 const CATALOG_REPO = process.env.CATALOG_REPO // owner/repo (public)
 const CHANNEL = process.env.CHANNEL || '@himusicapp'
 const RELEASE_TAG = 'catalog-media'
+// How long to long-poll getUpdates (helps when running right after posting)
+const POLL_TIMEOUT = parseInt(process.env.POLL_TIMEOUT || '25', 10)
+// Set RESET_OFFSET=1 to re-read from the start of the pending queue
+const RESET_OFFSET = process.env.RESET_OFFSET === '1'
+// Telegram bot download cap (getFile) — files above this can't be fetched
+const MAX_TG_FILE = 20 * 1024 * 1024
 
 const WORKDIR = path.join(process.cwd(), 'catalog-repo')
 const tg = (method) => `https://api.telegram.org/bot${TG_TOKEN}/${method}`
@@ -86,12 +92,63 @@ async function uploadAsset(release, name, bytes, contentType) {
   return (await res.json()).browser_download_url
 }
 
+async function tgJson(method, params = '') {
+  return (await fetch(tg(method) + params)).json()
+}
+
 async function tgGetFileBytes(fileId) {
-  const info = await (await fetch(tg('getFile') + `?file_id=${fileId}`)).json()
-  if (!info.ok) return null // e.g. file > 20MB
+  const info = await tgJson('getFile', `?file_id=${fileId}`)
+  if (!info.ok) {
+    console.log('  getFile failed (usually a >20MB file):', info.description || '')
+    return null
+  }
   const filePath = info.result.file_path
   const bin = await fetch(`https://api.telegram.org/file/bot${TG_TOKEN}/${filePath}`)
   return { buf: Buffer.from(await bin.arrayBuffer()), filePath }
+}
+
+// Diagnose the bot/channel so failures are obvious in the logs.
+async function diagnose() {
+  const me = await tgJson('getMe')
+  console.log('Bot:', me.ok ? '@' + me.result.username : JSON.stringify(me))
+
+  const wh = await tgJson('getWebhookInfo')
+  if (wh.ok && wh.result.url) {
+    console.log('A webhook is set (' + wh.result.url + ') — deleting it so getUpdates can work.')
+  }
+  // Always clear any webhook; a live webhook makes getUpdates return 409.
+  await tgJson('deleteWebhook', '?drop_pending_updates=false')
+
+  const chat = await tgJson('getChat', `?chat_id=${encodeURIComponent(CHANNEL)}`)
+  if (!chat.ok) {
+    console.log('⚠ getChat(' + CHANNEL + ') failed — the bot is probably not in the channel:', chat.description || '')
+    return
+  }
+  console.log('Channel:', chat.result.title || CHANNEL)
+  const admins = await tgJson('getChatAdministrators', `?chat_id=${encodeURIComponent(CHANNEL)}`)
+  const isAdmin = admins.ok && me.ok && admins.result.some((a) => a.user && a.user.id === me.result.id)
+  console.log('Bot is a channel admin:', isAdmin)
+  if (!isAdmin) {
+    console.log('⚠ The bot MUST be an admin of the channel to receive channel posts. Posts made before it became admin are never delivered.')
+  }
+}
+
+// Build {title, artist} from the audio tags or the post caption ("Artist - Title").
+function songMeta(audio, post) {
+  let title = audio.title || ''
+  let artist = audio.performer || ''
+  const cap = (post.caption || '').trim()
+  if ((!title || !artist) && cap) {
+    const m = cap.match(/^(.+?)\s*[-–—]\s*(.+)$/)
+    if (m) {
+      artist = artist || m[1].trim()
+      title = title || m[2].trim()
+    } else {
+      title = title || cap
+    }
+  }
+  title = title || audio.file_name || 'آهنگ'
+  return { title, artist }
 }
 
 async function main() {
@@ -114,40 +171,61 @@ async function main() {
   const catalog = readJson(catalogPath, { songs: [] })
   const state = readJson(statePath, { offset: 0 })
 
-  const updRes = await (
-    await fetch(
-      tg('getUpdates') +
-        `?offset=${state.offset}&timeout=0&allowed_updates=${encodeURIComponent('["channel_post","message"]')}`
-    )
-  ).json()
+  await diagnose()
+
+  const offset = RESET_OFFSET ? 0 : state.offset
+  if (RESET_OFFSET) console.log('RESET_OFFSET=1 — re-reading the pending queue from the start.')
+
+  const updRes = await tgJson(
+    'getUpdates',
+    `?offset=${offset}&timeout=${POLL_TIMEOUT}&allowed_updates=${encodeURIComponent('["channel_post","message"]')}`
+  )
   if (!updRes.ok) {
     console.error('getUpdates failed:', JSON.stringify(updRes))
     return
   }
   const updates = updRes.result || []
   if (updates.length === 0) {
-    console.log('No new updates.')
+    console.log(
+      `No new updates (offset=${offset}). Checklist: (1) the bot must be an ADMIN of ${CHANNEL}; ` +
+        '(2) only posts made AFTER it became admin are delivered; ' +
+        '(3) re-run with RESET_OFFSET=1 if you think an update was skipped.'
+    )
     return
   }
+  console.log(`Got ${updates.length} update(s).`)
 
   let release = null
-  let maxUpdateId = state.offset - 1
+  let maxUpdateId = offset - 1
   let added = 0
 
   for (const u of updates) {
     maxUpdateId = Math.max(maxUpdateId, u.update_id)
     const post = u.channel_post || u.message
-    const audio = post && (post.audio || post.voice || post.document)
-    if (!audio) continue
+    if (!post) {
+      console.log(`- update ${u.update_id}: no post body — skipping`)
+      continue
+    }
+    const audio = post.audio || post.voice || post.document
+    if (!audio) {
+      console.log(`- update ${u.update_id}: not an audio message (text/photo/...) — skipping`)
+      continue
+    }
     const mime = audio.mime_type || ''
-    if (post.document && !mime.startsWith('audio/')) continue
+    if (post.document && !mime.startsWith('audio/')) {
+      console.log(`- update ${u.update_id}: document is not audio (${mime}) — skipping`)
+      continue
+    }
+    if (audio.file_size && audio.file_size > MAX_TG_FILE) {
+      console.log(
+        `- update ${u.update_id}: file is ${(audio.file_size / 1048576).toFixed(1)}MB — over Telegram's 20MB bot download limit, skipping`
+      )
+      continue
+    }
 
     try {
       const got = await tgGetFileBytes(audio.file_id)
-      if (!got) {
-        console.log('Skipping file >20MB:', audio.file_name || audio.file_id)
-        continue
-      }
+      if (!got) continue
       if (!release) release = await ensureRelease()
 
       const ext = (got.filePath.split('.').pop() || 'mp3').toLowerCase()
@@ -163,15 +241,16 @@ async function main() {
         }
       }
 
+      const { title, artist } = songMeta(audio, post)
       catalog.songs.unshift({
-        title: audio.title || post.caption || audio.file_name || 'آهنگ',
-        artist: audio.performer || '',
+        title,
+        artist,
         coverUrl,
         audioUrl,
         durationSec: audio.duration || 0
       })
       added++
-      console.log('Added:', audio.title || audio.file_name)
+      console.log(`+ Added: ${artist ? artist + ' — ' : ''}${title}`)
     } catch (e) {
       console.error('Failed on update', u.update_id, e.message)
     }

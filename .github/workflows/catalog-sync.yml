@@ -3,7 +3,15 @@ name: Sync Music Catalog
 on:
   schedule:
     - cron: '*/15 * * * *' # every 15 minutes
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      reset_offset:
+        description: 'Re-read the pending Telegram queue from the start'
+        type: boolean
+        default: false
+      poll_timeout:
+        description: 'Long-poll seconds for getUpdates (run this right after posting)'
+        default: '25'
 
 permissions:
   contents: read
@@ -33,4 +41,6 @@ jobs:
           CATALOG_PAT: ${{ secrets.CATALOG_PAT }}
           CATALOG_REPO: sahandse/himusic-catalog
           CHANNEL: '@himusicapp'
+          RESET_OFFSET: ${{ github.event.inputs.reset_offset == 'true' && '1' || '0' }}
+          POLL_TIMEOUT: ${{ github.event.inputs.poll_timeout || '25' }}
         run: node tools/catalog-sync.js
