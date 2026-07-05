@@ -141,9 +141,25 @@ async function diagnose() {
 //   2) Single line "Artist - Title"  (e.g. "شادمهر - دیوونه")
 //   3) Two lines: first = song, second = artist
 //   4) Anything else -> used as the title
+// Strip the promo junk that music-download sites embed in tags/filenames,
+// e.g. "[ MyBia2Music.Com ]", "( 320 )", "| Site.ir", stray URLs.
+function clean(s) {
+  return (s || '')
+    .replace(/\.(mp3|m4a|flac|wav|aac|ogg|opus)$/i, '')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\((?:\s*\d{2,3}\s*(?:kbps)?\s*)\)/gi, ' ')
+    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/\b[\w-]+\.(?:com|ir|net|org|info|music|co)\b/gi, ' ')
+    .replace(/\s*[|•]\s*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/^[\s\-–—_]+|[\s\-–—_]+$/g, '')
+    .trim()
+}
+
 function songMeta(audio, post) {
-  let title = audio.title || ''
-  let artist = audio.performer || ''
+  // 1) Caption first — if you caption the post, it wins over messy file tags.
+  let title = ''
+  let artist = ''
   const cap = (post.caption || '').trim()
   if (cap) {
     const lines = cap
@@ -151,29 +167,29 @@ function songMeta(audio, post) {
       .map((l) => l.trim())
       .filter(Boolean)
 
-    // 1) labeled lines
     for (const line of lines) {
       const a = line.match(/^(خواننده|هنرمند|صدا|artist|singer)\s*[:：]\s*(.+)$/i)
       const s = line.match(/^(آهنگ|ترانه|عنوان|نام|title|song|track|name)\s*[:：]\s*(.+)$/i)
       if (a) artist = a[2].trim()
       else if (s) title = s[2].trim()
     }
-
-    // 2) "Artist - Title"  |  3) two lines (song, then artist)  |  4) plain
-    if (!title || !artist) {
+    if (!title && !artist) {
       const dash = cap.match(/^(.+?)\s*[-–—]\s*(.+)$/)
       if (dash) {
-        artist = artist || dash[1].trim()
-        title = title || dash[2].trim()
+        artist = dash[1].trim()
+        title = dash[2].trim()
       } else if (lines.length >= 2) {
-        title = title || lines[0]
-        artist = artist || lines[1]
+        title = lines[0]
+        artist = lines[1]
       } else {
-        title = title || cap
+        title = cap
       }
     }
   }
-  title = title || audio.file_name || 'آهنگ'
+
+  // 2) Fall back to the file's own tags, cleaned of promo junk.
+  title = clean(title) || clean(audio.title) || clean(audio.file_name) || 'آهنگ'
+  artist = clean(artist) || clean(audio.performer) || ''
   return { title, artist }
 }
 
