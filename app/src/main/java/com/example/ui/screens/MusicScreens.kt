@@ -965,7 +965,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onGenreClick = { currentSubScreen = SubScreen.Search },
                                             onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings },
-                                            onDiscoverClick = { selectedTab = 1; currentSubScreen = null }
+                                            onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
+                                            onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") }
                                         )
                                         1 -> DiscoverFeedScreen(
                                             viewModel = viewModel,
@@ -998,7 +999,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onGenreClick = { currentSubScreen = SubScreen.Search },
                                             onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings },
-                                            onDiscoverClick = { selectedTab = 1; currentSubScreen = null }
+                                            onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
+                                            onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") }
                                         )
                                     }
                                 }
@@ -1402,9 +1404,12 @@ fun HomeScreen(
     onProfileClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onDiscoverClick: () -> Unit = {},
-    onSearchClick: () -> Unit = {}
+    onSearchClick: () -> Unit = {},
+    onCatalogClick: () -> Unit = {}
 ) {
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
+    val catalogSongs by viewModel.catalogSongs.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.fetchCatalog() }
     val newestAlbums by viewModel.homeNewestAlbums.collectAsStateWithLifecycle()
     val artists by viewModel.artistsList.collectAsStateWithLifecycle()
     val favoriteArtists by viewModel.favoriteArtists.collectAsStateWithLifecycle()
@@ -1574,7 +1579,46 @@ fun HomeScreen(
                 )
             }
 
-
+            // Newest Iranian — the shared online catalog (admin-posted songs).
+            // Shows 12 with a "See all" button that opens the full catalog.
+            if (catalogSongs.isNotEmpty()) {
+                val newestIranian = remember(catalogSongs) { catalogSongs.take(12) }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = translate("جدیدترین ایرانی", "Newest Iranian", viewModel),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    TextButton(onClick = onCatalogClick) {
+                        Text(
+                            text = translate("مشاهده همه", "See all", viewModel),
+                            color = AppleRed,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                    }
+                }
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(newestIranian) { song ->
+                        VerticalBigCard(
+                            title = song.title,
+                            subtitle = song.artist.ifBlank { translate("هنرمند ناشناس", "Unknown Artist", viewModel) },
+                            imageUrl = song.coverUrl,
+                            onClick = { viewModel.playCatalogSong(song, newestIranian) }
+                        )
+                    }
+                }
+            }
 
             // Spotify-style 2×3 quick-access grid of recently played
             if (recentPlays.isNotEmpty()) {
