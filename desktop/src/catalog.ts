@@ -14,6 +14,7 @@ export interface CatalogSong {
   coverUrl: string
   audioUrl: string
   durationSec: number
+  genre?: string
 }
 
 export function catalogUrl(): string {
@@ -39,6 +40,7 @@ export function catalogToSong(s: CatalogSong): Song {
     artist: s.artist,
     directUrl: s.audioUrl,
     coverImageUrl: s.coverUrl,
-    duration: s.durationSec
+    duration: s.durationSec,
+    genre: s.genre
   }
 }

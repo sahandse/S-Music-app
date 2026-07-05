@@ -9,8 +9,12 @@ export function Catalog() {
   const { playQueue, current, settings } = useApp()
   void settings.lang
   const [songs, setSongs] = useState<CatalogSong[]>([])
+  const [cat, setCat] = useState('')
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
+
+  const genres = Array.from(new Set(songs.map((s) => (s.genre || '').trim()).filter(Boolean)))
+  const shown = cat ? songs.filter((s) => (s.genre || '').trim() === cat) : songs
 
   const reload = async () => {
     setBusy(true)
@@ -29,7 +33,7 @@ export function Catalog() {
   }, [])
 
   const playAll = (startIndex: number) => {
-    playQueue(songs.map(catalogToSong), startIndex)
+    playQueue(shown.map(catalogToSong), startIndex)
   }
 
   return (
@@ -39,7 +43,7 @@ export function Catalog() {
           🎵 {t('catalog.title')}
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          {songs.length > 0 && (
+          {shown.length > 0 && (
             <button className="chip active" onClick={() => playAll(0)}>
               ▶ {t('common.playAll')}
             </button>
@@ -49,19 +53,32 @@ export function Catalog() {
           </button>
         </div>
       </div>
-      <p className="card-sub" style={{ margin: '8px 0 16px' }}>
-        {songs.length} {t('common.songs')} · {t('catalog.subtitle')}
+      <p className="card-sub" style={{ margin: '8px 0 12px' }}>
+        {shown.length} {t('common.songs')} · {t('catalog.subtitle')}
       </p>
+
+      {genres.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <span className={`chip ${cat === '' ? 'active' : ''}`} onClick={() => setCat('')}>
+            {t('catalog.all')}
+          </span>
+          {genres.map((g) => (
+            <span key={g} className={`chip ${cat === g ? 'active' : ''}`} onClick={() => setCat(g)}>
+              {g}
+            </span>
+          ))}
+        </div>
+      )}
 
       {busy && songs.length === 0 ? (
         <div className="empty">{t('common.loading')}</div>
       ) : err ? (
         <div className="empty">{err}</div>
-      ) : songs.length === 0 ? (
+      ) : shown.length === 0 ? (
         <div className="empty">{t('catalog.empty')}</div>
       ) : (
         <div>
-          {songs.map((s, i) => (
+          {shown.map((s, i) => (
             <div
               key={s.audioUrl}
               className={`track-row ${current?.id === 'cat_' + s.audioUrl ? 'playing' : ''}`}

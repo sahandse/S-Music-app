@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { Album, getAlbumList, getGenres, getRandomSongs, getSongsByGenre, Song } from '../api'
 import { Cover, TrackList } from '../components/common'
+import { catalogToSong, fetchCatalog } from '../catalog'
 import { t } from '../i18n'
 
 export function Home() {
@@ -10,6 +11,7 @@ export function Home() {
   const [recent, setRecent] = useState<Album[]>([])
   const [frequent, setFrequent] = useState<Album[]>([])
   const [random, setRandom] = useState<Song[]>([])
+  const [newSongs, setNewSongs] = useState<Song[]>([])
   const [genres, setGenres] = useState<string[]>([])
   const [genre, setGenre] = useState<string>('')
   const [genreSongs, setGenreSongs] = useState<Song[]>([])
@@ -36,6 +38,10 @@ export function Home() {
         if (g.length) setGenre(g[0])
       })
       .catch(() => setGenres([]))
+    // Latest shared-catalog songs ("New songs")
+    fetchCatalog()
+      .then((list) => setNewSongs(list.slice(0, 12).map(catalogToSong)))
+      .catch(() => setNewSongs([]))
   }, [creds])
 
   useEffect(() => {
@@ -50,6 +56,22 @@ export function Home() {
   return (
     <div>
       <div className="page-title">{t('nav.home')}</div>
+
+      {newSongs.length > 0 && (
+        <>
+          <div className="section-title">
+            {t('home.newSongs')}{' '}
+            <button
+              className="chip active"
+              style={{ marginInlineStart: 12 }}
+              onClick={() => playQueue(newSongs, 0)}
+            >
+              {t('common.playAll')}
+            </button>
+          </div>
+          <TrackList songs={newSongs} showAlbum={false} />
+        </>
+      )}
 
       <AlbumRow title={t('home.newest')} albums={recent} onOpen={(id) => navigate('album', id)} />
       <AlbumRow title={t('home.frequent')} albums={frequent} onOpen={(id) => navigate('album', id)} />
