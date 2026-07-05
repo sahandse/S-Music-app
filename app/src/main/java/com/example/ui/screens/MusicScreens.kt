@@ -1197,7 +1197,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onGenreClick = { currentSubScreen = SubScreen.Search },
                                         onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings },
-                                        onDiscoverClick = { selectedTab = 1; currentSubScreen = null }
+                                        onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
+                                        onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") }
                                     )
                                     1 -> DiscoverFeedScreen(
                                         viewModel = viewModel,
@@ -1230,7 +1231,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onGenreClick = { currentSubScreen = SubScreen.Search },
                                         onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings },
-                                        onDiscoverClick = { selectedTab = 1; currentSubScreen = null }
+                                        onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
+                                        onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") }
                                     )
                                 }
                             }
