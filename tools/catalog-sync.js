@@ -133,18 +133,44 @@ async function diagnose() {
   }
 }
 
-// Build {title, artist} from the audio tags or the post caption ("Artist - Title").
+// Build {title, artist} from the audio tags or the post caption.
+// Supported caption formats (checked in this order):
+//   1) Labeled lines (recommended, unambiguous):
+//        آهنگ: نام آهنگ            (or: title / عنوان / ترانه / song / track)
+//        خواننده: نام خواننده       (or: artist / هنرمند / singer)
+//   2) Single line "Artist - Title"  (e.g. "شادمهر - دیوونه")
+//   3) Two lines: first = song, second = artist
+//   4) Anything else -> used as the title
 function songMeta(audio, post) {
   let title = audio.title || ''
   let artist = audio.performer || ''
   const cap = (post.caption || '').trim()
-  if ((!title || !artist) && cap) {
-    const m = cap.match(/^(.+?)\s*[-–—]\s*(.+)$/)
-    if (m) {
-      artist = artist || m[1].trim()
-      title = title || m[2].trim()
-    } else {
-      title = title || cap
+  if (cap) {
+    const lines = cap
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+
+    // 1) labeled lines
+    for (const line of lines) {
+      const a = line.match(/^(خواننده|هنرمند|صدا|artist|singer)\s*[:：]\s*(.+)$/i)
+      const s = line.match(/^(آهنگ|ترانه|عنوان|نام|title|song|track|name)\s*[:：]\s*(.+)$/i)
+      if (a) artist = a[2].trim()
+      else if (s) title = s[2].trim()
+    }
+
+    // 2) "Artist - Title"  |  3) two lines (song, then artist)  |  4) plain
+    if (!title || !artist) {
+      const dash = cap.match(/^(.+?)\s*[-–—]\s*(.+)$/)
+      if (dash) {
+        artist = artist || dash[1].trim()
+        title = title || dash[2].trim()
+      } else if (lines.length >= 2) {
+        title = title || lines[0]
+        artist = artist || lines[1]
+      } else {
+        title = title || cap
+      }
     }
   }
   title = title || audio.file_name || 'آهنگ'
@@ -198,6 +224,8 @@ async function main() {
   let release = null
   let maxUpdateId = offset - 1
   let added = 0
+  // A cover photo posted just BEFORE a song is attached to that song.
+  let pendingCover = null
 
   for (const u of updates) {
     maxUpdateId = Math.max(maxUpdateId, u.update_id)
@@ -208,7 +236,13 @@ async function main() {
     }
     const audio = post.audio || post.voice || post.document
     if (!audio) {
-      console.log(`- update ${u.update_id}: not an audio message (text/photo/...) — skipping`)
+      // A standalone photo becomes the cover for the next song.
+      if (Array.isArray(post.photo) && post.photo.length) {
+        pendingCover = post.photo[post.photo.length - 1].file_id
+        console.log(`- update ${u.update_id}: cover photo received — will attach to the next song`)
+      } else {
+        console.log(`- update ${u.update_id}: not an audio message (text/...) — skipping`)
+      }
       continue
     }
     const mime = audio.mime_type || ''
@@ -232,9 +266,11 @@ async function main() {
       const audioUrl = await uploadAsset(release, `${u.update_id}.${ext}`, got.buf, mime || 'audio/mpeg')
 
       let coverUrl = ''
-      const thumb = audio.thumbnail || audio.thumb
-      if (thumb && thumb.file_id) {
-        const t = await tgGetFileBytes(thumb.file_id)
+      // Prefer a cover photo posted right before the song; else the audio's own art
+      const coverFileId = pendingCover || (audio.thumbnail || audio.thumb || {}).file_id
+      pendingCover = null // consume it whether or not it downloads
+      if (coverFileId) {
+        const t = await tgGetFileBytes(coverFileId)
         if (t) {
           coverUrl = await uploadAsset(release, `${u.update_id}.jpg`, t.buf, 'image/jpeg')
           release = await ensureRelease() // refresh asset list for dedupe
