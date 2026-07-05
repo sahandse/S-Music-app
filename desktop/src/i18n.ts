@@ -228,6 +228,15 @@ const DICT: Record<string, [string, string]> = {
 
   // catalog / mysongs
   'catalog.error': ['خطا در دریافت کاتالوگ', 'Failed to load catalog'],
+  'catalog.admin': ['بخش ادمین', 'Admin'],
+  'catalog.adminHint': [
+    'با توکن گیت‌هابِ خودت می‌توانی همگام‌سازی کانال را دستی اجرا کنی. توکن فقط روی همین دستگاه ذخیره می‌شود.',
+    'With your own GitHub token you can trigger the channel sync manually. The token is stored only on this device.'
+  ],
+  'catalog.syncNow': ['همگام‌سازی الان', 'Sync now'],
+  'catalog.syncStarted': ['✓ همگام‌سازی شروع شد — چند لحظه بعد آهنگ‌های جدید می‌آیند.', '✓ Sync started — new songs appear in a moment.'],
+  'catalog.syncFailed': ['خطا در همگام‌سازی (توکن یا دسترسی را بررسی کن).', 'Sync failed (check the token / access).'],
+  'catalog.needToken': ['اول توکن گیت‌هاب را وارد کن.', 'Enter a GitHub token first.'],
   'my.songName': ['نام آهنگ', 'Song title'],
   'my.artistName': ['نام هنرمند', 'Artist name'],
   'my.directLink': ['لینک مستقیم آهنگ', 'Direct audio link'],

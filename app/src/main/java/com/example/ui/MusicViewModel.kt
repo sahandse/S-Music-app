@@ -2320,6 +2320,44 @@ class MusicViewModel(
         }
     }
 
+    // --- Admin-only manual sync: trigger the GitHub Actions catalog-sync ---
+    // The token is stored only in local prefs on the admin's device.
+    private val _catalogSyncMsg = MutableStateFlow<String?>(null)
+    val catalogSyncMsg: StateFlow<String?> = _catalogSyncMsg.asStateFlow()
+
+    fun catalogSyncToken(): String = tgPrefs().getString("gh_token", "") ?: ""
+    fun setCatalogSyncToken(t: String) { tgPrefs().edit().putString("gh_token", t.trim()).apply() }
+    fun clearCatalogSyncMsg() { _catalogSyncMsg.value = null }
+
+    fun dispatchCatalogSync() {
+        val token = catalogSyncToken()
+        if (token.isBlank()) {
+            _catalogSyncMsg.value = "اول توکن گیت‌هاب را وارد کن"
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val body = okhttp3.RequestBody.create(
+                    "application/json".toMediaTypeOrNull(),
+                    "{\"ref\":\"claude/music-app-fonts-q1foo3\"}"
+                )
+                val req = okhttp3.Request.Builder()
+                    .url("https://api.github.com/repos/sahandse/S-Music-app/actions/workflows/catalog-sync.yml/dispatches")
+                    .addHeader("Authorization", "Bearer $token")
+                    .addHeader("Accept", "application/vnd.github+json")
+                    .post(body)
+                    .build()
+                okhttp3.OkHttpClient().newCall(req).execute().use { resp ->
+                    _catalogSyncMsg.value = if (resp.code == 204)
+                        "✓ همگام‌سازی شروع شد — چند لحظه بعد آهنگ‌های جدید می‌آیند"
+                    else "خطا در همگام‌سازی (${resp.code})"
+                }
+            } catch (e: Exception) {
+                _catalogSyncMsg.value = "خطا در همگام‌سازی"
+            }
+        }
+    }
+
     fun playCatalogSong(song: CatalogSong, queue: List<CatalogSong>) {
         val songs = queue.ifEmpty { listOf(song) }
         val subsonicQueue = songs.map { s ->
