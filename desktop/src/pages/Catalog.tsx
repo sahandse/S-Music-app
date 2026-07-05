@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useApp } from '../store'
 import { Cover } from '../components/common'
-import { catalogToSong, CatalogSong, fetchCatalog, dispatchSync, ghToken, setGhToken } from '../catalog'
+import { catalogToSong, CatalogSong, fetchCatalog } from '../catalog'
 import { t } from '../i18n'
 
 // Shared online catalog: read a public catalog.json and play direct URLs.
@@ -11,22 +11,8 @@ export function Catalog() {
   const [songs, setSongs] = useState<CatalogSong[]>([])
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [showAdmin, setShowAdmin] = useState(false)
-  const [token, setToken] = useState(ghToken())
-  const [syncMsg, setSyncMsg] = useState('')
 
   const shown = songs
-
-  const doSync = async () => {
-    setSyncMsg('')
-    setGhToken(token)
-    try {
-      await dispatchSync()
-      setSyncMsg(t('catalog.syncStarted'))
-    } catch (e: any) {
-      setSyncMsg(e?.message === 'no-token' ? t('catalog.needToken') : t('catalog.syncFailed'))
-    }
-  }
 
   const reload = async () => {
     setBusy(true)
@@ -63,33 +49,11 @@ export function Catalog() {
           <button className="chip" onClick={reload}>
             {t('catalog.refresh')}
           </button>
-          <button className="chip" onClick={() => setShowAdmin((v) => !v)} title={t('catalog.admin')}>
-            ⚙
-          </button>
         </div>
       </div>
       <p className="card-sub" style={{ margin: '8px 0 16px' }}>
         {shown.length} {t('common.songs')} · {t('catalog.subtitle')}
       </p>
-
-      {showAdmin && (
-        <div className="settings-card" style={{ maxWidth: 620, marginBottom: 16 }}>
-          <h3>{t('catalog.admin')}</h3>
-          <p className="card-sub" style={{ marginBottom: 8 }}>{t('catalog.adminHint')}</p>
-          <input
-            className="inp"
-            type="password"
-            dir="ltr"
-            placeholder="GitHub token"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-          />
-          <button className="btn-sm" onClick={doSync}>
-            🔄 {t('catalog.syncNow')}
-          </button>
-          {syncMsg && <div className="card-sub" style={{ marginTop: 8 }}>{syncMsg}</div>}
-        </div>
-      )}
 
       {busy && songs.length === 0 ? (
         <div className="empty">{t('common.loading')}</div>

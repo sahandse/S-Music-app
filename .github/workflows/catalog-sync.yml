@@ -2,7 +2,8 @@ name: Sync Music Catalog
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # every 15 minutes
+    # GitHub throttles cron heavily, so we ask often to lower the average delay.
+    - cron: '*/5 * * * *' # every 5 minutes (best-effort)
   workflow_dispatch:
     inputs:
       reset_offset:

@@ -10618,11 +10618,15 @@ fun CatalogView(viewModel: MusicViewModel) {
     val songs by viewModel.catalogSongs.collectAsStateWithLifecycle()
     val busy by viewModel.isCatalogBusy.collectAsStateWithLifecycle()
     val status by viewModel.catalogStatus.collectAsStateWithLifecycle()
-    val syncMsg by viewModel.catalogSyncMsg.collectAsStateWithLifecycle()
-    var showAdmin by remember { mutableStateOf(false) }
-    var token by remember { mutableStateOf(viewModel.catalogSyncToken()) }
 
-    LaunchedEffect(Unit) { viewModel.loadCatalogState() }
+    // Auto-refresh the catalog while this screen is open so newly-posted songs
+    // show up without any manual action.
+    LaunchedEffect(Unit) {
+        while (true) {
+            viewModel.fetchCatalog()
+            kotlinx.coroutines.delay(60_000)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -10644,43 +10648,6 @@ fun CatalogView(viewModel: MusicViewModel) {
                 }
                 IconButton(onClick = { viewModel.fetchCatalog() }) {
                     Icon(Icons.Default.Refresh, contentDescription = "بروزرسانی", tint = AppleRed, modifier = Modifier.size(20.dp))
-                }
-                IconButton(onClick = { showAdmin = !showAdmin }) {
-                    Icon(Icons.Default.Settings, contentDescription = "ادمین", tint = AppleRed, modifier = Modifier.size(20.dp))
-                }
-            }
-        }
-
-        // Admin-only manual sync: enter your GitHub token, then tap to run the
-        // channel→catalog sync on demand (token stays only on this device).
-        if (showAdmin) {
-            Column(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    translate("با توکن گیت‌هابِ خودت می‌توانی همگام‌سازی کانال را دستی اجرا کنی. توکن فقط روی همین دستگاه ذخیره می‌شود.",
-                        "With your own GitHub token you can run the channel sync on demand. Stored only on this device.", viewModel),
-                    fontSize = 12.sp, color = Color.Gray, fontFamily = LocalAppFontFamily.current
-                )
-                OutlinedTextField(
-                    value = token,
-                    onValueChange = { token = it; viewModel.setCatalogSyncToken(it) },
-                    label = { Text("GitHub token", fontFamily = LocalAppFontFamily.current) },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Button(
-                    onClick = { viewModel.dispatchCatalogSync() },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed)
-                ) {
-                    Icon(Icons.Default.Sync, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(translate("همگام‌سازی الان", "Sync now", viewModel), fontFamily = LocalAppFontFamily.current)
-                }
-                syncMsg?.let {
-                    Text(it, fontSize = 12.sp, color = AppleRed, fontFamily = LocalAppFontFamily.current)
                 }
             }
         }
