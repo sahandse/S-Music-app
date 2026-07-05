@@ -966,7 +966,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings },
                                             onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
-                                            onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") }
+                                            onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") },
+                                            onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") }
                                         )
                                         1 -> DiscoverFeedScreen(
                                             viewModel = viewModel,
@@ -1000,7 +1001,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings },
                                             onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
-                                            onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") }
+                                            onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") },
+                                            onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") }
                                         )
                                     }
                                 }
@@ -1198,7 +1200,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings },
                                         onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
-                                        onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") }
+                                        onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") },
+                                        onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") }
                                     )
                                     1 -> DiscoverFeedScreen(
                                         viewModel = viewModel,
@@ -1232,7 +1235,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onProfileClick = { selectedTab = 3; currentSubScreen = null },
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings },
                                         onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
-                                        onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") }
+                                        onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") },
+                                        onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") }
                                     )
                                 }
                             }
@@ -1407,10 +1411,13 @@ fun HomeScreen(
     onSettingsClick: () -> Unit = {},
     onDiscoverClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
-    onCatalogClick: () -> Unit = {}
+    onCatalogClick: () -> Unit = {},
+    onPodcastsClick: () -> Unit = {}
 ) {
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val catalogSongs by viewModel.catalogSongs.collectAsStateWithLifecycle()
+    val topPodcasts by viewModel.topPodcasts.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.fetchTopPodcasts() }
     // Auto-refresh the online catalog while Home is open so newly-posted songs
     // appear in the "Newest Iranian" row without any manual action.
     LaunchedEffect(Unit) {
@@ -1624,6 +1631,45 @@ fun HomeScreen(
                             subtitle = song.artist.ifBlank { translate("هنرمند ناشناس", "Unknown Artist", viewModel) },
                             imageUrl = song.coverUrl,
                             onClick = { viewModel.playCatalogSong(song, newestIranian) }
+                        )
+                    }
+                }
+            }
+
+            // Podcasts — top shows with a "See all" that opens the Podcasts screen.
+            if (topPodcasts.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = translate("پادکست‌ها", "Podcasts", viewModel),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    TextButton(onClick = onPodcastsClick) {
+                        Text(
+                            text = translate("مشاهده همه", "See all", viewModel),
+                            color = AppleRed,
+                            fontFamily = LocalAppFontFamily.current
+                        )
+                    }
+                }
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(topPodcasts.take(12)) { pod ->
+                        VerticalBigCard(
+                            title = pod.name,
+                            subtitle = pod.artistName,
+                            imageUrl = pod.artworkUrl,
+                            onClick = onPodcastsClick
                         )
                     }
                 }
