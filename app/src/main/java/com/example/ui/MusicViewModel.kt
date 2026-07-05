@@ -2320,20 +2320,43 @@ class MusicViewModel(
         }
     }
 
+    private fun catalogToSubsonic(s: CatalogSong) = SubsonicSong(
+        id = "cat_${s.audioUrl.hashCode()}",
+        title = s.title,
+        artist = s.artist,
+        coverArt = s.coverUrl.ifBlank { null },
+        duration = s.durationSec,
+        path = s.audioUrl
+    )
+
     fun playCatalogSong(song: CatalogSong, queue: List<CatalogSong>) {
         val songs = queue.ifEmpty { listOf(song) }
-        val subsonicQueue = songs.map { s ->
-            SubsonicSong(
-                id = "cat_${s.audioUrl.hashCode()}",
-                title = s.title,
-                artist = s.artist,
-                coverArt = s.coverUrl.ifBlank { null },
-                duration = s.durationSec,
-                path = s.audioUrl
-            )
-        }
+        val subsonicQueue = songs.map { catalogToSubsonic(it) }
         val startIndex = songs.indexOfFirst { it.audioUrl == song.audioUrl }.coerceAtLeast(0)
         playSongDirectly(subsonicQueue[startIndex], subsonicQueue)
+    }
+
+    // Radio: shuffle the whole catalog and play endlessly.
+    fun radioPlayCatalog(songs: List<CatalogSong>) {
+        if (songs.isEmpty()) return
+        val shuffled = songs.shuffled()
+        playSongDirectly(catalogToSubsonic(shuffled.first()), shuffled.map { catalogToSubsonic(it) })
+    }
+
+    // Share a catalog song as a story card (reuses the existing card renderer).
+    fun shareCatalogSong(song: CatalogSong) = shareSongCard(catalogToSubsonic(song))
+
+    // --- Catalog likes (stored locally on the device) ---
+    private val _catalogLikes = MutableStateFlow<Set<String>>(
+        tgPrefs().getStringSet("catalog_likes", emptySet()) ?: emptySet()
+    )
+    val catalogLikes: StateFlow<Set<String>> = _catalogLikes.asStateFlow()
+
+    fun toggleCatalogLike(audioUrl: String) {
+        val next = _catalogLikes.value.toMutableSet()
+        if (!next.add(audioUrl)) next.remove(audioUrl)
+        _catalogLikes.value = next
+        tgPrefs().edit().putStringSet("catalog_likes", next).apply()
     }
 
     override fun onCleared() {

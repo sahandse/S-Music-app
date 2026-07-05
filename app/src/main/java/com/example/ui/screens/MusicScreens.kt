@@ -10666,6 +10666,9 @@ fun CatalogView(viewModel: MusicViewModel) {
     val songs by viewModel.catalogSongs.collectAsStateWithLifecycle()
     val busy by viewModel.isCatalogBusy.collectAsStateWithLifecycle()
     val status by viewModel.catalogStatus.collectAsStateWithLifecycle()
+    val likes by viewModel.catalogLikes.collectAsStateWithLifecycle()
+    var query by remember { mutableStateOf("") }
+    var likedOnly by remember { mutableStateOf(false) }
 
     // Auto-refresh the catalog while this screen is open so newly-posted songs
     // show up without any manual action.
@@ -10676,6 +10679,15 @@ fun CatalogView(viewModel: MusicViewModel) {
         }
     }
 
+    val shown = remember(songs, query, likedOnly, likes) {
+        songs.filter { s ->
+            (!likedOnly || likes.contains(s.audioUrl)) &&
+                (query.isBlank() ||
+                    s.title.contains(query, ignoreCase = true) ||
+                    s.artist.contains(query, ignoreCase = true))
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -10683,14 +10695,19 @@ fun CatalogView(viewModel: MusicViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                "🎵 " + translate("${songs.size} آهنگ در کاتالوگ", "${songs.size} songs in catalog", viewModel),
+                "🎵 " + translate("${shown.size} آهنگ", "${shown.size} songs", viewModel),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 fontFamily = LocalAppFontFamily.current
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (songs.isNotEmpty()) {
-                    TextButton(onClick = { viewModel.playCatalogSong(songs.first(), songs) }) {
+                if (shown.isNotEmpty()) {
+                    TextButton(onClick = { viewModel.radioPlayCatalog(shown) }) {
+                        Icon(Icons.Default.Radio, contentDescription = null, tint = AppleRed, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(translate("رادیو", "Radio", viewModel), color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                    }
+                    TextButton(onClick = { viewModel.playCatalogSong(shown.first(), shown) }) {
                         Text(translate("پخش همه", "Play all", viewModel), color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                 }
@@ -10700,19 +10717,38 @@ fun CatalogView(viewModel: MusicViewModel) {
             }
         }
 
+        // Search + liked-only filter
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = { Text(translate("جستجو در کاتالوگ...", "Search the catalog…", viewModel), fontFamily = LocalAppFontFamily.current) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        )
+        Row(modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)) {
+            FilterChip(
+                selected = likedOnly,
+                onClick = { likedOnly = !likedOnly },
+                label = { Text(translate("فقط پسندیده‌ها", "Liked only", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current) },
+                leadingIcon = { Icon(Icons.Default.Favorite, contentDescription = null, modifier = Modifier.size(16.dp)) }
+            )
+        }
+
         if (busy && songs.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = AppleRed)
             }
-        } else if (songs.isEmpty()) {
-            EmptyStateView(message = translate("کاتالوگ هنوز خالی است.", "The catalog is empty yet.", viewModel))
+        } else if (shown.isEmpty()) {
+            EmptyStateView(message = translate("چیزی پیدا نشد.", "Nothing found.", viewModel))
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                items(songs, key = { it.audioUrl }) { s ->
+                items(shown, key = { it.audioUrl }) { s ->
+                    val liked = likes.contains(s.audioUrl)
                     Row(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { viewModel.playCatalogSong(s, songs) }.padding(vertical = 8.dp, horizontal = 4.dp),
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { viewModel.playCatalogSong(s, shown) }.padding(vertical = 8.dp, horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(AppleRed.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                             if (s.coverUrl.isNotBlank()) {
@@ -10724,6 +10760,17 @@ fun CatalogView(viewModel: MusicViewModel) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(s.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
                             Text(s.artist, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                        }
+                        IconButton(onClick = { viewModel.toggleCatalogLike(s.audioUrl) }, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = "پسندیدن",
+                                tint = if (liked) AppleRed else Color.Gray,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        IconButton(onClick = { viewModel.shareCatalogSong(s) }, modifier = Modifier.size(36.dp)) {
+                            Icon(Icons.Default.Share, contentDescription = "اشتراک", tint = Color.Gray, modifier = Modifier.size(18.dp))
                         }
                     }
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
