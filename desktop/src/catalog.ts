@@ -29,7 +29,12 @@ export async function fetchCatalog(): Promise<CatalogSong[]> {
   const res = await fetch(catalogUrl() + '?t=' + Date.now())
   if (!res.ok) throw new Error('خطا در دریافت کاتالوگ')
   const json = await res.json()
-  return (json.songs || []).filter((s: any) => s && s.audioUrl) as CatalogSong[]
+  const seen = new Set<string>()
+  return (json.songs || []).filter((s: any) => {
+    if (!s || !s.audioUrl || seen.has(s.audioUrl)) return false
+    seen.add(s.audioUrl)
+    return true
+  }) as CatalogSong[]
 }
 
 export function catalogToSong(s: CatalogSong): Song {

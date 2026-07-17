@@ -1295,8 +1295,9 @@ class MusicViewModel(
                     )
                 }
                 if (items.isNotEmpty()) {
-                    val existing = _discoverMusicVideos.value.filter { cur -> items.none { it.id == cur.id } }
-                    _discoverMusicVideos.value = items + existing
+                    val unique = items.distinctBy { it.id }
+                    val existing = _discoverMusicVideos.value.filter { cur -> unique.none { it.id == cur.id } }
+                    _discoverMusicVideos.value = unique + existing
                 }
             } catch (_: Exception) {
             }
@@ -2345,7 +2346,9 @@ class MusicViewModel(
                         )
                     )
                 }
-                _catalogSongs.value = list
+                // Dedupe by URL — duplicate entries in catalog.json would crash
+                // LazyColumn item keys and clutter the list
+                _catalogSongs.value = list.distinctBy { it.audioUrl }
             } catch (e: Exception) {
                 _catalogStatus.value = "خطا در دریافت کاتالوگ"
             } finally {

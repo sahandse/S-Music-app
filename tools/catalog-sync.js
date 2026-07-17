@@ -222,6 +222,26 @@ async function main() {
   const offset = RESET_OFFSET ? 0 : state.offset
   if (RESET_OFFSET) console.log('RESET_OFFSET=1 — re-reading the pending queue from the start.')
 
+  if (!Array.isArray(catalog.songs)) catalog.songs = []
+  if (!Array.isArray(catalog.videos)) catalog.videos = []
+
+  // Heal past damage: RESET_OFFSET re-runs used to re-add already-synced
+  // updates, leaving duplicate entries that crash the apps' list keys.
+  const dedupe = (arr, keyOf) => {
+    const seen = new Set()
+    return arr.filter((x) => {
+      const k = keyOf(x)
+      if (seen.has(k)) return false
+      seen.add(k)
+      return true
+    })
+  }
+  const beforeCount = catalog.songs.length + catalog.videos.length
+  catalog.songs = dedupe(catalog.songs, (s) => s.audioUrl)
+  catalog.videos = dedupe(catalog.videos, (v) => v.videoUrl)
+  const removedDupes = beforeCount - (catalog.songs.length + catalog.videos.length)
+  if (removedDupes > 0) console.log(`Removing ${removedDupes} duplicate entr(y/ies) from catalog.json`)
+
   const updRes = await tgJson(
     'getUpdates',
     `?offset=${offset}&timeout=${POLL_TIMEOUT}&allowed_updates=${encodeURIComponent('["channel_post","message"]')}`
@@ -237,11 +257,9 @@ async function main() {
         '(2) only posts made AFTER it became admin are delivered; ' +
         '(3) re-run with RESET_OFFSET=1 if you think an update was skipped.'
     )
-    return
+  } else {
+    console.log(`Got ${updates.length} update(s).`)
   }
-  console.log(`Got ${updates.length} update(s).`)
-
-  if (!Array.isArray(catalog.videos)) catalog.videos = []
 
   let release = null
   let maxUpdateId = offset - 1
@@ -304,6 +322,15 @@ async function main() {
           coverUrl = await uploadAsset(release, `${u.update_id}.jpg`, t.buf, 'image/jpeg')
           release = await ensureRelease() // refresh asset list for dedupe
         }
+      }
+
+      // Same update re-read (e.g. RESET_OFFSET) produces the same URL — skip it
+      if (
+        catalog.songs.some((x) => x.audioUrl === mediaUrl) ||
+        catalog.videos.some((x) => x.videoUrl === mediaUrl)
+      ) {
+        console.log(`- update ${u.update_id}: already in catalog — skipping duplicate`)
+        continue
       }
 
       const { title, artist } = songMeta(media, post)

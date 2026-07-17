@@ -10743,7 +10743,7 @@ fun CatalogView(viewModel: MusicViewModel) {
             EmptyStateView(message = translate("چیزی پیدا نشد.", "Nothing found.", viewModel))
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-                items(shown, key = { it.audioUrl }) { s ->
+                itemsIndexed(shown, key = { i, s -> "$i:${s.audioUrl}" }) { _, s ->
                     val liked = likes.contains(s.audioUrl)
                     Row(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { viewModel.playCatalogSong(s, shown) }.padding(vertical = 8.dp, horizontal = 4.dp),
