@@ -241,10 +241,12 @@ async function main() {
   }
   console.log(`Got ${updates.length} update(s).`)
 
+  if (!Array.isArray(catalog.videos)) catalog.videos = []
+
   let release = null
   let maxUpdateId = offset - 1
   let added = 0
-  // A cover photo posted just BEFORE a song is attached to that song.
+  // A cover photo posted just BEFORE a song/video is attached to it.
   let pendingCover = null
 
   for (const u of updates) {
@@ -254,40 +256,47 @@ async function main() {
       console.log(`- update ${u.update_id}: no post body — skipping`)
       continue
     }
-    const audio = post.audio || post.voice || post.document
-    if (!audio) {
-      // A standalone photo becomes the cover for the next song.
+    const media = post.audio || post.voice || post.video || post.document
+    if (!media) {
+      // A standalone photo becomes the cover for the next song/video.
       if (Array.isArray(post.photo) && post.photo.length) {
         pendingCover = post.photo[post.photo.length - 1].file_id
-        console.log(`- update ${u.update_id}: cover photo received — will attach to the next song`)
+        console.log(`- update ${u.update_id}: cover photo received — will attach to the next post`)
       } else {
-        console.log(`- update ${u.update_id}: not an audio message (text/...) — skipping`)
+        console.log(`- update ${u.update_id}: not audio/video (text/...) — skipping`)
       }
       continue
     }
-    const mime = audio.mime_type || ''
-    if (post.document && !mime.startsWith('audio/')) {
-      console.log(`- update ${u.update_id}: document is not audio (${mime}) — skipping`)
+    const mime = media.mime_type || ''
+    const isVideo = !!post.video || (post.document && mime.startsWith('video/'))
+    if (post.document && !mime.startsWith('audio/') && !mime.startsWith('video/')) {
+      console.log(`- update ${u.update_id}: document is not audio/video (${mime}) — skipping`)
       continue
     }
-    if (audio.file_size && audio.file_size > MAX_TG_FILE) {
+    if (media.file_size && media.file_size > MAX_TG_FILE) {
       console.log(
-        `- update ${u.update_id}: file is ${(audio.file_size / 1048576).toFixed(1)}MB — over Telegram's 20MB bot download limit, skipping`
+        `- update ${u.update_id}: file is ${(media.file_size / 1048576).toFixed(1)}MB — over Telegram's 20MB bot download limit, skipping`
       )
       continue
     }
 
     try {
-      const got = await tgGetFileBytes(audio.file_id)
+      const got = await tgGetFileBytes(media.file_id)
       if (!got) continue
       if (!release) release = await ensureRelease()
 
-      const ext = (got.filePath.split('.').pop() || 'mp3').toLowerCase()
-      const audioUrl = await uploadAsset(release, `${u.update_id}.${ext}`, got.buf, mime || 'audio/mpeg')
+      const defaultExt = isVideo ? 'mp4' : 'mp3'
+      const ext = (got.filePath.split('.').pop() || defaultExt).toLowerCase()
+      const mediaUrl = await uploadAsset(
+        release,
+        `${u.update_id}.${ext}`,
+        got.buf,
+        mime || (isVideo ? 'video/mp4' : 'audio/mpeg')
+      )
 
       let coverUrl = ''
-      // Prefer a cover photo posted right before the song; else the audio's own art
-      const coverFileId = pendingCover || (audio.thumbnail || audio.thumb || {}).file_id
+      // Prefer a cover photo posted right before; else the media's own thumbnail
+      const coverFileId = pendingCover || (media.thumbnail || media.thumb || {}).file_id
       pendingCover = null // consume it whether or not it downloads
       if (coverFileId) {
         const t = await tgGetFileBytes(coverFileId)
@@ -297,16 +306,27 @@ async function main() {
         }
       }
 
-      const { title, artist } = songMeta(audio, post)
-      catalog.songs.unshift({
-        title,
-        artist,
-        coverUrl,
-        audioUrl,
-        durationSec: audio.duration || 0
-      })
+      const { title, artist } = songMeta(media, post)
+      if (isVideo) {
+        catalog.videos.unshift({
+          title,
+          artist,
+          coverUrl,
+          videoUrl: mediaUrl,
+          durationSec: media.duration || 0
+        })
+        console.log(`+ Added video: ${artist ? artist + ' — ' : ''}${title}`)
+      } else {
+        catalog.songs.unshift({
+          title,
+          artist,
+          coverUrl,
+          audioUrl: mediaUrl,
+          durationSec: media.duration || 0
+        })
+        console.log(`+ Added: ${artist ? artist + ' — ' : ''}${title}`)
+      }
       added++
-      console.log(`+ Added: ${artist ? artist + ' — ' : ''}${title}`)
     } catch (e) {
       console.error('Failed on update', u.update_id, e.message)
     }

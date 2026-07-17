@@ -1266,7 +1266,41 @@ class MusicViewModel(
         _discoverVideoSeedIndex = 0
         _discoverVideoOffset = 0
         _discoverMusicVideos.value = emptyList()
+        loadCatalogVideos()
         loadMusicVideosPage()
+    }
+
+    // Videos the admin posts to the Telegram channel (synced into the public
+    // catalog). They are pinned to the TOP of the Discover music-video feed.
+    private fun loadCatalogVideos() {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val url = catalogUrl() + "?t=" + System.currentTimeMillis()
+                val body = okhttp3.OkHttpClient().newCall(okhttp3.Request.Builder().url(url).build())
+                    .execute().use { it.body?.string() } ?: "{}"
+                val arr = org.json.JSONObject(body).optJSONArray("videos") ?: org.json.JSONArray()
+                val items = mutableListOf<MusicVideoItem>()
+                for (i in 0 until arr.length()) {
+                    val o = arr.getJSONObject(i)
+                    val videoUrl = o.optString("videoUrl")
+                    if (videoUrl.isBlank()) continue
+                    items.add(
+                        MusicVideoItem(
+                            id = videoUrl.hashCode().toLong(),
+                            title = o.optString("title"),
+                            artistName = o.optString("artist"),
+                            thumbnailUrl = o.optString("coverUrl"),
+                            previewUrl = videoUrl
+                        )
+                    )
+                }
+                if (items.isNotEmpty()) {
+                    val existing = _discoverMusicVideos.value.filter { cur -> items.none { it.id == cur.id } }
+                    _discoverMusicVideos.value = items + existing
+                }
+            } catch (_: Exception) {
+            }
+        }
     }
 
     fun fetchMoreMusicVideos() {
