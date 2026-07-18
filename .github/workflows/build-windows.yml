@@ -44,12 +44,8 @@ jobs:
           INSTALLER=$(find release -maxdepth 1 -name "*.exe" | head -n 1)
           echo "installer=$INSTALLER" >> "$GITHUB_OUTPUT"
 
-      - name: Upload installer artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: high-music-windows
-          path: desktop/release/*.exe
-
+      # Distribution happens via the release below; Actions-artifact uploads
+      # were dropped because they exhaust the account's artifact storage quota.
       - name: Publish/update GitHub Release with installer
         uses: ncipollo/release-action@v1
         with:
