@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>High Music — مدیریت موزیک ویدیو</title>
+<style>
+  :root { --bg:#0d0d10; --card:#17171c; --hover:#22222a; --text:#f2f2f5; --dim:#9a9aa6; --accent:#fa2d48; --border:rgba(255,255,255,.08); }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:Tahoma,'Segoe UI',system-ui,sans-serif; min-height:100vh; padding:24px 16px; }
+  .wrap { max-width:640px; margin:0 auto; }
+  h1 { font-size:22px; margin-bottom:4px; }
+  h1 .dot { color:var(--accent); }
+  .sub { color:var(--dim); font-size:13px; margin-bottom:20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:18px; margin-bottom:16px; }
+  label { display:block; font-size:13px; color:var(--dim); margin:10px 0 6px; }
+  input { width:100%; padding:11px 12px; border-radius:9px; border:1px solid var(--border); background:var(--hover); color:var(--text); font-family:inherit; font-size:14px; }
+  input:focus { outline:none; border-color:var(--accent); }
+  .ltr { direction:ltr; text-align:left; }
+  button { cursor:pointer; border:none; font-family:inherit; border-radius:9px; font-size:14px; font-weight:bold; }
+  .btn { background:var(--accent); color:#fff; padding:12px 22px; margin-top:14px; width:100%; }
+  .btn:hover { filter:brightness(1.1); }
+  .btn:disabled { opacity:.5; cursor:default; }
+  .msg { margin-top:12px; font-size:13px; min-height:18px; }
+  .ok { color:#2ecc71; } .err { color:var(--accent); }
+  .row { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .row:last-child { border-bottom:none; }
+  .thumb { width:46px; height:46px; border-radius:8px; object-fit:cover; background:var(--hover); flex-shrink:0; display:flex; align-items:center; justify-content:center; color:var(--dim); }
+  .meta { flex:1; min-width:0; }
+  .meta .t { font-size:14px; font-weight:bold; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .meta .a { font-size:12px; color:var(--dim); }
+  .del { background:transparent; color:var(--dim); font-size:16px; padding:8px; }
+  .del:hover { color:var(--accent); }
+  .tok-row { display:flex; gap:8px; }
+  .tok-row input { flex:1; }
+  .tok-row button { background:var(--hover); color:var(--text); padding:0 16px; }
+  details summary { cursor:pointer; color:var(--dim); font-size:13px; }
+  .count { color:var(--dim); font-size:12px; margin-bottom:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>High<span class="dot">Music</span> — مدیریت موزیک ویدیو</h1>
+  <p class="sub">اسم آهنگ، خواننده و لینک مستقیم ویدیو را بنویس؛ مستقیم در گیت‌هاب ذخیره می‌شود و در بخش «ایرانی» موزیک ویدیوهای اپ نمایش داده می‌شود.</p>
+
+  <div class="card">
+    <details id="tokBox">
+      <summary>🔑 توکن گیت‌هاب (یک‌بار وارد کن)</summary>
+      <label>Fine-grained token با دسترسی Contents: Read and write روی مخزن himusic-catalog</label>
+      <div class="tok-row">
+        <input id="token" type="password" class="ltr" placeholder="github_pat_...">
+        <button onclick="saveToken()">ذخیره</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="card">
+    <label>اسم آهنگ *</label>
+    <input id="title" placeholder="مثلاً: دیوونه">
+    <label>اسم خواننده</label>
+    <input id="artist" placeholder="مثلاً: شادمهر عقیلی">
+    <label>لینک عکس کاور (اختیاری)</label>
+    <input id="cover" class="ltr" placeholder="https://.../cover.jpg">
+    <label>لینک مستقیم موزیک ویدیو (mp4) *</label>
+    <input id="video" class="ltr" placeholder="https://.../video.mp4">
+    <button class="btn" id="addBtn" onclick="addVideo()">➕ افزودن موزیک ویدیو</button>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="card">
+    <div class="count" id="count"></div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script>
+const API = 'https://api.github.com/repos/sahandse/himusic-catalog/contents/manual-videos.json';
+const $ = (id) => document.getElementById(id);
+
+$('token').value = localStorage.getItem('hm_token') || '';
+if (!$('token').value) $('tokBox').open = true;
+
+function saveToken() {
+  localStorage.setItem('hm_token', $('token').value.trim());
+  setMsg('✓ توکن ذخیره شد', true);
+  refresh();
+}
+
+function headers() {
+  const h = { 'Accept': 'application/vnd.github+json' };
+  const t = ($('token').value || '').trim();
+  if (t) h['Authorization'] = 'Bearer ' + t;
+  return h;
+}
+
+function setMsg(text, ok) {
+  const el = $('msg');
+  el.textContent = text;
+  el.className = 'msg ' + (ok ? 'ok' : 'err');
+}
+
+// UTF-8 safe base64
+const b64encode = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+const b64decode = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, '')), c => c.charCodeAt(0)));
+
+async function getFile() {
+  const r = await fetch(API + '?t=' + Date.now(), { headers: headers() });
+  if (!r.ok) throw new Error('خواندن فایل ناموفق (' + r.status + ')');
+  const j = await r.json();
+  return { data: JSON.parse(b64decode(j.content)), sha: j.sha };
+}
+
+async function putFile(data, sha, message) {
+  const r = await fetch(API, {
+    method: 'PUT',
+    headers: { ...headers(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, sha, content: b64encode(JSON.stringify(data, null, 2) + '\n') })
+  });
+  if (!r.ok) throw new Error('ذخیره ناموفق (' + r.status + ') — توکن و دسترسی را بررسی کن');
+}
+
+function render(videos) {
+  $('count').textContent = videos.length + ' موزیک ویدیو';
+  $('list').innerHTML = videos.length ? '' : '<div class="sub">هنوز چیزی اضافه نشده.</div>';
+  for (const v of videos) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const img = v.coverUrl
+      ? '<img class="thumb" src="' + v.coverUrl.replace(/"/g, '&quot;') + '" onerror="this.outerHTML=\'<div class=thumb>🎬</div>\'">'
+      : '<div class="thumb">🎬</div>';
+    row.innerHTML = img +
+      '<div class="meta"><div class="t"></div><div class="a"></div></div>' +
+      '<button class="del" title="حذف">🗑</button>';
+    row.querySelector('.t').textContent = v.title || 'موزیک ویدیو';
+    row.querySelector('.a').textContent = v.artist || '';
+    row.querySelector('.del').onclick = () => delVideo(v.videoUrl);
+    $('list').appendChild(row);
+  }
+}
+
+async function refresh() {
+  try {
+    const { data } = await getFile();
+    render((data.videos || []).filter(v => v && v.videoUrl));
+  } catch (e) { setMsg(e.message, false); }
+}
+
+async function addVideo() {
+  const title = $('title').value.trim();
+  const video = $('video').value.trim();
+  if (!title || !video) { setMsg('اسم آهنگ و لینک ویدیو لازم است', false); return; }
+  if (!($('token').value || '').trim()) { setMsg('اول توکن گیت‌هاب را وارد و ذخیره کن', false); $('tokBox').open = true; return; }
+  localStorage.setItem('hm_token', $('token').value.trim());
+  $('addBtn').disabled = true;
+  setMsg('در حال ذخیره...', true);
+  try {
+    const { data, sha } = await getFile();
+    if (!Array.isArray(data.videos)) data.videos = [];
+    data.videos = data.videos.filter(v => v && v.videoUrl !== video); // no duplicates
+    data.videos.unshift({ title, artist: $('artist').value.trim(), coverUrl: $('cover').value.trim(), videoUrl: video });
+    await putFile(data, sha, 'admin: add video ' + title);
+    setMsg('✓ اضافه شد — تا چند لحظه دیگر در اپ نمایش داده می‌شود', true);
+    $('title').value = ''; $('artist').value = ''; $('cover').value = ''; $('video').value = '';
+    render(data.videos);
+  } catch (e) { setMsg(e.message, false); }
+  $('addBtn').disabled = false;
+}
+
+async function delVideo(url) {
+  if (!confirm('این موزیک ویدیو حذف شود؟')) return;
+  try {
+    const { data, sha } = await getFile();
+    data.videos = (data.videos || []).filter(v => v && v.videoUrl !== url);
+    await putFile(data, sha, 'admin: delete video');
+    setMsg('✓ حذف شد', true);
+    render(data.videos);
+  } catch (e) { setMsg(e.message, false); }
+}
+
+refresh();
+</script>
+</body>
+</html>
