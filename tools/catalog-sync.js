@@ -242,6 +242,42 @@ async function main() {
   const removedDupes = beforeCount - (catalog.songs.length + catalog.videos.length)
   if (removedDupes > 0) console.log(`Removing ${removedDupes} duplicate entr(y/ies) from catalog.json`)
 
+  // Manually curated music-video links: the admin edits manual-videos.json in
+  // the public repo (GitHub web editor). Each run rebuilds the manual portion
+  // of catalog.videos from that file, so add/edit/delete all propagate.
+  const manualPath = path.join(WORKDIR, 'manual-videos.json')
+  if (!fs.existsSync(manualPath)) {
+    fs.writeFileSync(
+      manualPath,
+      JSON.stringify(
+        {
+          _help:
+            'این فایل را در گیت‌هاب ویرایش کن. برای هر موزیک ویدیو یک آیتم داخل videos اضافه کن: ' +
+            'title (نام آهنگ)، artist (خواننده)، coverUrl (لینک عکس کاور، اختیاری)، videoUrl (لینک مستقیم mp4). ' +
+            'بعد از ذخیره، با اجرای همگام‌سازی (یا اجرای زمان‌بندی‌شده) در اپ نمایش داده می‌شود.',
+          videos: []
+        },
+        null,
+        2
+      ) + '\n'
+    )
+    console.log('Seeded manual-videos.json template in the catalog repo.')
+  }
+  const manual = readJson(manualPath, { videos: [] })
+  const telegramVideos = catalog.videos.filter((v) => v.src !== 'manual')
+  const manualVideos = (Array.isArray(manual.videos) ? manual.videos : [])
+    .filter((v) => v && v.videoUrl)
+    .map((v) => ({
+      title: v.title || 'موزیک ویدیو',
+      artist: v.artist || '',
+      coverUrl: v.coverUrl || '',
+      videoUrl: v.videoUrl,
+      durationSec: v.durationSec || 0,
+      src: 'manual'
+    }))
+  catalog.videos = dedupe([...manualVideos, ...telegramVideos], (v) => v.videoUrl)
+  if (manualVideos.length) console.log(`Merged ${manualVideos.length} manual video link(s).`)
+
   const updRes = await tgJson(
     'getUpdates',
     `?offset=${offset}&timeout=${POLL_TIMEOUT}&allowed_updates=${encodeURIComponent('["channel_post","message"]')}`
@@ -365,8 +401,8 @@ async function main() {
 
   const changed = sh(`git -C ${WORKDIR} status --porcelain`)
   if (changed) {
-    sh(`git -C ${WORKDIR} add catalog.json state.json`)
-    sh(`git -C ${WORKDIR} commit -m "sync: ${added} new song(s) from Telegram"`)
+    sh(`git -C ${WORKDIR} add catalog.json state.json manual-videos.json`)
+    sh(`git -C ${WORKDIR} commit -m "sync: ${added} new item(s) from Telegram + manual videos"`)
     sh(`git -C ${WORKDIR} push origin HEAD`)
     console.log(`Pushed. Added ${added} song(s). New offset: ${state.offset}`)
   } else {
