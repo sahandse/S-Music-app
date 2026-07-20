@@ -9616,69 +9616,120 @@ fun MusicVideoFeed(
     onArtistClick: (String) -> Unit = {},
     onOpenServerSong: (SubsonicSong) -> Unit = {}
 ) {
-    val videos by viewModel.discoverMusicVideos.collectAsStateWithLifecycle()
+    val foreignVideos by viewModel.discoverMusicVideos.collectAsStateWithLifecycle()
+    val iranianVideos by viewModel.catalogVideos.collectAsStateWithLifecycle()
     val isLoadingMore by viewModel.isLoadingMoreVideos.collectAsStateWithLifecycle()
     val serverSong by viewModel.discoverVideoServerSong.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
         if (viewModel.discoverMusicVideos.value.isEmpty()) viewModel.fetchMusicVideos()
+        else viewModel.fetchCatalogVideos()
     }
 
-    if (videos.isEmpty()) {
-        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator(color = AppleRed)
-                Text(translate("در حال دریافت موزیک ویدیو...", "Loading music videos...", viewModel), color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
-            }
-        }
-        return
-    }
-
-    val pagerState = rememberPagerState(pageCount = { videos.size })
-    var isMuted by remember { mutableStateOf(false) }
-
-    val exoPlayer = remember {
-        ExoPlayer.Builder(context).build().apply {
-            repeatMode = Player.REPEAT_MODE_ONE
-            playWhenReady = true
-            volume = 1f
-        }
-    }
-    DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
-
-    // Keyed on the current video's id (not the whole list) so appending the
-    // next page doesn't restart the video that is already playing
-    val currentVideo = videos.getOrNull(pagerState.currentPage)
-    LaunchedEffect(currentVideo?.id) {
-        val video = currentVideo ?: return@LaunchedEffect
-        exoPlayer.setMediaItem(MediaItem.fromUri(video.previewUrl))
-        exoPlayer.prepare()
-        exoPlayer.play()
-        // Check whether the server library has this song
-        viewModel.matchVideoToServerSong(video)
-        // Load next page when 5 videos remain
-        if (pagerState.currentPage >= videos.size - 5) {
-            viewModel.fetchMoreMusicVideos()
-        }
-    }
-
-    LaunchedEffect(isMuted) { exoPlayer.volume = if (isMuted) 0f else 1f }
+    // Two sub-feeds: ایرانی (our catalog/GitHub links) and خارجی (iTunes).
+    // Starts on ایرانی when it has content, otherwise on خارجی.
+    var pickedTab by remember { mutableStateOf(-1) }
+    val videoTab = if (pickedTab != -1) pickedTab else if (iranianVideos.isNotEmpty()) 0 else 1
+    val videos = if (videoTab == 0) iranianVideos else foreignVideos
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        VerticalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-            MusicVideoPage(
-                video = videos[page],
-                isActive = page == pagerState.currentPage,
-                exoPlayer = exoPlayer,
-                isMuted = isMuted,
-                onToggleMute = { isMuted = !isMuted },
-                onArtistClick = onArtistClick,
-                serverSong = if (page == pagerState.currentPage) serverSong else null,
-                onOpenServerSong = onOpenServerSong
-            )
+        androidx.compose.runtime.key(videoTab) {
+            if (videos.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        if (videoTab == 1) {
+                            CircularProgressIndicator(color = AppleRed)
+                            Text(translate("در حال دریافت موزیک ویدیو...", "Loading music videos...", viewModel), color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+                        } else {
+                            Text(
+                                translate("هنوز موزیک ویدیوی ایرانی اضافه نشده", "No Iranian music videos yet", viewModel),
+                                color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current
+                            )
+                        }
+                    }
+                }
+            } else {
+                val pagerState = rememberPagerState(pageCount = { videos.size })
+                var isMuted by remember { mutableStateOf(false) }
+
+                val exoPlayer = remember {
+                    ExoPlayer.Builder(context).build().apply {
+                        repeatMode = Player.REPEAT_MODE_ONE
+                        playWhenReady = true
+                        volume = 1f
+                    }
+                }
+                DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
+
+                // Keyed on the current video's id (not the whole list) so appending the
+                // next page doesn't restart the video that is already playing
+                val currentVideo = videos.getOrNull(pagerState.currentPage)
+                LaunchedEffect(currentVideo?.id) {
+                    val video = currentVideo ?: return@LaunchedEffect
+                    exoPlayer.setMediaItem(MediaItem.fromUri(video.previewUrl))
+                    exoPlayer.prepare()
+                    exoPlayer.play()
+                    // Check whether the server library has this song
+                    viewModel.matchVideoToServerSong(video)
+                    // Endless paging only applies to the iTunes feed
+                    if (videoTab == 1 && pagerState.currentPage >= videos.size - 5) {
+                        viewModel.fetchMoreMusicVideos()
+                    }
+                }
+
+                LaunchedEffect(isMuted) { exoPlayer.volume = if (isMuted) 0f else 1f }
+
+                VerticalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                    MusicVideoPage(
+                        video = videos[page],
+                        isActive = page == pagerState.currentPage,
+                        exoPlayer = exoPlayer,
+                        isMuted = isMuted,
+                        onToggleMute = { isMuted = !isMuted },
+                        onArtistClick = onArtistClick,
+                        serverSong = if (page == pagerState.currentPage) serverSong else null,
+                        onOpenServerSong = onOpenServerSong
+                    )
+                }
+            }
         }
-        if (isLoadingMore) {
+
+        // ایرانی / خارجی toggle (sits under Discover's own top tab bar)
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 100.dp)
+                .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(20.dp))
+                .padding(horizontal = 4.dp, vertical = 3.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            listOf(
+                translate("ایرانی", "Iranian", viewModel) to 0,
+                translate("خارجی", "International", viewModel) to 1
+            ).forEach { (label, tabIndex) ->
+                val selected = videoTab == tabIndex
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .tvFocusable(cornerRadius = 16.dp)
+                        .background(if (selected) AppleRed else Color.Transparent)
+                        .clickable { pickedTab = tabIndex }
+                        .padding(horizontal = 14.dp, vertical = 5.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = label,
+                        color = if (selected) Color.White else Color.White.copy(alpha = 0.55f),
+                        fontSize = 12.sp,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+            }
+        }
+
+        if (isLoadingMore && videoTab == 1) {
             CircularProgressIndicator(
                 color = AppleRed,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp).size(24.dp),

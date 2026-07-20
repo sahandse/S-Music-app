@@ -1266,39 +1266,46 @@ class MusicViewModel(
         _discoverVideoSeedIndex = 0
         _discoverVideoOffset = 0
         _discoverMusicVideos.value = emptyList()
-        loadCatalogVideos()
+        fetchCatalogVideos()
         loadMusicVideosPage()
     }
 
-    // Videos the admin posts to the Telegram channel (synced into the public
-    // catalog). They are pinned to the TOP of the Discover music-video feed.
-    private fun loadCatalogVideos() {
+    // Iranian music videos — read straight from GitHub: manual-videos.json
+    // (links the admin edits in the web editor, no size limit) plus the
+    // Telegram-synced videos in catalog.json. Shown as the "ایرانی" tab.
+    private val _catalogVideos = MutableStateFlow<List<MusicVideoItem>>(emptyList())
+    val catalogVideos: StateFlow<List<MusicVideoItem>> = _catalogVideos.asStateFlow()
+
+    fun fetchCatalogVideos() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val url = catalogUrl() + "?t=" + System.currentTimeMillis()
-                val body = okhttp3.OkHttpClient().newCall(okhttp3.Request.Builder().url(url).build())
-                    .execute().use { it.body?.string() } ?: "{}"
-                val arr = org.json.JSONObject(body).optJSONArray("videos") ?: org.json.JSONArray()
+                val client = okhttp3.OkHttpClient()
+                val base = catalogUrl()
                 val items = mutableListOf<MusicVideoItem>()
-                for (i in 0 until arr.length()) {
-                    val o = arr.getJSONObject(i)
-                    val videoUrl = o.optString("videoUrl")
-                    if (videoUrl.isBlank()) continue
-                    items.add(
-                        MusicVideoItem(
-                            id = videoUrl.hashCode().toLong(),
-                            title = o.optString("title"),
-                            artistName = o.optString("artist"),
-                            thumbnailUrl = o.optString("coverUrl"),
-                            previewUrl = videoUrl
-                        )
-                    )
+                for (u in listOf(base.replace("catalog.json", "manual-videos.json"), base)) {
+                    try {
+                        val body = client.newCall(
+                            okhttp3.Request.Builder().url(u + "?t=" + System.currentTimeMillis()).build()
+                        ).execute().use { it.body?.string() } ?: continue
+                        val arr = org.json.JSONObject(body).optJSONArray("videos") ?: continue
+                        for (i in 0 until arr.length()) {
+                            val o = arr.getJSONObject(i)
+                            val videoUrl = o.optString("videoUrl")
+                            if (videoUrl.isBlank()) continue
+                            items.add(
+                                MusicVideoItem(
+                                    id = videoUrl.hashCode().toLong(),
+                                    title = o.optString("title"),
+                                    artistName = o.optString("artist"),
+                                    thumbnailUrl = o.optString("coverUrl"),
+                                    previewUrl = videoUrl
+                                )
+                            )
+                        }
+                    } catch (_: Exception) {
+                    }
                 }
-                if (items.isNotEmpty()) {
-                    val unique = items.distinctBy { it.id }
-                    val existing = _discoverMusicVideos.value.filter { cur -> unique.none { it.id == cur.id } }
-                    _discoverMusicVideos.value = unique + existing
-                }
+                _catalogVideos.value = items.distinctBy { it.id }
             } catch (_: Exception) {
             }
         }
