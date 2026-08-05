@@ -102,9 +102,6 @@ class PlaybackConnection(
                     val songInQueue = _playbackQueue.value.find { it.id == songId }
                     if (songInQueue != null) {
                         _currentTrack.value = songInQueue
-                        connectionScope.launch {
-                            repository.insertRecentPlay(songInQueue)
-                        }
                     }
                 }
                 _trackDuration.value = controller.duration.coerceAtLeast(0)

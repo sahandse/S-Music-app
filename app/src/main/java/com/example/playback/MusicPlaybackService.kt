@@ -38,6 +38,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.util.Log
 
 class MusicPlaybackService : MediaLibraryService() {
 
@@ -107,7 +108,7 @@ class MusicPlaybackService : MediaLibraryService() {
             val p = player ?: return
             val views = android.widget.RemoteViews(packageName, R.layout.widget_player)
             val meta = p.mediaMetadata
-            views.setTextViewText(R.id.widget_title, meta.title ?: "S Music")
+            views.setTextViewText(R.id.widget_title, meta.title ?: "High Music")
             views.setTextViewText(R.id.widget_artist, meta.artist ?: "")
             views.setImageViewResource(
                 R.id.widget_play_pause,
@@ -149,7 +150,7 @@ class MusicPlaybackService : MediaLibraryService() {
                     mgr.updateAppWidget(ids, views)
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("MusicApp", "Failed to update widget", e) }
     }
 
     private fun favoriteButton(isFavorite: Boolean): CommandButton {
@@ -193,7 +194,6 @@ class MusicPlaybackService : MediaLibraryService() {
         return MediaItem.Builder()
             .setMediaId(id)
             .setUri(streamUrl)
-            .setMimeType(MimeTypes.AUDIO_MPEG)
             .setMediaMetadata(metadata)
             .build()
     }
@@ -274,7 +274,7 @@ class MusicPlaybackService : MediaLibraryService() {
             browser: MediaSession.ControllerInfo,
             params: LibraryParams?
         ): ListenableFuture<LibraryResult<MediaItem>> {
-            return Futures.immediateFuture(LibraryResult.ofItem(browsableItem(ROOT_ID, "S Music"), params))
+            return Futures.immediateFuture(LibraryResult.ofItem(browsableItem(ROOT_ID, "High Music"), params))
         }
 
         override fun onGetItem(
@@ -283,7 +283,7 @@ class MusicPlaybackService : MediaLibraryService() {
             mediaId: String
         ): ListenableFuture<LibraryResult<MediaItem>> = futureResult {
             val item = when {
-                mediaId == ROOT_ID -> browsableItem(ROOT_ID, "S Music")
+                mediaId == ROOT_ID -> browsableItem(ROOT_ID, "High Music")
                 mediaId == SUGGESTED_ID -> browsableItem(SUGGESTED_ID, "پیشنهادی برای شما")
                 mediaId == FAVORITES_ID -> browsableItem(FAVORITES_ID, "علاقه‌مندی‌ها")
                 mediaId == PLAYLISTS_ID -> browsableItem(PLAYLISTS_ID, "پلی‌لیست‌های من")
@@ -410,7 +410,7 @@ class MusicPlaybackService : MediaLibraryService() {
                     android.content.IntentFilter(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED),
                     androidx.core.content.ContextCompat.RECEIVER_EXPORTED
                 )
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to register bluetooth receiver", e) }
         }
     }
 
@@ -510,7 +510,7 @@ class MusicPlaybackService : MediaLibraryService() {
         fadeJob = serviceScope.launch {
             val steps = 20
             val startVol = exoPlayer.volume
-            for (i in steps downTo 0) {
+            for (i in steps downTo 1) {
                 exoPlayer.volume = startVol * (i / steps.toFloat())
                 delay(durationMs / steps)
             }
@@ -532,7 +532,7 @@ class MusicPlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
-        try { unregisterReceiver(bluetoothReceiver) } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("MusicApp", "Failed to unregister bluetooth receiver", e) }
         fadeJob?.cancel()
         positionCheckJob?.cancel()
         serviceScope.cancel()

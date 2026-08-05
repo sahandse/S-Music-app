@@ -16,7 +16,7 @@ class PlayerWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         appWidgetIds.forEach { id ->
             val views = RemoteViews(context.packageName, R.layout.widget_player)
-            views.setTextViewText(R.id.widget_title, "S Music")
+            views.setTextViewText(R.id.widget_title, "High Music")
             views.setTextViewText(R.id.widget_artist, "برای پخش، برنامه را باز کنید")
             views.setImageViewResource(R.id.widget_cover, R.mipmap.ic_launcher)
             views.setImageViewResource(R.id.widget_play_pause, R.drawable.ic_widget_play)

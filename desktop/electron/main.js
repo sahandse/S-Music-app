@@ -54,9 +54,12 @@ function createWindow() {
   })
 
   // Closing the window quits the whole app (no background/tray persistence)
-  win.on('closed', () => {
-    isQuitting = true
-    app.quit()
+  win.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault()
+      isQuitting = true
+      app.quit()
+    }
   })
 
   if (isDev) {

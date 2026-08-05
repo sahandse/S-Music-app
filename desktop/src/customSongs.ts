@@ -30,7 +30,7 @@ export function addCustomSong(input: Omit<CustomSong, 'id' | 'addedAt'>): Custom
   const list = loadCustomSongs()
   const item: CustomSong = {
     ...input,
-    id: 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+    id: 'custom_' + crypto.randomUUID(),
     addedAt: Date.now()
   }
   const next = [item, ...list]
@@ -52,7 +52,7 @@ export function importCustomSongs(json: string): CustomSong[] {
   const added: CustomSong[] = parsed
     .filter((o: any) => o && o.title && o.directUrl)
     .map((o: any) => ({
-      id: 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      id: 'custom_' + crypto.randomUUID(),
       title: String(o.title),
       artist: String(o.artist || ''),
       coverImageUrl: String(o.coverImageUrl || o.cover || ''),

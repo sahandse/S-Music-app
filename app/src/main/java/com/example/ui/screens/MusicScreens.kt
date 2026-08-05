@@ -112,6 +112,7 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import android.util.Log
 
 @Composable
 fun Modifier.glassmorphic(
@@ -5310,7 +5311,7 @@ fun ArtistDetailView(
                         swatch?.let { s -> artistDominantColor = Color(s.rgb) }
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Screen operation failed", e) }
         }
     }
     val artistTrackTint = artistDominantColor?.copy(alpha = 0.07f) ?: Color.Transparent
@@ -6077,7 +6078,7 @@ fun AlbumDetailView(
                         swatch?.let { s -> albumDominantColor = Color(s.rgb) }
                     }
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Screen operation failed", e) }
         }
     }
 
@@ -8183,7 +8184,7 @@ fun FullscreenPlayer(
                     swatch?.let { dominantColor = Color(it.rgb) }
                 }
             }
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("MusicApp", "Screen operation failed", e) }
     }
 
     Box(

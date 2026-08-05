@@ -23,6 +23,7 @@ import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
 import java.util.UUID
+import android.util.Log
 
 class MusicRepository(
     private val context: Context,
@@ -765,7 +766,7 @@ class MusicRepository(
                     }
                     prefs.edit().remove("public_copy_uri_$id").apply()
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to clean up downloaded track", e) }
             dao.deleteDownloadedTrack(id)
         }
     }

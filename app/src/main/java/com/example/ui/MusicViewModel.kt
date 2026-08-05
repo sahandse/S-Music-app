@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import android.util.Log
 
 data class MusicVideoItem(
     val id: Long,
@@ -318,12 +319,7 @@ class MusicViewModel(
                 val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
                 val isGuestLoggedIn = prefs.getBoolean("is_guest_logged_in", false)
                 _isServerConfigured.value = server != null || isGuestLoggedIn
-                if (server != null || isGuestLoggedIn) {
-                    loadHomeContent()
-                } else {
-                    // Fallback to Demo mode home loading
-                    loadHomeContent()
-                }
+                loadHomeContent()
             }
         }
 
@@ -362,7 +358,7 @@ class MusicViewModel(
                             swatch?.let { s -> _dominantColorArgb.value = s.rgb }
                         }
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) { Log.e("MusicApp", "Failed to extract dominant color from palette", e) }
             }
         }
 
@@ -440,7 +436,7 @@ class MusicViewModel(
             val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
             prefs.edit().putBoolean("is_guest_logged_in", false).apply()
             _isServerConfigured.value = false
-            playbackConnection.togglePlayPause() // stop music if playing
+            playbackConnection.stopPlayback()
         }
     }
 
@@ -860,7 +856,7 @@ class MusicViewModel(
                                 }
                             }
                         }
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { Log.e("MusicApp", "Failed to parse lyrics JSON", e) }
                     // Fallback: generic scan of the JSON for title/subtitle pairs
                     if (wanted.isEmpty()) {
                         Regex("\"title\"\\s*:\\s*\"(.*?)\"\\s*,\\s*\"subtitle\"\\s*:\\s*\"(.*?)\"")
@@ -889,7 +885,7 @@ class MusicViewModel(
                                 )
                         } ?: candidates.firstOrNull { it.title.equals(title, ignoreCase = true) }
                         if (hit != null && matched.none { it.id == hit.id }) matched.add(hit)
-                    } catch (_: Exception) {}
+                    } catch (e: Exception) { Log.e("MusicApp", "Failed to match Spotify import tracks", e) }
                 }
 
                 if (matched.isEmpty()) {
@@ -1246,7 +1242,7 @@ class MusicViewModel(
                     ))
                 }
                 _artistMusicVideos.value = items
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to load music videos", e) }
         }
     }
 
@@ -1378,7 +1374,7 @@ class MusicViewModel(
                             video.artistName.contains(s.artist, ignoreCase = true)
                         )
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to match video with local songs", e) }
         }
     }
 
@@ -1687,7 +1683,7 @@ class MusicViewModel(
                 _deviceSongs.value = songs
                 _deviceSongDates.value = dates
                 _deviceSongFolders.value = folderNames
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to load device songs", e) }
         }
     }
 
@@ -1759,7 +1755,7 @@ class MusicViewModel(
                         artworkUrl = rss.artworkUrl.ifBlank { looked?.artworkUrl.orEmpty() }
                     )
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to parse Apple Music RSS feed", e) }
         }
     }
 
@@ -1788,7 +1784,7 @@ class MusicViewModel(
                 if (art.isNotBlank()) {
                     _appleArtworkCache.value = _appleArtworkCache.value + (key to art)
                 }
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to cache Apple artwork", e) }
         }
     }
 
@@ -1837,7 +1833,7 @@ class MusicViewModel(
                     }
                 } catch (_: Exception) { null }
                 _artistWikiBio.value = fetchLang("fa") ?: fetchLang("en")
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to load artist wiki bio", e) }
         }
     }
 
@@ -1881,7 +1877,7 @@ class MusicViewModel(
                     )
                 }
                 _appleTopSongs.value = items
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to load Apple top songs", e) }
         }
     }
 
@@ -1935,7 +1931,7 @@ class MusicViewModel(
                 val body = okhttp3.OkHttpClient().newCall(okhttp3.Request.Builder().url(url).build())
                     .execute().use { it.body?.string() } ?: return@launch
                 _podcastSearchResults.value = parsePodcastResults(body)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to search podcasts", e) }
         }
     }
 
@@ -1958,7 +1954,7 @@ class MusicViewModel(
                 val lookupBody = client.newCall(okhttp3.Request.Builder().url(lookupUrl).build())
                     .execute().use { it.body?.string() } ?: return@launch
                 _topPodcasts.value = parsePodcastResults(lookupBody)
-            } catch (_: Exception) {}
+            } catch (e: Exception) { Log.e("MusicApp", "Failed to load top podcasts", e) }
         }
     }
 
@@ -2048,7 +2044,7 @@ class MusicViewModel(
             }
             getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
                 .edit().putString("followed_podcasts", arr.toString()).apply()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("MusicApp", "Failed to save followed podcasts", e) }
     }
 
     fun loadFollowedPodcasts() {
@@ -2070,7 +2066,7 @@ class MusicViewModel(
                 )
             }
             _followedPodcasts.value = items
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("MusicApp", "Failed to load followed podcasts", e) }
     }
 
     // --- Telegram as free unlimited cloud storage (user's own bot, no key) ---
@@ -2236,7 +2232,7 @@ class MusicViewModel(
                 )
             }
             tgPrefs().edit().putString("telegram_songs", arr.toString()).apply()
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("MusicApp", "Failed to save Telegram songs", e) }
     }
 
     private fun loadTelegramSongs() {
@@ -2258,7 +2254,7 @@ class MusicViewModel(
                 )
             }
             _telegramSongs.value = list
-        } catch (_: Exception) {}
+        } catch (e: Exception) { Log.e("MusicApp", "Failed to load Telegram songs", e) }
     }
 
     // Telegram file links expire, so resolve a fresh one right before playing
