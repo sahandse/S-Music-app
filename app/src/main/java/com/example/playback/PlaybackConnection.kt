@@ -234,6 +234,42 @@ class PlaybackConnection(
         }
     }
 
+    fun reorderQueue(fromIndex: Int, toIndex: Int) {
+        val controller = mediaController ?: return
+        val queue = _playbackQueue.value.toMutableList()
+        if (fromIndex !in queue.indices || toIndex !in queue.indices) return
+        val item = queue.removeAt(fromIndex)
+        queue.add(toIndex, item)
+        _playbackQueue.value = queue
+        val mediaItems = queue.map { song ->
+            val streamUrl = repository.getStreamUrl(song)
+            val mediaMetadata = MediaMetadata.Builder()
+                .setTitle(song.title)
+                .setArtist(song.artist)
+                .setAlbumTitle(song.album)
+                .setArtworkUri(android.net.Uri.parse(repository.getCoverArtUrl(song.coverArt)))
+                .build()
+            MediaItem.Builder()
+                .setMediaId(song.id)
+                .setUri(streamUrl)
+                .setMediaMetadata(mediaMetadata)
+                .build()
+        }
+        controller.setMediaItems(mediaItems)
+        val newIndex = queue.indexOfFirst { it.id == _currentTrack.value?.id }.coerceAtLeast(0)
+        controller.seekTo(newIndex, 0)
+        if (_isPlaying.value) controller.play()
+    }
+
+    fun removeFromQueue(index: Int) {
+        val controller = mediaController ?: return
+        val queue = _playbackQueue.value.toMutableList()
+        if (index !in queue.indices) return
+        queue.removeAt(index)
+        _playbackQueue.value = queue
+        controller.removeMediaItem(index)
+    }
+
     fun stopPlayback() {
         val controller = mediaController ?: return
         controller.stop()

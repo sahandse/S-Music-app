@@ -1059,6 +1059,15 @@ class MusicViewModel(
     }
 
     // --- Equalizer Controls (applied live by MusicPlaybackService via SharedPreferences) ---
+    data class EQPreset(val nameFa: String, val nameEn: String, val bass: Int, val treble: Int)
+    val eqPresets = listOf(
+        EQPreset("طبیعی", "Natural", 50, 50),
+        EQPreset("بیس", "Bass", 75, 35),
+        EQPreset("پاپ", "Pop", 55, 60),
+        EQPreset("راگ", "Rock", 70, 55),
+        EQPreset("شات", "Sharp", 45, 70)
+    )
+
     fun setBassLevel(level: Int) {
         val clamped = level.coerceIn(0, 100)
         _bassLevel.value = clamped
@@ -1071,6 +1080,11 @@ class MusicViewModel(
         _trebleLevel.value = clamped
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putInt("treble_level", clamped).apply()
+    }
+
+    fun applyEQPreset(preset: EQPreset) {
+        setBassLevel(preset.bass)
+        setTrebleLevel(preset.treble)
     }
 
     fun setCrossfadeEnabled(enabled: Boolean) {

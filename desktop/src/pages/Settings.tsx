@@ -1,6 +1,6 @@
 import React from 'react'
 import { useApp } from '../store'
-import { setSettings, EQ_FREQS, ThemeMode, Lang } from '../settings'
+import { setSettings, EQ_FREQS, ThemeMode, Lang, exportSettings, importSettings } from '../settings'
 import { bridge, isDesktop } from '../desktop'
 import { t } from '../i18n'
 
@@ -181,6 +181,49 @@ export function Settings() {
           <p className="card-sub" style={{ marginTop: 4 }}>
             {t('set.releasesHint')}
           </p>
+        </section>
+      )}
+
+      {/* Backup / restore */}
+      {isDesktop() && (
+        <section className="settings-card">
+          <h3>{t('set.backup') || 'پشتیبان‌گیری'}</h3>
+          <div className="set-row">
+            <span>{t('set.exportSettings') || 'Export Settings'}</span>
+            <button className="btn-sm" onClick={() => {
+              const json = exportSettings()
+              const blob = new Blob([json], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = 'high-music-settings.json'
+              a.click()
+              URL.revokeObjectURL(url)
+            }}>
+              {t('set.export') || 'Export'}
+            </button>
+          </div>
+          <div className="set-row">
+            <span>{t('set.importSettings') || 'Import Settings'}</span>
+            <label className="btn-sm" style={{ cursor: 'pointer' }}>
+              {t('set.import') || 'Import'}
+              <input
+                type="file"
+                accept="application/json"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (!file) return
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    const ok = importSettings(reader.result as string)
+                    if (!ok) alert('Invalid settings file')
+                  }
+                  reader.readAsText(file)
+                }}
+              />
+            </label>
+          </div>
         </section>
       )}
     </div>

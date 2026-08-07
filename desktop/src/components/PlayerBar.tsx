@@ -73,8 +73,8 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
 
       <div className="player-center">
         <div className="controls">
-          <button className={shuffle ? 'active' : ''} onClick={toggleShuffle} title={t('player.shuffle')}>
-            🔀
+          <button className={(shuffle || smartShuffle) ? 'active' : ''} onClick={toggleShuffle} title={t('player.shuffle')}>
+            {smartShuffle ? '✨' : '🔀'}
           </button>
           <button onClick={prev} title={t('player.prev')}>
             ⏮

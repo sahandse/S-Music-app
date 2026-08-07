@@ -67,3 +67,32 @@ export function applyTheme(s: Settings = current) {
   document.documentElement.setAttribute('lang', s.lang)
   document.documentElement.style.setProperty('--accent', s.accent)
 }
+
+export function exportSettings(): string {
+  return JSON.stringify({
+    version: 1,
+    settings: current,
+    customSongs: (() => {
+      try {
+        const raw = localStorage.getItem('highmusic.customSongs')
+        return raw ? JSON.parse(raw) : []
+      } catch {
+        return []
+      }
+    })()
+  })
+}
+
+export function importSettings(json: string): boolean {
+  try {
+    const data = JSON.parse(json)
+    if (!data.settings) return false
+    setSettings(data.settings)
+    if (Array.isArray(data.customSongs)) {
+      localStorage.setItem('highmusic.customSongs', JSON.stringify(data.customSongs))
+    }
+    return true
+  } catch {
+    return false
+  }
+}

@@ -318,7 +318,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                             )
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
+                            Icon(Icons.Default.Search, contentDescription = "جستجو", tint = Color.White.copy(alpha = 0.6f))
                         },
                         singleLine = true,
                         textStyle = androidx.compose.ui.text.TextStyle(fontFamily = LocalAppFontFamily.current),
@@ -3213,7 +3213,7 @@ fun SearchScreen(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(imageVector = Icons.Default.History, contentDescription = null, tint = Color.Gray)
+                                    Icon(imageVector = Icons.Default.History, contentDescription = "تاریخچه", tint = Color.Gray)
                                     Text(text = hist, fontSize = 14.sp, fontFamily = LocalAppFontFamily.current)
                                 }
                                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
@@ -3681,6 +3681,7 @@ fun LibraryScreen(
             Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid),
             Triple("catalog", "🎵 کاتالوگ آنلاین" to "🎵 Online Catalog", Icons.Outlined.LibraryMusic),
             Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts),
+            Triple("recent", "پخش‌های اخیر" to "Recently Played", Icons.Default.History),
             Triple("quiz", "🎮 بازی حدس آهنگ" to "🎮 Music Quiz", Icons.Outlined.SportsEsports)
         )
 
@@ -4190,6 +4191,7 @@ fun SubLibraryItemsView(
         "podcasts" -> translate("پادکست", "Podcasts", viewModel)
         "catalog" -> translate("کاتالوگ آنلاین", "Online Catalog", viewModel)
         "quiz" -> translate("بازی حدس آهنگ", "Music Quiz", viewModel)
+        "recent" -> translate("پخش‌های اخیر", "Recently Played", viewModel)
         else -> translate("دانلودها", "Downloads", viewModel)
     }
 
@@ -4215,6 +4217,53 @@ fun SubLibraryItemsView(
                 }
                 "quiz" -> {
                     MusicQuizView(viewModel = viewModel)
+                }
+                "recent" -> {
+                    val recent by viewModel.recentPlays.collectAsStateWithLifecycle()
+                    if (recent.isEmpty()) {
+                        EmptyStateView(message = translate("هنوز آهنگی پخش نشده است.", "No songs played yet.", viewModel))
+                    } else {
+                        val recentSongs = remember(recent) {
+                            recent.mapNotNull { rp ->
+                                val song = rp.song
+                                if (song != null) song else null
+                            }
+                        }
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = translate("${recentSongs.size} آهنگ", "${recentSongs.size} songs", viewModel),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                                Button(
+                                    onClick = { viewModel.playAllSongsInQueue(recentSongs) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "پخش", tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(translate("پخش همه", "Play All", viewModel), color = Color.White, fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+                                }
+                            }
+                            LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                items(recentSongs, key = { it.id }) { song ->
+                                    TrackRowItem(
+                                        song = song,
+                                        onPlay = { viewModel.playSongDirectly(song, recentSongs) },
+                                        viewModel = viewModel
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
                 "catalog" -> {
                     CatalogView(viewModel = viewModel)
@@ -4259,7 +4308,7 @@ fun SubLibraryItemsView(
                                     colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
                                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = "پخش", tint = Color.White, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(4.dp))
                                     Text(translate("پخش همه", "Play All", viewModel), color = Color.White, fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
                                 }
@@ -4356,7 +4405,7 @@ fun SubLibraryItemsView(
                             onValueChange = { query = it },
                             placeholder = { Text(translate("جستجوی هنرمند...", "Search artist...", viewModel)) },
                             singleLine = true,
-                            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = null) },
+                            leadingIcon = { Icon(imageVector = Icons.Default.Search, contentDescription = "جستجو") },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -5030,120 +5079,6 @@ fun getSongArtists(song: SubsonicSong, artistsList: List<SubsonicArtist>): List<
     return result.distinctBy { it.name.lowercase().trim() }
 }
 
-data class ArtistExtraDetails(
-    val country: String,
-    val birthYearOrActive: String,
-    val instagram: String? = null,
-    val twitter: String? = null,
-    val youtube: String? = null,
-    val spotify: String? = null
-)
-
-fun getArtistExtraDetails(name: String, language: String): ArtistExtraDetails {
-    val normalizedName = name.trim()
-    val isFa = language == "fa"
-    
-    // Famous artist exact matching
-    return when {
-        normalizedName.contains("Taylor Swift", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "ایالات متحده" else "United States",
-            birthYearOrActive = if (isFa) "متولد ۱۹۸۹" else "Born 1989",
-            instagram = "taylorswift",
-            twitter = "taylorswift13",
-            youtube = "TaylorSwift",
-            spotify = "06HL4z00K2zSTw0szgqgA8"
-        )
-        normalizedName.contains("The Weeknd", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "کانادا" else "Canada",
-            birthYearOrActive = if (isFa) "متولد ۱۹۹۰" else "Born 1990",
-            instagram = "theweeknd",
-            twitter = "theweeknd",
-            youtube = "TheWeeknd",
-            spotify = "1Xyo493mqZ0hxKHTT3vYr3"
-        )
-        normalizedName.contains("Coldplay", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "انگلستان" else "United Kingdom",
-            birthYearOrActive = if (isFa) "تأسیس ۱۹۹۶" else "Formed 1996",
-            instagram = "coldplay",
-            twitter = "coldplay",
-            youtube = "coldplay",
-            spotify = "4gzpq7vSSTNTL6g8Sg7b7F"
-        )
-        normalizedName.contains("Adele", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "انگلستان" else "United Kingdom",
-            birthYearOrActive = if (isFa) "متولد ۱۹۸۸" else "Born 1988",
-            instagram = "adele",
-            twitter = "adele",
-            youtube = "adele",
-            spotify = "4dpARuHxo51GoX761z87Xz"
-        )
-        normalizedName.contains("Eminem", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "ایالات متحده" else "United States",
-            birthYearOrActive = if (isFa) "متولد ۱۹۷۲" else "Born 1972",
-            instagram = "eminem",
-            twitter = "eminem",
-            youtube = "eminem",
-            spotify = "7dG12g9vHfv9ve63b0of0Z"
-        )
-        normalizedName.contains("Billie Eilish", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "ایالات متحده" else "United States",
-            birthYearOrActive = if (isFa) "متولد ۲۰۰۱" else "Born 2001",
-            instagram = "billieeilish",
-            twitter = "billieeilish",
-            youtube = "BillieEilish",
-            spotify = "6qqNV0v67gmgP63Z6KFymH"
-        )
-        normalizedName.contains("Dua Lipa", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "انگلستان" else "United Kingdom",
-            birthYearOrActive = if (isFa) "متولد ۱۹۹۵" else "Born 1995",
-            instagram = "dualipa",
-            twitter = "dualipa",
-            youtube = "dualipa",
-            spotify = "6M2v0gZdS6g7UP9jYgZ4S4"
-        )
-        normalizedName.contains("Drake", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "کانادا" else "Canada",
-            birthYearOrActive = if (isFa) "متولد ۱۹۸۶" else "Born 1986",
-            instagram = "champagnepapi",
-            twitter = "drake",
-            youtube = "DrakeOfficial",
-            spotify = "3TVKi7XgZ480ywZ76m6X0K"
-        )
-        normalizedName.contains("Bruno Mars", ignoreCase = true) -> ArtistExtraDetails(
-            country = if (isFa) "ایالات متحده" else "United States",
-            birthYearOrActive = if (isFa) "متولد ۱۹۸۵" else "Born 1985",
-            instagram = "brunomars",
-            twitter = "brunomars",
-            youtube = "brunomars",
-            spotify = "0du5Z07I77660InNDmECY3"
-        )
-        // Deterministic generation for any other artist (using hash)
-        else -> {
-            val hash = normalizedName.hashCode().let { if (it < 0) -it else it }
-            val countries = if (isFa) {
-                listOf("ایالات متحده", "کانادا", "انگلستان", "ایران", "فرانسه", "سوئد", "آلمان", "استرالیا")
-            } else {
-                listOf("United States", "Canada", "United Kingdom", "Iran", "France", "Sweden", "Germany", "Australia")
-            }
-            val countrySelected = countries[hash % countries.size]
-            
-            val year = 1980 + (hash % 23)
-            val activeText = if (isFa) "شروع فعالیت $year" else "Active since $year"
-            
-            val cleanInsta = normalizedName.lowercase().replace(" ", "").replace("[^a-z0-9]".toRegex(), "")
-            
-            ArtistExtraDetails(
-                country = countrySelected,
-                birthYearOrActive = activeText,
-                instagram = cleanInsta,
-                twitter = cleanInsta,
-                youtube = cleanInsta,
-                spotify = null
-            )
-        }
-    }
-}
-
 @Composable
 fun SocialIconCircle(
     brand: String, // "instagram", "twitter", "youtube", "spotify"
@@ -5278,7 +5213,7 @@ fun ArtistDetailView(
     val context = LocalContext.current
 
     val lang = viewModel.language.value
-    val details = remember(artist.name, lang) { getArtistExtraDetails(artist.name, lang) }
+    val details = remember(artist.name, lang) { viewModel.getArtistExtraDetails(artist.name, lang) }
 
     // Real biography from Persian (or English) Wikipedia — free, no key
     val wikiBio by viewModel.artistWikiBio.collectAsStateWithLifecycle()
@@ -7451,7 +7386,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                             ) {
                                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
-                            Icon(imageVector = Icons.Default.SkipNext, contentDescription = null, tint = liveAccentColor, modifier = Modifier.size(20.dp))
+                            Icon(imageVector = Icons.Default.SkipNext, contentDescription = "بعدی", tint = Color.White, modifier = Modifier.size(36.dp)))
                         }
                     }
                 }
@@ -7692,6 +7627,31 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     valueRange = 0f..100f,
                     colors = SliderDefaults.colors(thumbColor = AppleRed, activeTrackColor = AppleRed)
                 )
+
+                Text(
+                    text = translate("پیش‌تنظیمات اکولایزر", "EQ Presets", viewModel),
+                    fontSize = 12.sp,
+                    fontFamily = LocalAppFontFamily.current,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    viewModel.eqPresets.forEach { preset ->
+                        val selected = bassLevel == preset.bass && trebleLevel == preset.treble
+                        FilterChip(
+                            selected = selected,
+                            onClick = { viewModel.applyEQPreset(preset) },
+                            label = { Text(translate(preset.nameFa, preset.nameEn, viewModel), fontSize = 12.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AppleRed,
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
+                }
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
 
@@ -8123,6 +8083,7 @@ fun FullscreenPlayer(
     val progress by viewModel.playbackConnection.playbackProgress.collectAsStateWithLifecycle()
     val duration by viewModel.playbackConnection.trackDuration.collectAsStateWithLifecycle()
     val isShuffle by viewModel.playbackConnection.isShuffleEnabled.collectAsStateWithLifecycle()
+    val smartShuffle by viewModel.playbackConnection.smartShuffleEnabled.collectAsStateWithLifecycle()
     val repeatMode by viewModel.playbackConnection.repeatMode.collectAsStateWithLifecycle()
     val speed by viewModel.playbackConnection.playbackSpeed.collectAsStateWithLifecycle()
     val lyrics by viewModel.currentLyrics.collectAsStateWithLifecycle()
@@ -8739,9 +8700,9 @@ fun FullscreenPlayer(
                         ) {
                             IconButton(onClick = { viewModel.playbackConnection.toggleShuffle() }) {
                                 Icon(
-                                    imageVector = Icons.Default.Shuffle,
-                                    contentDescription = "تصادفی",
-                                    tint = if (isShuffle) AppleRed else Color.White.copy(alpha = 0.6f),
+                                    imageVector = if (smartShuffle) Icons.Default.AutoAwesome else Icons.Default.Shuffle,
+                                    contentDescription = if (smartShuffle) "تصادفی هوشمند" else "تصادفی",
+                                    tint = if (isShuffle || smartShuffle) AppleRed else Color.White.copy(alpha = 0.6f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -8870,7 +8831,7 @@ fun FullscreenPlayer(
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = if (speed != 1f) AppleRed else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                        Icon(imageVector = Icons.Default.Speed, contentDescription = "سرعت پخش", tint = if (speed != 1f) AppleRed else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
                         Text(text = "${speed}x", color = if (speed != 1f) AppleRed else Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
@@ -8899,7 +8860,7 @@ fun FullscreenPlayer(
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Icon(imageVector = Icons.Default.Equalizer, contentDescription = null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
+                        Icon(imageVector = Icons.Default.Equalizer, contentDescription = "اکولایزر", tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
                         Text(text = "EQ", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
@@ -9048,11 +9009,11 @@ fun FullscreenPlayer(
         SleepTimerDialog(
             currentMinutes = sleepTimerLeft,
             onDismiss = { showTimerDialog = false },
-            onSelect = { min ->
+            onSelect = { min, fadeMs ->
                 if (min == 0) {
                     viewModel.playbackConnection.cancelSleepTimer()
                 } else {
-                    viewModel.playbackConnection.startSleepTimer(min)
+                    viewModel.playbackConnection.startSleepTimer(min, fadeMs)
                 }
                 showTimerDialog = false
             }
@@ -9088,6 +9049,8 @@ fun FullscreenPlayer(
     if (showQueueSheet) {
         val queue by viewModel.playbackConnection.playbackQueue.collectAsStateWithLifecycle()
         val currentTrackId = song.id
+        var dragIndex by remember { mutableStateOf<Int?>(null) }
+        var dragOffsetY by remember { mutableStateOf(0f) }
         Dialog(onDismissRequest = { showQueueSheet = false }) {
             Surface(
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
@@ -9120,11 +9083,36 @@ fun FullscreenPlayer(
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             itemsIndexed(queue) { index, qSong ->
                                 val isActive = qSong.id == currentTrackId
+                                var isDragging by remember { mutableStateOf(false) }
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
                                         .background(if (isActive) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
+                                        .then(if (isDragging) Modifier.shadow(8.dp, RoundedCornerShape(10.dp)) else Modifier)
+                                        .pointerInput(index) {
+                                            detectDragGestures(
+                                                onDragStart = { isDragging = true },
+                                                onDragEnd = {
+                                                    isDragging = false
+                                                    dragIndex = null
+                                                    dragOffsetY = 0f
+                                                },
+                                                onDrag = { change, dragAmount ->
+                                                    change.consume()
+                                                    dragOffsetY += dragAmount.y
+                                                    if (dragOffsetY > 60 && dragIndex != index + 1 && index + 1 < queue.size) {
+                                                        viewModel.playbackConnection.reorderQueue(index, index + 1)
+                                                        dragOffsetY = 0f
+                                                        dragIndex = index + 1
+                                                    } else if (dragOffsetY < -60 && dragIndex != index - 1 && index - 1 >= 0) {
+                                                        viewModel.playbackConnection.reorderQueue(index, index - 1)
+                                                        dragOffsetY = 0f
+                                                        dragIndex = index - 1
+                                                    }
+                                                }
+                                            )
+                                        }
                                         .clickable {
                                             viewModel.playbackConnection.playTrack(qSong, queue)
                                             showQueueSheet = false
@@ -9133,13 +9121,11 @@ fun FullscreenPlayer(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    Text(
-                                        text = "${index + 1}",
-                                        fontSize = 12.sp,
-                                        color = if (isActive) AppleRed else Color.Gray,
-                                        fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                        modifier = Modifier.width(22.dp),
-                                        textAlign = TextAlign.Center
+                                    Icon(
+                                        imageVector = Icons.Default.DragHandle,
+                                        contentDescription = "جابجایی",
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                     AsyncImage(
                                         model = viewModel.getCoverArtUrl(qSong.coverArt),
@@ -9169,6 +9155,9 @@ fun FullscreenPlayer(
                                     if (isActive) {
                                         Icon(Icons.Default.VolumeUp, contentDescription = null, tint = AppleRed, modifier = Modifier.size(16.dp))
                                     }
+                                    IconButton(onClick = { viewModel.playbackConnection.removeFromQueue(index) }) {
+                                        Icon(Icons.Default.Close, contentDescription = "حذف از صف", tint = Color.Gray, modifier = Modifier.size(18.dp))
+                                    }
                                 }
                             }
                         }
@@ -9184,7 +9173,7 @@ fun FullscreenPlayer(
 fun SleepTimerDialog(
     currentMinutes: Int?,
     onDismiss: () -> Unit,
-    onSelect: (Int) -> Unit
+    onSelect: (Int, Long) -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(16.dp), color = CardDark) {
@@ -9204,12 +9193,32 @@ fun SleepTimerDialog(
 
                 options.forEach { opt ->
                     TextButton(
-                        onClick = { onSelect(opt.first) },
+                        onClick = { onSelect(opt.first, 0L) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(opt.second, color = if (opt.first == 0) Color.Gray else Color.White)
                     }
                     HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                }
+
+                Text("محو شدن تدریجی", fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f), fontSize = 14.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                val fadeOptions = listOf(
+                    0L to "بدون محو",
+                    3000L to "۳ ثانیه",
+                    5000L to "۵ ثانیه",
+                    10000L to "۱۰ ثانیه"
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    fadeOptions.forEach { opt ->
+                        val selected = false
+                        OutlinedButton(
+                            onClick = { onSelect(currentMinutes ?: 15, opt.first) },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
+                        ) {
+                            Text(opt.second, fontSize = 12.sp)
+                        }
+                    }
                 }
 
                 Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AppleRed)) {
@@ -9280,18 +9289,19 @@ fun SyncedLyricsView(
     ) {
         itemsIndexed(lyricsLines) { index, line ->
             val isActive = index == activeIndex
-            val scale by animateFloatAsState(targetValue = if (isActive) 1.15f else 1.0f, label = "LineScale")
-            val alpha by animateFloatAsState(targetValue = if (isActive) 1.0f else 0.4f, label = "LineAlpha")
+            val scale by animateFloatAsState(targetValue = if (isActive) 1.12f else 1.0f, animationSpec = tween(300), label = "LineScale")
+            val alpha by animateFloatAsState(targetValue = if (isActive) 1.0f else 0.45f, animationSpec = tween(300), label = "LineAlpha")
 
             Text(
                 text = line.text,
                 color = if (isActive) AppleRed else Color.White,
-                fontSize = 18.sp,
+                fontSize = if (isActive) 20.sp else 18.sp,
                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
-                lineHeight = 32.sp,
+                lineHeight = 34.sp,
                 modifier = Modifier
                     .graphicsLayer(scaleX = scale, scaleY = scale, alpha = alpha)
+                    .shadow(if (isActive) 8.dp else 0.dp, shape = RoundedCornerShape(4.dp), spotColor = AppleRed)
                     .padding(horizontal = 24.dp)
             )
         }
@@ -9361,7 +9371,7 @@ fun CarModeScreen(viewModel: MusicViewModel, onClose: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(imageVector = Icons.Default.DirectionsCar, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+                    Icon(imageVector = Icons.Default.DirectionsCar, contentDescription = "حالت خودرو", tint = AppleRed, modifier = Modifier.size(20.dp))
                     Text(text = "حالت خودرو", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = LocalAppFontFamily.current)
                 }
                 IconButton(onClick = onClose) {
@@ -10346,7 +10356,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                 IconButton(onClick = { selectedFolder = null }, modifier = Modifier.size(30.dp)) {
                     Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "بازگشت", modifier = Modifier.size(18.dp))
                 }
-                Icon(imageVector = Icons.Outlined.Folder, contentDescription = null, tint = AppleRed, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Outlined.Folder, contentDescription = "پوشه", tint = AppleRed, modifier = Modifier.size(18.dp))
                 Text(folderName, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
             }
         }
@@ -10704,7 +10714,7 @@ fun CatalogView(viewModel: MusicViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (shown.isNotEmpty()) {
                     TextButton(onClick = { viewModel.radioPlayCatalog(shown) }) {
-                        Icon(Icons.Default.Radio, contentDescription = null, tint = AppleRed, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Radio, contentDescription = "رادیو", tint = AppleRed, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(translate("رادیو", "Radio", viewModel), color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }

@@ -39,6 +39,8 @@ interface AppState {
   seek: (sec: number) => void
   setVolume: (v: number) => void
   toggleShuffle: () => void
+  smartShuffle: boolean
+  setSmartShuffle: (v: boolean) => void
   cycleRepeat: () => void
   jumpTo: (i: number) => void
 
@@ -90,6 +92,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return isNaN(v) ? 1 : v
   })
   const [shuffle, setShuffle] = useState(false)
+  const [smartShuffle, setSmartShuffleState] = useState(false)
   const [repeat, setRepeat] = useState<RepeatMode>('off')
 
   const [settings, setSettingsState] = useState<Settings>(() => getSettings())
@@ -107,8 +110,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Keep latest values available to event handlers without re-binding them
-  const stateRef = useRef({ shuffle, repeat, queue, index, volume, settings, creds })
-  stateRef.current = { shuffle, repeat, queue, index, volume, settings, creds }
+  const stateRef = useRef({ shuffle, smartShuffle, repeat, queue, index, volume, settings, creds })
+  stateRef.current = { shuffle, smartShuffle, repeat, queue, index, volume, settings, creds }
 
   const current = queue[index] ?? null
 
@@ -439,7 +442,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('highmusic.volume', String(v))
   }, [])
 
-  const toggleShuffle = useCallback(() => setShuffle((s) => !s), [])
+  const toggleShuffle = useCallback(() => {
+    if (smartShuffle) {
+      setSmartShuffleState(false)
+      setShuffle(true)
+    } else if (shuffle) {
+      setShuffle(false)
+    } else {
+      setSmartShuffleState(true)
+    }
+  }, [smartShuffle, shuffle])
   const cycleRepeat = useCallback(
     () => setRepeat((r) => (r === 'off' ? 'all' : r === 'all' ? 'one' : 'off')),
     []
@@ -481,6 +493,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     seek,
     setVolume,
     toggleShuffle,
+    smartShuffle,
+    setSmartShuffle: setSmartShuffleState,
     cycleRepeat,
     jumpTo,
     settings,

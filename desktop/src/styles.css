@@ -715,11 +715,11 @@ input[type='range']::-webkit-slider-thumb {
 .np-controls button.active { color: var(--accent); }
 .np-lyrics { flex: 1; overflow-y: auto; padding: 20vh 10px; max-width: 480px; }
 .lyric-line {
-  font-size: 20px; line-height: 2.1; color: rgba(255,255,255,0.45); cursor: pointer; transition: all 0.2s;
+  font-size: 20px; line-height: 2.1; color: rgba(255,255,255,0.45); cursor: pointer; transition: all 0.3s ease;
   text-align: center;
 }
 .lyric-line.plain { cursor: default; }
-.lyric-line.active { color: #fff; font-weight: 800; font-size: 23px; }
+.lyric-line.active { color: #fff; font-weight: 800; font-size: 23px; text-shadow: 0 0 18px var(--accent); transform: scale(1.06); }
 
 /* ===== Mini player ===== */
 .mini-player {
