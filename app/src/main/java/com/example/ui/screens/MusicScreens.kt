@@ -13,6 +13,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.input.pointer.pointerInput
@@ -4224,9 +4225,15 @@ fun SubLibraryItemsView(
                         EmptyStateView(message = translate("هنوز آهنگی پخش نشده است.", "No songs played yet.", viewModel))
                     } else {
                         val recentSongs = remember(recent) {
-                            recent.mapNotNull { rp ->
-                                val song = rp.song
-                                if (song != null) song else null
+                            recent.map { rp ->
+                                SubsonicSong(
+                                    id = rp.trackId,
+                                    title = rp.title,
+                                    artist = rp.artist,
+                                    album = rp.album,
+                                    duration = rp.duration,
+                                    coverArt = rp.coverArtUrl
+                                )
                             }
                         }
                         Column {
