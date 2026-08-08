@@ -7386,7 +7386,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                             ) {
                                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
-                            Icon(imageVector = Icons.Default.SkipNext, contentDescription = "بعدی", tint = Color.White, modifier = Modifier.size(36.dp)))
+                            Icon(imageVector = Icons.Default.SkipNext, contentDescription = "بعدی", tint = Color.White, modifier = Modifier.size(36.dp))
                         }
                     }
                 }

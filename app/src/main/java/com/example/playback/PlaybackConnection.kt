@@ -38,6 +38,9 @@ class PlaybackConnection(
     private val _isShuffleEnabled = MutableStateFlow(false)
     val isShuffleEnabled: StateFlow<Boolean> = _isShuffleEnabled.asStateFlow()
 
+    private val _smartShuffleEnabled = MutableStateFlow(false)
+    val smartShuffleEnabled: StateFlow<Boolean> = _smartShuffleEnabled.asStateFlow()
+
     private val _repeatMode = MutableStateFlow(Player.REPEAT_MODE_OFF)
     val repeatMode: StateFlow<Int> = _repeatMode.asStateFlow()
 
@@ -360,9 +363,29 @@ class PlaybackConnection(
 
     fun toggleShuffle() {
         val controller = mediaController ?: return
-        val nextMode = !controller.shuffleModeEnabled
-        controller.shuffleModeEnabled = nextMode
-        _isShuffleEnabled.value = nextMode
+        when {
+            _smartShuffleEnabled.value -> {
+                setSmartShuffleEnabled(false)
+                controller.shuffleModeEnabled = true
+                _isShuffleEnabled.value = true
+            }
+            !controller.shuffleModeEnabled -> {
+                setSmartShuffleEnabled(true)
+            }
+            else -> {
+                controller.shuffleModeEnabled = false
+                _isShuffleEnabled.value = false
+            }
+        }
+    }
+
+    fun setSmartShuffleEnabled(enabled: Boolean) {
+        _smartShuffleEnabled.value = enabled
+        val controller = mediaController ?: return
+        if (enabled) {
+            controller.shuffleModeEnabled = false
+            _isShuffleEnabled.value = false
+        }
     }
 
     fun toggleRepeatMode() {
@@ -383,7 +406,7 @@ class PlaybackConnection(
         _playbackSpeed.value = speed
     }
 
-    fun startSleepTimer(minutes: Int) {
+    fun startSleepTimer(minutes: Int, fadeMs: Long = 0L) {
         sleepTimerJob?.cancel()
         _sleepTimerMinutesLeft.value = minutes
         sleepTimerJob = connectionScope.launch {
@@ -393,8 +416,28 @@ class PlaybackConnection(
                 remaining--
                 _sleepTimerMinutesLeft.value = remaining
             }
-            togglePlayPause() // Pause playback when timer completes
+            if (fadeMs > 0) {
+                fadeOutForSleep(fadeMs)
+            } else {
+                togglePlayPause()
+            }
             _sleepTimerMinutesLeft.value = null
+        }
+    }
+
+    private suspend fun fadeOutForSleep(durationMs: Long) {
+        val controller = mediaController ?: return
+        fadeJob?.cancel()
+        fadeJob = connectionScope.launch {
+            val steps = 20
+            val startVol = controller.volume
+            for (i in steps downTo 1) {
+                controller.volume = startVol * (i / steps.toFloat())
+                delay(durationMs / steps)
+            }
+            controller.volume = 0f
+            controller.pause()
+            controller.volume = 1f
         }
     }
 
