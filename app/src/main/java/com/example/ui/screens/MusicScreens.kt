@@ -9109,15 +9109,11 @@ fun FullscreenPlayer(
                                                     change.consume()
                                                     dragOffsetY += dragAmount.y
                                                     if (dragOffsetY > 60 && dragIndex != index + 1 && index + 1 < queue.size) {
-                                                        viewModel.viewModelScope.launch {
-                                                            viewModel.playbackConnection.reorderQueue(index, index + 1)
-                                                        }
+                                                        viewModel.playbackConnection.reorderQueue(index, index + 1)
                                                         dragOffsetY = 0f
                                                         dragIndex = index + 1
                                                     } else if (dragOffsetY < -60 && dragIndex != index - 1 && index - 1 >= 0) {
-                                                        viewModel.viewModelScope.launch {
-                                                            viewModel.playbackConnection.reorderQueue(index, index - 1)
-                                                        }
+                                                        viewModel.playbackConnection.reorderQueue(index, index - 1)
                                                         dragOffsetY = 0f
                                                         dragIndex = index - 1
                                                     }

@@ -237,7 +237,13 @@ class PlaybackConnection(
         }
     }
 
-    suspend fun reorderQueue(fromIndex: Int, toIndex: Int) {
+    fun reorderQueue(fromIndex: Int, toIndex: Int) {
+        connectionScope.launch {
+            reorderQueueSuspend(fromIndex, toIndex)
+        }
+    }
+
+    suspend fun reorderQueueSuspend(fromIndex: Int, toIndex: Int) {
         val controller = mediaController ?: return
         val queue = _playbackQueue.value.toMutableList()
         if (fromIndex !in queue.indices || toIndex !in queue.indices) return
