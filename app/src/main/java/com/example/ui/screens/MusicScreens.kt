@@ -9308,7 +9308,6 @@ fun SyncedLyricsView(
                 lineHeight = 34.sp,
                 modifier = Modifier
                     .graphicsLayer(scaleX = scale, scaleY = scale, alpha = alpha)
-                    .shadow(if (isActive) 8.dp else 0.dp, shape = RoundedCornerShape(4.dp), spotColor = AppleRed)
                     .padding(horizontal = 24.dp)
             )
         }
@@ -9743,17 +9742,26 @@ fun MusicVideoPage(
 
         // Video surface (only active page renders the player); tap toggles play/pause
         if (isActive) {
-            AndroidView(
-                factory = { ctx ->
-                    android.view.SurfaceView(ctx).also { sv ->
-                        exoPlayer.setVideoSurfaceView(sv)
-                    }
-                },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .aspectRatio(16f / 9f)
                     .align(Alignment.Center)
-            )
+                    .clip(RoundedCornerShape(8.dp))
+            ) {
+                AndroidView(
+                    factory = { ctx ->
+                        android.view.SurfaceView(ctx).also { sv ->
+                            sv.layoutParams = android.view.ViewGroup.LayoutParams(
+                                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                                android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                            )
+                            videoPlayer.setVideoSurfaceView(sv)
+                        }
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
             // Transparent tap layer over the video for play/pause
             Box(
                 modifier = Modifier
