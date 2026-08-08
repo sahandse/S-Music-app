@@ -22,6 +22,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+        env:
+          KSP_USE_INTERNAL_BUILD_FOR_TEST: true
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -39,6 +41,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build debug APK
+        env:
+          KSP_USE_INTERNAL_BUILD_FOR_TEST: true
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Locate APK
