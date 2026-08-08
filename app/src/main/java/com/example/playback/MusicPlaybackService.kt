@@ -532,6 +532,8 @@ class MusicPlaybackService : MediaLibraryService() {
     }
 
     override fun onDestroy() {
+        try {
+            bluetoothReceiver?.let { unregisterReceiver(it) }
         } catch (e: Exception) { Log.e("MusicApp", "Failed to unregister bluetooth receiver", e) }
         fadeJob?.cancel()
         positionCheckJob?.cancel()
