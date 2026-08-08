@@ -29,7 +29,7 @@ object SmartShuffle {
 
         val result = mutableListOf<SubsonicSong>()
         val tiers = listOf(tier0, tier1, tier2)
-        val counts = tiers.map { (it.size + 2) / 3 }
+        val counts = tiers.map { (it.size + 2) / 3 }.toMutableList()
         val pointers = IntArray(3) { 0 }
 
         while (result.size < queue.size) {
