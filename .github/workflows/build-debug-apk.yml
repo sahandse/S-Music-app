@@ -3,6 +3,7 @@ name: Build Debug APK
 on:
   push:
     branches:
+      - session/agent_aebabead-b02d-483f-873d-1a9fef180d36
       - claude/music-app-fonts-q1foo3
   workflow_dispatch: {}
 
