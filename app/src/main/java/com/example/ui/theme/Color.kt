@@ -21,6 +21,18 @@ val SpotifyGreen = Color(0xFF1DB954)
 val SpotifyBackground = Color(0xFF121212)
 val SpotifySurface = Color(0xFF181818)
 
+// Aparat Music-inspired preset: monochrome black/white, flat cards, no glass blur.
+// Both a dark and a light variant, since Aparat Music itself supports both.
+val AparatBackgroundDark = Color(0xFF000000)
+val AparatSurfaceDark = Color(0xFF1A1A1A)
+val AparatSurfaceDarkElevated = Color(0xFF262626)
+val AparatTextDimDark = Color(0xFFB3B3B3)
+
+val AparatBackgroundLight = Color(0xFFFFFFFF)
+val AparatSurfaceLight = Color(0xFFF2F2F2)
+val AparatSurfaceLightElevated = Color(0xFFE6E6E6)
+val AparatTextDimLight = Color(0xFF6A6A6A)
+
 val Purple80 = Color(0xFFFA2D48)
 val PurpleGrey80 = Color(0xFFE5E5EA)
 val Pink80 = Color(0xFFFF2D55)

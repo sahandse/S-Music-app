@@ -50,7 +50,7 @@ private val AmoledColorScheme = darkColorScheme(
 
 @Composable
 fun MyApplicationTheme(
-    themeMode: String = "dark", // "light", "dark", "amoled", "glass", "spotify"
+    themeMode: String = "dark", // "light", "dark", "amoled", "glass", "spotify", "aparat", "aparat-light"
     themeAccent: String = "red", // "red", "blue", "green", "orange", "purple", "pink"
     lang: String = "fa", // "fa" uses Vazirmatn, "en" uses the Poppins Google font
     content: @Composable () -> Unit,
@@ -120,6 +120,29 @@ fun MyApplicationTheme(
             onSecondary = Color.White,
             onBackground = Color.White,
             onSurface = Color.White
+        )
+        // Aparat Music preset: monochrome (white-on-black / black-on-white), flat cards, no glass blur
+        "aparat" -> darkColorScheme(
+            primary = Color.White,
+            secondary = AparatTextDimDark,
+            tertiary = Color.White,
+            background = AparatBackgroundDark,
+            surface = AparatSurfaceDark,
+            onPrimary = Color.Black,
+            onSecondary = Color.White,
+            onBackground = Color.White,
+            onSurface = Color.White
+        )
+        "aparat-light" -> lightColorScheme(
+            primary = Color.Black,
+            secondary = AparatTextDimLight,
+            tertiary = Color.Black,
+            background = AparatBackgroundLight,
+            surface = AparatSurfaceLight,
+            onPrimary = Color.White,
+            onSecondary = Color.Black,
+            onBackground = Color.Black,
+            onSurface = Color.Black
         )
         else -> DarkColorScheme
     }

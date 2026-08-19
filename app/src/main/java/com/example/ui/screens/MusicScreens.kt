@@ -99,6 +99,8 @@ import com.example.ui.theme.AppleRed
 import com.example.ui.theme.AppleRedDark
 import com.example.ui.theme.SpotifyGreen
 import com.example.ui.theme.SpotifyBackground
+import com.example.ui.theme.AparatBackgroundDark
+import com.example.ui.theme.AparatBackgroundLight
 import com.example.ui.theme.LocalAppFontFamily
 import java.util.*
 import kotlin.math.roundToInt
@@ -420,7 +422,8 @@ fun AppNavigation(viewModel: MusicViewModel) {
     }
 }
 
-// --- First-run look picker: Spotify (flat black + green) vs Apple Music (glassy black + red) ---
+// --- First-run look picker: Spotify (flat black + green), Aparat Music (monochrome black/white),
+// or Apple Music (glassy black + red) ---
 @Composable
 fun ThemeChoiceScreen(viewModel: MusicViewModel) {
     Box(
@@ -450,7 +453,10 @@ fun ThemeChoiceScreen(viewModel: MusicViewModel) {
                 textAlign = TextAlign.Center
             )
 
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 ThemePresetCard(
                     title = "Spotify",
                     subtitle = translate("مشکی مسطح و سبز", "Flat black & green", viewModel),
@@ -458,6 +464,14 @@ fun ThemeChoiceScreen(viewModel: MusicViewModel) {
                     accent = SpotifyGreen,
                     flat = true,
                     onClick = { viewModel.applyThemePreset("spotify") }
+                )
+                ThemePresetCard(
+                    title = translate("آپارات موزیک", "Aparat Music", viewModel),
+                    subtitle = translate("مشکی خالص و مینیمال", "Pure black & minimal", viewModel),
+                    previewBackground = AparatBackgroundDark,
+                    accent = Color.White,
+                    flat = true,
+                    onClick = { viewModel.applyThemePreset("aparat") }
                 )
                 ThemePresetCard(
                     title = translate("اپل موزیک", "Apple Music", viewModel),
@@ -916,12 +930,13 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val isLight = themeMode == "light" || themeMode == "glass"
-    val backgroundColor = when {
-        themeMode == "glass" -> Color(0xFFF0F2F6)
-        themeMode == "spotify" -> SpotifyBackground
-        isLight -> Color.White
-        else -> Color.Black
+    val isLight = themeMode == "light" || themeMode == "glass" || themeMode == "aparat-light"
+    val backgroundColor = when (themeMode) {
+        "glass" -> Color(0xFFF0F2F6)
+        "spotify" -> SpotifyBackground
+        "aparat" -> AparatBackgroundDark
+        "aparat-light" -> AparatBackgroundLight
+        else -> if (isLight) Color.White else Color.Black
     }
     val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x55
     val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x38
@@ -7423,7 +7438,9 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     )
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val themes = listOf(
@@ -7431,13 +7448,14 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         "dark" to translate("تاریک", "Dark", viewModel),
                         "amoled" to translate("آمولد", "Amoled", viewModel),
                         "glass" to translate("شیشه‌ای", "Glass", viewModel),
-                        "spotify" to "Spotify"
+                        "spotify" to "Spotify",
+                        "aparat" to translate("آپارات تیره", "Aparat Dark", viewModel),
+                        "aparat-light" to translate("آپارات روشن", "Aparat Light", viewModel)
                     )
                     themes.forEach { t ->
                         val isSelected = themeMode == t.first
                         Box(
                             modifier = Modifier
-                                .weight(1f)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (isSelected) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
                                 .border(
@@ -7446,7 +7464,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                     shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable { viewModel.setThemeMode(t.first) }
-                                .padding(vertical = 8.dp),
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -7454,7 +7472,8 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontFamily = LocalAppFontFamily.current,
-                                color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                maxLines = 1
                             )
                         }
                     }

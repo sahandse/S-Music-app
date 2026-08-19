@@ -992,10 +992,20 @@ class MusicViewModel(
         prefs.edit().putString("theme_accent", accent).apply()
     }
 
-    // First-run look picker: "spotify" (flat black + green) or "apple" (glassy black + red)
+    // First-run look picker: "spotify" (flat black + green), "aparat" (monochrome black/white),
+    // or "apple" (glassy black + red)
     fun applyThemePreset(preset: String) {
-        setThemeMode(if (preset == "spotify") "spotify" else "dark")
-        setThemeAccent(if (preset == "spotify") "green" else "red")
+        val mode = when (preset) {
+            "spotify" -> "spotify"
+            "aparat" -> "aparat"
+            else -> "dark"
+        }
+        val accent = when (preset) {
+            "spotify" -> "green"
+            else -> "red"
+        }
+        setThemeMode(mode)
+        setThemeAccent(accent)
         _themeChoiceMade.value = true
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putBoolean("theme_choice_made", true).apply()
