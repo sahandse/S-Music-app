@@ -50,7 +50,7 @@ private val AmoledColorScheme = darkColorScheme(
 
 @Composable
 fun MyApplicationTheme(
-    themeMode: String = "dark", // "light", "dark", "amoled", "glass"
+    themeMode: String = "dark", // "light", "dark", "amoled", "glass", "spotify"
     themeAccent: String = "red", // "red", "blue", "green", "orange", "purple", "pink"
     lang: String = "fa", // "fa" uses Vazirmatn, "en" uses the Poppins Google font
     content: @Composable () -> Unit,
@@ -108,6 +108,18 @@ fun MyApplicationTheme(
             surface = Color(0xC0FFFFFF),
             onSurface = Color.Black,
             onBackground = Color.Black
+        )
+        // Spotify preset always uses Spotify's own green, regardless of the accent picker
+        "spotify" -> darkColorScheme(
+            primary = SpotifyGreen,
+            secondary = SpotifyGreen,
+            tertiary = SpotifyGreen,
+            background = SpotifyBackground,
+            surface = SpotifySurface,
+            onPrimary = Color.Black,
+            onSecondary = Color.White,
+            onBackground = Color.White,
+            onSurface = Color.White
         )
         else -> DarkColorScheme
     }

@@ -97,6 +97,8 @@ import com.example.data.network.SubsonicSong
 import com.example.ui.MusicViewModel
 import com.example.ui.theme.AppleRed
 import com.example.ui.theme.AppleRedDark
+import com.example.ui.theme.SpotifyGreen
+import com.example.ui.theme.SpotifyBackground
 import com.example.ui.theme.LocalAppFontFamily
 import java.util.*
 import kotlin.math.roundToInt
@@ -403,14 +405,131 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
 fun AppNavigation(viewModel: MusicViewModel) {
     val isConfigured by viewModel.isServerConfigured.collectAsStateWithLifecycle()
     val onboardingPreferencesSet by viewModel.onboardingPreferencesSet.collectAsStateWithLifecycle()
+    val themeChoiceMade by viewModel.themeChoiceMade.collectAsStateWithLifecycle()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        if (!isConfigured) {
+        if (!themeChoiceMade) {
+            ThemeChoiceScreen(viewModel = viewModel)
+        } else if (!isConfigured) {
             LoginScreen(viewModel = viewModel)
         } else if (!onboardingPreferencesSet) {
             GenrePreferenceScreen(viewModel = viewModel)
         } else {
             MainMusicApp(viewModel = viewModel)
+        }
+    }
+}
+
+// --- First-run look picker: Spotify (flat black + green) vs Apple Music (glassy black + red) ---
+@Composable
+fun ThemeChoiceScreen(viewModel: MusicViewModel) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(28.dp)
+        ) {
+            Text(
+                text = translate("چه ظاهری رو دوست داری؟", "Pick your look", viewModel),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                fontFamily = LocalAppFontFamily.current,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = translate("بعداً هم می‌تونی از تنظیمات عوضش کنی", "You can change this later in Settings", viewModel),
+                fontSize = 13.sp,
+                color = Color.White.copy(alpha = 0.5f),
+                fontFamily = LocalAppFontFamily.current,
+                textAlign = TextAlign.Center
+            )
+
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                ThemePresetCard(
+                    title = "Spotify",
+                    subtitle = translate("مشکی مسطح و سبز", "Flat black & green", viewModel),
+                    previewBackground = SpotifyBackground,
+                    accent = SpotifyGreen,
+                    flat = true,
+                    onClick = { viewModel.applyThemePreset("spotify") }
+                )
+                ThemePresetCard(
+                    title = translate("اپل موزیک", "Apple Music", viewModel),
+                    subtitle = translate("شیشه‌ای و قرمز", "Glassy & red", viewModel),
+                    previewBackground = Color.Black,
+                    accent = AppleRed,
+                    flat = false,
+                    onClick = { viewModel.applyThemePreset("apple") }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ThemePresetCard(
+    title: String,
+    subtitle: String,
+    previewBackground: Color,
+    accent: Color,
+    flat: Boolean,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(150.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(previewBackground)
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(if (flat) 14.dp else 18.dp))
+                .background(
+                    if (flat) accent else Brush.linearGradient(colors = listOf(accent, Color(0xFFFF2D55)))
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.MusicNote,
+                contentDescription = null,
+                tint = if (flat) Color.Black else Color.White,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current)
+        Text(
+            subtitle,
+            color = Color.White.copy(alpha = 0.55f),
+            fontSize = 11.sp,
+            fontFamily = LocalAppFontFamily.current,
+            textAlign = TextAlign.Center
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp)
+                .clip(RoundedCornerShape(if (flat) 6.dp else 14.dp))
+                .background(accent),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = if (flat) Color.Black else Color.White,
+                modifier = Modifier.size(16.dp)
+            )
         }
     }
 }
@@ -430,6 +549,9 @@ fun LoginScreen(viewModel: MusicViewModel) {
 
     val isAuthenticating by viewModel.isAuthenticating.collectAsStateWithLifecycle()
     val loginError by viewModel.loginError.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val isSpotify = themeMode == "spotify"
+    val accentColor = MaterialTheme.colorScheme.primary
     val context = LocalContext.current
 
     if (showRegisterSuccessDialog) {
@@ -489,7 +611,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                             Toast.makeText(context, "مرورگر باز نشد. آیدی تلگرام: @iappSupport", Toast.LENGTH_LONG).show()
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor)
                 ) {
                     Text("ارسال پیام در تلگرام", fontFamily = LocalAppFontFamily.current, fontWeight = FontWeight.Bold)
                 }
@@ -518,22 +640,21 @@ fun LoginScreen(viewModel: MusicViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Apple Music inspired floating music note logo
+            // Floating music note logo, matching the picked theme (flat for Spotify, gradient for Apple Music)
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        Brush.linearGradient(
-                            colors = listOf(AppleRed, Color(0xFFFF2D55))
-                        )
+                        if (isSpotify) androidx.compose.ui.graphics.SolidColor(accentColor)
+                        else Brush.linearGradient(colors = listOf(accentColor, Color(0xFFFF2D55)))
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = "High Music Logo",
-                    tint = Color.White,
+                    tint = if (isSpotify) Color.Black else Color.White,
                     modifier = Modifier.size(48.dp)
                 )
             }
@@ -546,7 +667,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
             )
 
             Text(
-                text = "پخش موسیقی لذت‌بخش با استایل اپل موزیک",
+                text = translate("پخش موسیقی، ساده و لذت‌بخش", "Enjoy your music", viewModel),
                 fontSize = 13.sp,
                 color = Color.White.copy(alpha = 0.6f),
                 textAlign = TextAlign.Center,
@@ -564,8 +685,8 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("name_input"),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AppleRed, 
-                        focusedLabelColor = AppleRed,
+                        focusedBorderColor = accentColor,
+                        focusedLabelColor = accentColor,
                         unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
                         unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
                         focusedTextColor = Color.White,
@@ -581,8 +702,8 @@ fun LoginScreen(viewModel: MusicViewModel) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth().testTag("username_input"),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AppleRed, 
-                    focusedLabelColor = AppleRed,
+                    focusedBorderColor = accentColor,
+                    focusedLabelColor = accentColor,
                     unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
                     unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
                     focusedTextColor = Color.White,
@@ -607,8 +728,8 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     }
                 },
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AppleRed, 
-                    focusedLabelColor = AppleRed,
+                    focusedBorderColor = accentColor,
+                    focusedLabelColor = accentColor,
                     unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
                     unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
                     focusedTextColor = Color.White,
@@ -627,9 +748,9 @@ fun LoginScreen(viewModel: MusicViewModel) {
                                 context.startActivity(intent)
                             } catch (e: Exception) {}
                         },
-                    colors = CardDefaults.cardColors(containerColor = AppleRed.copy(alpha = 0.15f)),
+                    colors = CardDefaults.cardColors(containerColor = accentColor.copy(alpha = 0.15f)),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(0.5.dp, AppleRed.copy(alpha = 0.3f))
+                    border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.3f))
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
@@ -649,7 +770,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                             fontSize = 9.sp,
                             fontFamily = LocalAppFontFamily.current,
                             fontWeight = FontWeight.Bold,
-                            color = AppleRed,
+                            color = accentColor,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -692,8 +813,12 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     .height(48.dp)
                     .testTag("register_button"),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRegisterMode) AppleRed else Color.White.copy(alpha = 0.12f),
-                    contentColor = if (isRegisterMode) Color.White else Color.White.copy(alpha = 0.85f)
+                    containerColor = if (isRegisterMode) accentColor else Color.White.copy(alpha = 0.12f),
+                    contentColor = when {
+                        !isRegisterMode -> Color.White.copy(alpha = 0.85f)
+                        isSpotify -> Color.Black
+                        else -> Color.White
+                    }
                 ),
                 shape = RoundedCornerShape(14.dp),
                 border = if (!isRegisterMode) BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)) else null
@@ -725,14 +850,21 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     .height(48.dp)
                     .testTag("login_button"),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (!isRegisterMode) AppleRed else Color.White.copy(alpha = 0.12f),
-                    contentColor = if (!isRegisterMode) Color.White else Color.White.copy(alpha = 0.85f)
+                    containerColor = if (!isRegisterMode) accentColor else Color.White.copy(alpha = 0.12f),
+                    contentColor = when {
+                        isRegisterMode -> Color.White.copy(alpha = 0.85f)
+                        isSpotify -> Color.Black
+                        else -> Color.White
+                    }
                 ),
                 shape = RoundedCornerShape(14.dp),
                 border = if (isRegisterMode) BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)) else null
             ) {
                 if (isAuthenticating && !isRegisterMode) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
+                    CircularProgressIndicator(
+                        color = if (isSpotify) Color.Black else Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
                 } else {
                     Text(
                         text = "ورود",
@@ -784,7 +916,12 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val isLight = themeMode == "light" || themeMode == "glass"
-    val backgroundColor = if (themeMode == "glass") Color(0xFFF0F2F6) else if (isLight) Color.White else Color.Black
+    val backgroundColor = when {
+        themeMode == "glass" -> Color(0xFFF0F2F6)
+        themeMode == "spotify" -> SpotifyBackground
+        isLight -> Color.White
+        else -> Color.Black
+    }
     val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x55
     val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x38
     val ambientColor1 = accentColor.copy(alpha = ambientAlpha1 / 255f)
@@ -7289,10 +7426,11 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val themes = listOf(
-                        "light" to translate("روشن", "Light", viewModel), 
-                        "dark" to translate("تاریک", "Dark", viewModel), 
-                        "amoled" to translate("آمولد", "Amoled", viewModel), 
-                        "glass" to translate("شیشه‌ای", "Glass", viewModel)
+                        "light" to translate("روشن", "Light", viewModel),
+                        "dark" to translate("تاریک", "Dark", viewModel),
+                        "amoled" to translate("آمولد", "Amoled", viewModel),
+                        "glass" to translate("شیشه‌ای", "Glass", viewModel),
+                        "spotify" to "Spotify"
                     )
                     themes.forEach { t ->
                         val isSelected = themeMode == t.first

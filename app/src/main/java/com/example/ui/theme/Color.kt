@@ -16,6 +16,11 @@ val GlassBorder = Color(0x26FFFFFF)       // 15% opacity white border highlight
 val GlassBorderLight = Color(0x26000000)  // 15% opacity dark border highlight for light mode
 val GlassAmbientRed = Color(0x26FA2D48)   // Ambient red glow behind glass
 
+// Spotify-inspired preset: flat black + green, no glass
+val SpotifyGreen = Color(0xFF1DB954)
+val SpotifyBackground = Color(0xFF121212)
+val SpotifySurface = Color(0xFF181818)
+
 val Purple80 = Color(0xFFFA2D48)
 val PurpleGrey80 = Color(0xFFE5E5EA)
 val Pink80 = Color(0xFFFF2D55)
