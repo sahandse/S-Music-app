@@ -11,6 +11,7 @@ import androidx.core.content.ContextCompat
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -55,6 +56,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.draw.scale
@@ -9276,14 +9278,31 @@ fun FullscreenPlayer(
                             Text("صف پخش خالی است", color = Color.Gray, fontFamily = LocalAppFontFamily.current)
                         }
                     } else {
+                        val density = LocalDensity.current
+                        // Row height (40dp cover + 16dp vertical padding) + 4dp spacing between items
+                        val rowHeightPx = with(density) { 60.dp.toPx() }
+                        var draggingIndex by remember { mutableStateOf<Int?>(null) }
+                        var dragOffsetPx by remember { mutableStateOf(0f) }
+
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            itemsIndexed(queue) { index, qSong ->
+                            itemsIndexed(queue, key = { _, item -> item.id }) { index, qSong ->
                                 val isActive = qSong.id == currentTrackId
+                                val isDragging = draggingIndex == index
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .zIndex(if (isDragging) 1f else 0f)
+                                        .graphicsLayer {
+                                            translationY = if (isDragging) dragOffsetPx else 0f
+                                        }
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
+                                        .background(
+                                            when {
+                                                isDragging -> MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                                isActive -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                                else -> Color.Transparent
+                                            }
+                                        )
                                         .clickable {
                                             viewModel.playbackConnection.playTrack(qSong, queue)
                                             showQueueSheet = false
@@ -9328,6 +9347,45 @@ fun FullscreenPlayer(
                                     if (isActive) {
                                         Icon(Icons.Default.VolumeUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                                     }
+                                    Icon(
+                                        imageVector = Icons.Default.DragHandle,
+                                        contentDescription = translate("جابه‌جایی", "Reorder", viewModel),
+                                        tint = Color.White.copy(alpha = 0.35f),
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .pointerInput(qSong.id) {
+                                                detectDragGestures(
+                                                    onDragStart = {
+                                                        draggingIndex = index
+                                                        dragOffsetPx = 0f
+                                                    },
+                                                    onDragEnd = {
+                                                        draggingIndex = null
+                                                        dragOffsetPx = 0f
+                                                    },
+                                                    onDragCancel = {
+                                                        draggingIndex = null
+                                                        dragOffsetPx = 0f
+                                                    },
+                                                    onDrag = { change, dragAmount ->
+                                                        change.consume()
+                                                        dragOffsetPx += dragAmount.y
+                                                        draggingIndex?.let { current ->
+                                                            val currentQueue = viewModel.playbackConnection.playbackQueue.value
+                                                            if (dragOffsetPx > rowHeightPx / 2 && current < currentQueue.lastIndex) {
+                                                                viewModel.playbackConnection.moveQueueItem(current, current + 1)
+                                                                draggingIndex = current + 1
+                                                                dragOffsetPx -= rowHeightPx
+                                                            } else if (dragOffsetPx < -rowHeightPx / 2 && current > 0) {
+                                                                viewModel.playbackConnection.moveQueueItem(current, current - 1)
+                                                                draggingIndex = current - 1
+                                                                dragOffsetPx += rowHeightPx
+                                                            }
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                    )
                                 }
                             }
                         }

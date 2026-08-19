@@ -237,6 +237,16 @@ class PlaybackConnection(
         }
     }
 
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        if (fromIndex == toIndex) return
+        val controller = mediaController ?: return
+        if (fromIndex !in _playbackQueue.value.indices || toIndex !in _playbackQueue.value.indices) return
+        controller.moveMediaItem(fromIndex, toIndex)
+        _playbackQueue.value = _playbackQueue.value.toMutableList().apply {
+            add(toIndex, removeAt(fromIndex))
+        }
+    }
+
     fun stopPlayback() {
         val controller = mediaController ?: return
         controller.stop()
