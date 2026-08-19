@@ -497,7 +497,8 @@ private fun ThemePresetCard(
                 .size(56.dp)
                 .clip(RoundedCornerShape(if (flat) 14.dp else 18.dp))
                 .background(
-                    if (flat) accent else Brush.linearGradient(colors = listOf(accent, Color(0xFFFF2D55)))
+                    if (flat) androidx.compose.ui.graphics.SolidColor(accent)
+                    else Brush.linearGradient(colors = listOf(accent, Color(0xFFFF2D55)))
                 ),
             contentAlignment = Alignment.Center
         ) {
