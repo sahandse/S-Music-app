@@ -96,7 +96,6 @@ import com.example.ui.theme.CardDark
 import com.example.data.network.SubsonicSong
 import com.example.ui.MusicViewModel
 import com.example.ui.theme.AppleRed
-import com.example.ui.theme.AppleRedDark
 import com.example.ui.theme.SpotifyGreen
 import com.example.ui.theme.SpotifyBackground
 import com.example.ui.theme.AparatBackgroundDark
@@ -150,7 +149,7 @@ fun Modifier.tvFocusable(
         .scale(scale)
         .border(
             width = if (isFocused) 2.dp else 0.dp,
-            color = if (isFocused) AppleRed.copy(alpha = borderAlpha) else Color.Transparent,
+            color = if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha) else Color.Transparent,
             shape = RoundedCornerShape(cornerRadius)
         )
 }
@@ -275,7 +274,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
 
                 if (isLoading) {
                     Box(modifier = Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = AppleRed)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (step == 0) {
                     LazyVerticalGrid(
@@ -290,8 +289,8 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) AppleRed.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f))
-                                    .border(1.dp, if (isSelected) AppleRed else Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f))
+                                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
                                     .clickable {
                                         selectedGenres = if (isSelected) selectedGenres - genre else selectedGenres + genre
                                     }
@@ -328,9 +327,9 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = Color.White,
                             unfocusedTextColor = Color.White,
-                            focusedBorderColor = AppleRed,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
-                            cursorColor = AppleRed
+                            cursorColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(14.dp)
                     )
@@ -365,7 +364,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                             modifier = Modifier
                                 .size(if (step == index) 10.dp else 8.dp)
                                 .clip(CircleShape)
-                                .background(if (step == index) AppleRed else Color.White.copy(alpha = 0.3f))
+                                .background(if (step == index) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.3f))
                         )
                     }
                 }
@@ -379,7 +378,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(14.dp)
                 ) {
                     Text(
@@ -916,8 +915,11 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
 
     val dominantColorArgb by viewModel.dominantColorArgb.collectAsStateWithLifecycle()
+    // Aparat's look is monochrome by design — don't let album-art color creep into nav/controls there
+    val isMonochromeTheme = themeMode == "aparat" || themeMode == "aparat-light"
+    val monochromeAccent = MaterialTheme.colorScheme.primary
     val accentColor by animateColorAsState(
-        targetValue = Color(dominantColorArgb),
+        targetValue = if (isMonochromeTheme) monochromeAccent else Color(dominantColorArgb),
         animationSpec = tween(durationMillis = 900),
         label = "AppAccentColor"
     )
@@ -986,7 +988,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         Icon(
                             imageVector = Icons.Filled.MusicNote,
                             contentDescription = "آوا",
-                            tint = AppleRed,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(36.dp)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
@@ -1445,7 +1447,7 @@ fun MiniPlayer(
     onClick: () -> Unit,
     onClose: () -> Unit = {},
     onCarMode: () -> Unit = {},
-    accentColor: Color = AppleRed,
+    accentColor: Color = MaterialTheme.colorScheme.primary,
     viewModel: MusicViewModel
 ) {
     val playbackProgress by viewModel.playbackConnection.playbackProgress.collectAsStateWithLifecycle()
@@ -1673,7 +1675,7 @@ fun HomeScreen(
 
     if (isLoading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = AppleRed)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -1712,7 +1714,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.DownloadForOffline,
                             contentDescription = "دانلودها",
-                            tint = AppleRed,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(32.dp)
                         )
                     }
@@ -1723,7 +1725,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Search,
                             contentDescription = "جستجو",
-                            tint = AppleRed,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -1734,7 +1736,7 @@ fun HomeScreen(
                         Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "پروفایل",
-                            tint = AppleRed,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -1769,7 +1771,7 @@ fun HomeScreen(
                     TextButton(onClick = onCatalogClick) {
                         Text(
                             text = translate("مشاهده همه", "See all", viewModel),
-                            color = AppleRed,
+                            color = MaterialTheme.colorScheme.primary,
                             fontFamily = LocalAppFontFamily.current
                         )
                     }
@@ -1808,7 +1810,7 @@ fun HomeScreen(
                     TextButton(onClick = onPodcastsClick) {
                         Text(
                             text = translate("مشاهده همه", "See all", viewModel),
-                            color = AppleRed,
+                            color = MaterialTheme.colorScheme.primary,
                             fontFamily = LocalAppFontFamily.current
                         )
                     }
@@ -1917,7 +1919,7 @@ fun HomeScreen(
                                 modifier = Modifier
                                     .padding(bottom = 6.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(AppleRed.copy(alpha = 0.85f))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
                                     .padding(horizontal = 8.dp, vertical = 2.dp)
                             ) {
                                 Text(
@@ -2476,7 +2478,7 @@ fun ArtistCircleCard(
                     Icon(
                         imageVector = if (isFavorite == true) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(15.dp)
                     )
                 }
@@ -2824,7 +2826,7 @@ fun TrackRowItem(
             Icon(
                 imageVector = Icons.Filled.Favorite,
                 contentDescription = "like",
-                tint = AppleRed,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
                     .align(Alignment.CenterStart)
                     .padding(start = 8.dp)
@@ -2841,7 +2843,7 @@ fun TrackRowItem(
             .fillMaxWidth()
             .offset { androidx.compose.ui.unit.IntOffset(swipeOffsetX.toInt().coerceAtMost(20), 0) }
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isCurrentlyPlaying) AppleRed.copy(alpha = 0.08f) else backgroundTint)
+            .background(if (isCurrentlyPlaying) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f) else backgroundTint)
             .tvFocusable(cornerRadius = 8.dp)
             .clickable(onClick = onPlay)
             .padding(vertical = 8.dp, horizontal = 4.dp),
@@ -2872,7 +2874,7 @@ fun TrackRowItem(
                         Icon(
                             imageVector = Icons.Filled.VolumeUp,
                             contentDescription = "در حال پخش",
-                            tint = AppleRed,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -2884,7 +2886,7 @@ fun TrackRowItem(
                     text = song.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isCurrentlyPlaying) AppleRed else MaterialTheme.colorScheme.onBackground,
+                    color = if (isCurrentlyPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -2971,7 +2973,7 @@ fun TrackRowItem(
                     Icon(
                         imageVector = Icons.Filled.Favorite,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                     LaunchedEffect(showHeartAnim) {
@@ -3059,7 +3061,7 @@ fun PlaylistSelectorDialog(
                 Button(
                     onClick = onDismiss,
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("بستن")
                 }
@@ -3145,7 +3147,7 @@ fun SearchScreen(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = null,
-                    tint = AppleRed,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 10.dp).size(22.dp)
                 )
                 BasicTextField(
@@ -3157,7 +3159,7 @@ fun SearchScreen(
                         fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(AppleRed),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .weight(1f)
                         .testTag("search_input"),
@@ -3196,7 +3198,7 @@ fun SearchScreen(
                         }
                     },
                     modifier = Modifier
-                        .background(AppleRed, CircleShape)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
                         .size(40.dp)
                 ) {
                     Icon(imageVector = Icons.Default.Mic, contentDescription = "Voice Search", tint = Color.White, modifier = Modifier.size(20.dp))
@@ -3215,7 +3217,7 @@ fun SearchScreen(
                     val tabs = listOf("همه", "آهنگ‌ها", "آلبوم‌ها", "هنرمندان")
                     tabs.forEach { tab ->
                         val isSelected = activeFilter == tab
-                        val backgroundColor = if (isSelected) AppleRed else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        val backgroundColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                         val textColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
 
                         Box(
@@ -3261,8 +3263,8 @@ fun SearchScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(if (isSelected) AppleRed.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .border(1.dp, if (isSelected) AppleRed else Color.Transparent, RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(14.dp))
                                     .clickable { selectedGenre = if (isSelected) null else genre }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
@@ -3271,7 +3273,7 @@ fun SearchScreen(
                                     text = genre,
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                     fontFamily = LocalAppFontFamily.current
                                 )
                             }
@@ -3281,8 +3283,8 @@ fun SearchScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(if (isSelected) AppleRed.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
-                                    .border(1.dp, if (isSelected) AppleRed else Color.Transparent, RoundedCornerShape(14.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(14.dp))
                                     .clickable { selectedYear = if (isSelected) null else year }
                                     .padding(horizontal = 12.dp, vertical = 6.dp),
                                 contentAlignment = Alignment.Center
@@ -3291,7 +3293,7 @@ fun SearchScreen(
                                     text = year.toString(),
                                     fontSize = 11.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                     fontFamily = LocalAppFontFamily.current
                                 )
                             }
@@ -3305,7 +3307,7 @@ fun SearchScreen(
 
             if (isSearching) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AppleRed)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (query.isEmpty()) {
                 // Search History, Suggestions & Explore Categories (Scrollable)
@@ -3346,7 +3348,7 @@ fun SearchScreen(
                         ) {
                             Text(text = translate("تاریخچه جستجو", "Search History", viewModel), fontWeight = FontWeight.Bold, fontSize = 16.sp, fontFamily = LocalAppFontFamily.current)
                             TextButton(onClick = { viewModel.clearSearchHistory() }) {
-                                Text(translate("پاک کردن همه", "Clear All", viewModel), color = AppleRed, fontFamily = LocalAppFontFamily.current)
+                                Text(translate("پاک کردن همه", "Clear All", viewModel), color = MaterialTheme.colorScheme.primary, fontFamily = LocalAppFontFamily.current)
                             }
                         }
 
@@ -3515,7 +3517,7 @@ fun SearchScreen(
                                     text = translate("هنرمندان", "Artists", viewModel),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
-                                    color = AppleRed,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontFamily = LocalAppFontFamily.current,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
@@ -3563,7 +3565,7 @@ fun SearchScreen(
                                     text = translate("آلبوم‌ها", "Albums", viewModel),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
-                                    color = AppleRed,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontFamily = LocalAppFontFamily.current,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
@@ -3620,7 +3622,7 @@ fun SearchScreen(
                                     text = translate("آهنگ‌ها", "Songs", viewModel),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 16.sp,
-                                    color = AppleRed,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontFamily = LocalAppFontFamily.current,
                                     modifier = Modifier.padding(vertical = 4.dp)
                                 )
@@ -3645,14 +3647,14 @@ fun SearchScreen(
                                     Icon(
                                         imageVector = Icons.Default.Lyrics,
                                         contentDescription = null,
-                                        tint = AppleRed,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
                                         text = translate("پیدا شده در متن آهنگ", "Found in Lyrics", viewModel),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp,
-                                        color = AppleRed,
+                                        color = MaterialTheme.colorScheme.primary,
                                         fontFamily = LocalAppFontFamily.current
                                     )
                                 }
@@ -3671,13 +3673,13 @@ fun SearchScreen(
                                         modifier = Modifier
                                             .size(42.dp)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(AppleRed.copy(alpha = 0.12f)),
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.Lyrics,
                                             contentDescription = null,
-                                            tint = AppleRed,
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(20.dp)
                                         )
                                     }
@@ -3716,14 +3718,14 @@ fun SearchScreen(
                                     Icon(
                                         imageVector = Icons.Default.OfflinePin,
                                         contentDescription = null,
-                                        tint = AppleRed,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
                                         text = translate("دانلودشده", "Downloaded", viewModel),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 16.sp,
-                                        color = AppleRed,
+                                        color = MaterialTheme.colorScheme.primary,
                                         fontFamily = LocalAppFontFamily.current
                                     )
                                 }
@@ -3759,14 +3761,14 @@ fun SearchScreen(
                                                 contentScale = ContentScale.Crop
                                             )
                                         } else {
-                                            Icon(Icons.Default.MusicNote, contentDescription = null, tint = AppleRed, modifier = Modifier.size(22.dp))
+                                            Icon(Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                                         }
                                     }
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(track.title, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
                                         Text(track.artist, fontSize = 12.sp, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
                                     }
-                                    Icon(Icons.Default.OfflinePin, contentDescription = null, tint = AppleRed.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Default.OfflinePin, contentDescription = null, tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), modifier = Modifier.size(16.dp))
                                 }
                             }
                         }
@@ -3898,7 +3900,7 @@ fun LibraryScreen(
                 Icon(
                     imageVector = smart.third,
                     contentDescription = null,
-                    tint = AppleRed,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(22.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
@@ -3961,13 +3963,13 @@ fun LibraryScreen(
                                     modifier = Modifier
                                         .size(48.dp)
                                         .clip(CircleShape)
-                                        .background(AppleRed.copy(alpha = 0.15f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Radio,
                                         contentDescription = null,
-                                        tint = AppleRed,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(24.dp)
                                     )
                                 }
@@ -3983,7 +3985,7 @@ fun LibraryScreen(
                                 Icon(
                                     imageVector = Icons.Default.PlayCircle,
                                     contentDescription = "پخش",
-                                    tint = AppleRed,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -4002,7 +4004,7 @@ fun LibraryScreen(
             ) {
                 Text(text = translate("لیست‌های پخش من", "My Playlists", viewModel), fontWeight = FontWeight.Bold, fontSize = 20.sp)
                 IconButton(onClick = { showCreatePlaylistDialog = true }) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "ایجاد پلی‌لیست", tint = AppleRed)
+                    Icon(imageVector = Icons.Default.Add, contentDescription = "ایجاد پلی‌لیست", tint = MaterialTheme.colorScheme.primary)
                 }
             }
         }
@@ -4076,7 +4078,7 @@ fun LibraryScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(imageVector = icon, contentDescription = null, tint = AppleRed, modifier = Modifier.size(24.dp))
+                            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                             Column {
                                 Text(labels.first, fontWeight = FontWeight.Bold, fontSize = 14.sp, fontFamily = LocalAppFontFamily.current)
                                 Text(labels.second, fontSize = 11.sp, color = Color.Gray, fontFamily = LocalAppFontFamily.current)
@@ -4109,13 +4111,13 @@ fun LibraryScreen(
                         onValueChange = { playlistName = it },
                         label = { Text("نام لیست پخش") },
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                     )
                     OutlinedTextField(
                         value = playlistDesc,
                         onValueChange = { playlistDesc = it },
                         label = { Text("توضیحات (اختیاری)") },
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                     )
                 }
             },
@@ -4128,7 +4130,7 @@ fun LibraryScreen(
                         }
                     }
                 ) {
-                    Text("ایجاد", color = AppleRed)
+                    Text("ایجاد", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -4181,19 +4183,19 @@ private fun ManualPlaylistDialog(viewModel: MusicViewModel, onDismiss: () -> Uni
                     onValueChange = { playlistName = it },
                     label = { Text("نام لیست پخش") },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
                 OutlinedTextField(
                     value = pickerQuery,
                     onValueChange = { pickerQuery = it },
                     label = { Text("جستجوی آهنگ...") },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
                 Text(
                     text = "${selected.size} آهنگ انتخاب شده",
                     fontSize = 12.sp,
-                    color = AppleRed,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold,
                     fontFamily = LocalAppFontFamily.current
                 )
@@ -4218,7 +4220,7 @@ private fun ManualPlaylistDialog(viewModel: MusicViewModel, onDismiss: () -> Uni
                                     if (isSelected) selected.removeAll { it.id == song.id }
                                     else selected.add(song)
                                 },
-                                colors = CheckboxDefaults.colors(checkedColor = AppleRed)
+                                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                             )
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(song.title, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
@@ -4239,7 +4241,7 @@ private fun ManualPlaylistDialog(viewModel: MusicViewModel, onDismiss: () -> Uni
                 },
                 enabled = playlistName.isNotBlank() && selected.isNotEmpty()
             ) {
-                Text("ایجاد (${selected.size})", color = if (playlistName.isNotBlank() && selected.isNotEmpty()) AppleRed else Color.Gray)
+                Text("ایجاد (${selected.size})", color = if (playlistName.isNotBlank() && selected.isNotEmpty()) MaterialTheme.colorScheme.primary else Color.Gray)
             }
         },
         dismissButton = {
@@ -4279,11 +4281,11 @@ private fun SpotifyImportDialog(viewModel: MusicViewModel, onDismiss: () -> Unit
                     label = { Text("https://open.spotify.com/playlist/...") },
                     singleLine = true,
                     enabled = !isImporting,
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                 )
                 if (isImporting) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CircularProgressIndicator(color = AppleRed, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Text("در حال دریافت و تطبیق آهنگ‌ها...", fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                 }
@@ -4291,7 +4293,7 @@ private fun SpotifyImportDialog(viewModel: MusicViewModel, onDismiss: () -> Unit
                     Text(
                         text = status,
                         fontSize = 13.sp,
-                        color = if (status.startsWith("✓")) Color(0xFF34C759) else AppleRed,
+                        color = if (status.startsWith("✓")) Color(0xFF34C759) else MaterialTheme.colorScheme.primary,
                         fontFamily = LocalAppFontFamily.current
                     )
                 }
@@ -4302,7 +4304,7 @@ private fun SpotifyImportDialog(viewModel: MusicViewModel, onDismiss: () -> Unit
                 onClick = { viewModel.importSpotifyPlaylist(spotifyLink.trim()) },
                 enabled = !isImporting && spotifyLink.isNotBlank()
             ) {
-                Text("ایمپورت", color = if (!isImporting && spotifyLink.isNotBlank()) AppleRed else Color.Gray)
+                Text("ایمپورت", color = if (!isImporting && spotifyLink.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray)
             }
         },
         dismissButton = {
@@ -4408,7 +4410,7 @@ fun SubLibraryItemsView(
                                 )
                                 Button(
                                     onClick = { viewModel.playAllSongsInQueue(smartSongs) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp)
                                 ) {
                                     Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -4512,7 +4514,7 @@ fun SubLibraryItemsView(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AppleRed)
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                         )
                         if (filteredSorted.isEmpty()) {
                             EmptyStateView(message = translate("هنرمندی یافت نشد.", "No artists found.", viewModel))
@@ -4552,7 +4554,7 @@ fun SubLibraryItemsView(
                                                 text = letter,
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = AppleRed,
+                                                color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier
                                                     .clickable {
                                                         coroutineScope.launch { gridState.scrollToItem(index) }
@@ -4663,7 +4665,7 @@ fun SubLibraryItemsView(
                                         Icon(
                                             imageVector = Icons.Default.DeleteSweep,
                                             contentDescription = delAllLabel,
-                                            tint = AppleRed
+                                            tint = MaterialTheme.colorScheme.primary
                                         )
                                     }
                                 }
@@ -4684,7 +4686,7 @@ fun SubLibraryItemsView(
                                                 modifier = Modifier
                                                     .fillMaxHeight()
                                                     .weight(maxOf(0.01f, sMusicWeight))
-                                                    .background(AppleRed)
+                                                    .background(MaterialTheme.colorScheme.primary)
                                             )
                                         }
                                         if (otherFilesWeight > 0) {
@@ -4711,7 +4713,7 @@ fun SubLibraryItemsView(
                                             horizontalArrangement = Arrangement.SpaceBetween
                                         ) {
                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(AppleRed))
+                                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary))
                                                 Text(text = "$usedLabel $totalMB", fontSize = 10.sp, fontFamily = LocalAppFontFamily.current, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                                             }
                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -4772,9 +4774,9 @@ fun SubLibraryItemsView(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 16.dp, vertical = 4.dp)
-                                    .border(1.dp, AppleRed.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                                 shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = AppleRed.copy(alpha = 0.08f))
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
                             ) {
                                 Row(
                                     modifier = Modifier.padding(12.dp),
@@ -4782,7 +4784,7 @@ fun SubLibraryItemsView(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     CircularProgressIndicator(
-                                        color = AppleRed,
+                                        color = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(24.dp),
                                         strokeWidth = 2.dp
                                     )
@@ -4792,7 +4794,7 @@ fun SubLibraryItemsView(
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
                                             fontFamily = LocalAppFontFamily.current,
-                                            color = AppleRed
+                                            color = MaterialTheme.colorScheme.primary
                                         )
                                         Text(
                                             text = translate(
@@ -4861,9 +4863,9 @@ fun SubLibraryItemsView(
                             ) {
                                 items(sortOptions) { option ->
                                     val isSelected = sortBy == option.first
-                                    val chipBg = if (isSelected) AppleRed.copy(alpha = 0.15f) else Color.Transparent
-                                    val chipBorderColor = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-                                    val chipTextColor = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface
+                                    val chipBg = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent
+                                    val chipBorderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+                                    val chipTextColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                     
                                     Box(
                                         modifier = Modifier
@@ -5524,7 +5526,7 @@ fun ArtistDetailView(
     Scaffold { padding ->
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AppleRed)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -5604,7 +5606,7 @@ fun ArtistDetailView(
                                     modifier = Modifier
                                         .size(114.dp)
                                         .clip(CircleShape)
-                                        .border(2.5.dp, AppleRed, CircleShape),
+                                        .border(2.5.dp, MaterialTheme.colorScheme.primary, CircleShape),
                                     contentScale = ContentScale.Crop
                                 )
                                 
@@ -5691,8 +5693,8 @@ fun ArtistDetailView(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(16.dp))
-                                            .background(if (isFav) AppleRed.copy(alpha = 0.15f) else AppleRed)
-                                            .border(1.dp, AppleRed, RoundedCornerShape(16.dp))
+                                            .background(if (isFav) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.primary)
+                                            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(16.dp))
                                             .clickable { viewModel.toggleFavoriteArtist(artist) }
                                             .padding(horizontal = 14.dp, vertical = 6.dp),
                                         contentAlignment = Alignment.Center
@@ -5704,7 +5706,7 @@ fun ArtistDetailView(
                                             Icon(
                                                 imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                                 contentDescription = null,
-                                                tint = if (isFav) AppleRed else Color.White,
+                                                tint = if (isFav) MaterialTheme.colorScheme.primary else Color.White,
                                                 modifier = Modifier.size(13.dp)
                                             )
                                             Text(
@@ -5712,7 +5714,7 @@ fun ArtistDetailView(
                                                 fontFamily = LocalAppFontFamily.current,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (isFav) AppleRed else Color.White
+                                                color = if (isFav) MaterialTheme.colorScheme.primary else Color.White
                                             )
                                         }
                                     }
@@ -5774,7 +5776,7 @@ fun ArtistDetailView(
                                             Icon(
                                                 imageVector = Icons.Default.Info,
                                                 contentDescription = null,
-                                                tint = AppleRed,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Text(
@@ -5782,7 +5784,7 @@ fun ArtistDetailView(
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 fontFamily = LocalAppFontFamily.current,
-                                                color = AppleRed
+                                                color = MaterialTheme.colorScheme.primary
                                             )
                                         }
                                         Text(
@@ -5829,17 +5831,17 @@ fun ArtistDetailView(
                                                     context.startActivity(intent)
                                                 } catch (e: Exception) {}
                                             },
-                                            border = BorderStroke(1.dp, AppleRed),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                                             shape = RoundedCornerShape(12.dp)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.OpenInBrowser,
                                                 contentDescription = null,
-                                                tint = AppleRed,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
-                                            Text("ویکیپدیا", color = AppleRed, fontFamily = LocalAppFontFamily.current)
+                                            Text("ویکیپدیا", color = MaterialTheme.colorScheme.primary, fontFamily = LocalAppFontFamily.current)
                                         }
                                     }
 
@@ -5956,10 +5958,10 @@ fun ArtistDetailView(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(12.dp))
-                                            .background(if (isSelected) AppleRed.copy(alpha = 0.12f) else Color.Transparent)
+                                            .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f) else Color.Transparent)
                                             .border(
                                                 width = 1.dp,
-                                                color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
                                                 shape = RoundedCornerShape(12.dp)
                                             )
                                             .clickable { sortBy = opt.first }
@@ -5970,7 +5972,7 @@ fun ArtistDetailView(
                                             fontSize = 11.sp,
                                             fontFamily = LocalAppFontFamily.current,
                                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                         )
                                     }
                                 }
@@ -6079,7 +6081,7 @@ fun ArtistDetailView(
                     if (isLoadingAllSongs) {
                         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(2) }) {
                             Box(modifier = Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = AppleRed, modifier = Modifier.size(24.dp))
+                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                             }
                         }
                     } else if (allSongs.isEmpty()) {
@@ -6115,7 +6117,7 @@ fun ArtistDetailView(
                                         Icon(
                                             imageVector = Icons.Default.PlayCircleOutline,
                                             contentDescription = "موزیک ویدیو",
-                                            tint = AppleRed,
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -6250,7 +6252,7 @@ fun AlbumDetailView(
     Box(modifier = Modifier.fillMaxSize()) {
         if (isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AppleRed)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             LazyColumn(
@@ -6356,7 +6358,7 @@ fun AlbumDetailView(
                         ) {
                             Button(
                                 onClick = { viewModel.playAllSongsInQueue(songs) },
-                                colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
                                 Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -6372,7 +6374,7 @@ fun AlbumDetailView(
                                 Icon(
                                     imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                     contentDescription = null,
-                                    tint = if (isFav) AppleRed else MaterialTheme.colorScheme.onSurface
+                                    tint = if (isFav) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             IconButton(onClick = { viewModel.addToQueue(songs) }) {
@@ -6495,7 +6497,7 @@ fun PlaylistDetailView(
                                 val songsList = items.map { SubsonicSong(it.trackId, it.title, it.album, it.artist, coverArt = it.coverArtUrl, duration = it.duration) }
                                 viewModel.playAllSongsInQueue(songsList)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
                         ) {
                             Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null)
@@ -6722,8 +6724,8 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                     modifier = Modifier
                         .size(72.dp)
                         .clip(CircleShape)
-                        .background(AppleRed.copy(alpha = 0.15f))
-                        .border(2.dp, AppleRed, CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
                         .clickable {
                             photoPickerLauncher.launch(
                                 androidx.activity.result.PickVisualMediaRequest(
@@ -6745,7 +6747,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                             text = (userName.firstOrNull() ?: 'S').uppercaseChar().toString(),
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold,
-                            color = AppleRed,
+                            color = MaterialTheme.colorScheme.primary,
                             fontFamily = LocalAppFontFamily.current
                         )
                     }
@@ -6763,7 +6765,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = translate("ویرایش نام", "Edit Name", viewModel),
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -6828,7 +6830,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                         text = "$unlockedCount/$totalBadges",
                         fontSize = 12.sp,
                         fontFamily = LocalAppFontFamily.current,
-                        color = AppleRed,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -6853,8 +6855,8 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                                     modifier = Modifier
                                         .size(56.dp)
                                         .clip(CircleShape)
-                                        .background(AppleRed.copy(alpha = 0.12f))
-                                        .border(1.5.dp, AppleRed.copy(alpha = 0.4f), CircleShape),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                        .border(1.5.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(text = emoji, fontSize = 24.sp)
@@ -6922,11 +6924,11 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(AppleRed.copy(alpha = 0.12f))
-                                    .border(1.dp, AppleRed.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                                    .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                             ) {
-                                Text(text = genre, fontSize = 12.sp, color = AppleRed, fontFamily = LocalAppFontFamily.current)
+                                Text(text = genre, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary, fontFamily = LocalAppFontFamily.current)
                             }
                         }
                     }
@@ -6976,7 +6978,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                                         .width(14.dp)
                                         .height((60.dp * count / maxCount).coerceAtLeast(4.dp))
                                         .clip(RoundedCornerShape(4.dp))
-                                        .background(if (count > 0) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
+                                        .background(if (count > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
@@ -7017,7 +7019,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                                 text = "${idx + 1}",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (idx == 0) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                color = if (idx == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                                 modifier = Modifier.width(18.dp),
                                 textAlign = TextAlign.Center
                             )
@@ -7064,7 +7066,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                                         .clip(CircleShape)
                                         .background(
                                             Brush.linearGradient(
-                                                listOf(AppleRed.copy(alpha = 0.6f + idx * 0.13f), Color(0xFF8E24AA).copy(alpha = 0.5f))
+                                                listOf(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f + idx * 0.13f), Color(0xFF8E24AA).copy(alpha = 0.5f))
                                             )
                                         ),
                                     contentAlignment = Alignment.Center
@@ -7195,7 +7197,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
                             },
                             enabled = editedName.isNotBlank()
                         ) {
-                            Text(translate("ذخیره", "Save", viewModel), color = AppleRed, fontWeight = FontWeight.Bold)
+                            Text(translate("ذخیره", "Save", viewModel), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -7217,7 +7219,7 @@ fun ProfileStatCard(modifier: Modifier = Modifier, icon: androidx.compose.ui.gra
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(imageVector = icon, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+            Icon(imageVector = icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             Text(text = value, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
             Text(text = label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -7279,7 +7281,7 @@ fun AddServerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isAuthenticating) {
-                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = AppleRed, strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp)
                     } else {
                         TextButton(onClick = onDismiss) {
                             Text(translate("انصراف", "Cancel", viewModel))
@@ -7288,7 +7290,7 @@ fun AddServerDialog(
                             onClick = { onConfirm(url.trim(), username.trim(), password, false) },
                             enabled = url.isNotBlank() && username.isNotBlank() && password.isNotBlank()
                         ) {
-                            Text(translate("اتصال", "Connect", viewModel), color = AppleRed, fontWeight = FontWeight.Bold)
+                            Text(translate("اتصال", "Connect", viewModel), color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -7372,7 +7374,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.Language,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -7394,10 +7396,10 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(if (isSelected) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
                                 .border(
                                     width = 1.dp,
-                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .clickable { viewModel.setLanguage(langOption.first) }
@@ -7409,7 +7411,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 fontFamily = LocalAppFontFamily.current,
-                                color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                             )
                         }
                     }
@@ -7426,7 +7428,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.Palette,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -7457,10 +7459,10 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (isSelected) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
                                 .border(
                                     width = 1.dp,
-                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                                     shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable { viewModel.setThemeMode(t.first) }
@@ -7472,7 +7474,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontFamily = LocalAppFontFamily.current,
-                                color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                                 maxLines = 1
                             )
                         }
@@ -7490,7 +7492,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.ColorLens,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -7636,7 +7638,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.Hearing,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -7664,10 +7666,10 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (isSelected) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
                                 .border(
                                     width = 1.dp,
-                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                                     shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable { viewModel.setAudioQuality(q.first) }
@@ -7679,7 +7681,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontFamily = LocalAppFontFamily.current,
-                                color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -7696,7 +7698,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.Download,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -7724,10 +7726,10 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(if (isSelected) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
                                 .border(
                                     width = 1.dp,
-                                    color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f),
                                     shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable { viewModel.setDownloadQuality(q.first) }
@@ -7739,7 +7741,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                 fontSize = 11.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontFamily = LocalAppFontFamily.current,
-                                color = if (isSelected) AppleRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         }
                     }
@@ -7756,7 +7758,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.SdStorage,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -7782,10 +7784,10 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                             val msg = if (language == "fa") "حافظه موقت پاکسازی شد." else "Temporary cache cleared."
                             Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                         },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth(),
-                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                     ) {
                         Text(translate("پاک کردن کش موقت", "Clear Temporary Cache", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
@@ -7812,7 +7814,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.GraphicEq,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -7834,7 +7836,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     value = bassLevel.toFloat(),
                     onValueChange = { viewModel.setBassLevel(it.toInt()) },
                     valueRange = 0f..100f,
-                    colors = SliderDefaults.colors(thumbColor = AppleRed, activeTrackColor = AppleRed)
+                    colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary)
                 )
 
                 Text(
@@ -7847,7 +7849,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     value = trebleLevel.toFloat(),
                     onValueChange = { viewModel.setTrebleLevel(it.toInt()) },
                     valueRange = 0f..100f,
-                    colors = SliderDefaults.colors(thumbColor = AppleRed, activeTrackColor = AppleRed)
+                    colors = SliderDefaults.colors(thumbColor = MaterialTheme.colorScheme.primary, activeTrackColor = MaterialTheme.colorScheme.primary)
                 )
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
@@ -7868,7 +7870,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         Switch(
                             checked = crossfadeEnabled,
                             onCheckedChange = { viewModel.setCrossfadeEnabled(it) },
-                            colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                            colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                         )
                     }
                     androidx.compose.animation.AnimatedVisibility(visible = crossfadeEnabled) {
@@ -7888,7 +7890,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                     text = "$crossfadeDurationSeconds ${translate("ثانیه", "sec", viewModel)}",
                                     fontSize = 12.sp,
                                     fontFamily = LocalAppFontFamily.current,
-                                    color = AppleRed
+                                    color = MaterialTheme.colorScheme.primary
                                 )
                             }
                             Slider(
@@ -7897,9 +7899,9 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                 valueRange = 1f..12f,
                                 steps = 10,
                                 colors = androidx.compose.material3.SliderDefaults.colors(
-                                    thumbColor = AppleRed,
-                                    activeTrackColor = AppleRed,
-                                    inactiveTrackColor = AppleRed.copy(alpha = 0.25f)
+                                    thumbColor = MaterialTheme.colorScheme.primary,
+                                    activeTrackColor = MaterialTheme.colorScheme.primary,
+                                    inactiveTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                                 ),
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -7922,7 +7924,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Switch(
                         checked = wifiOnlyDownload,
                         onCheckedChange = { viewModel.setWifiOnlyDownload(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
 
@@ -7949,7 +7951,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Switch(
                         checked = saveDownloadsPublic,
                         onCheckedChange = { viewModel.setSaveDownloadsPublic(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
 
@@ -7976,7 +7978,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Switch(
                         checked = fadeOnPause,
                         onCheckedChange = { viewModel.setFadeOnPause(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
 
@@ -8003,7 +8005,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Switch(
                         checked = resumeOnBluetooth,
                         onCheckedChange = { viewModel.setResumeOnBluetooth(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
             }
@@ -8028,7 +8030,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.Backup,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -8045,19 +8047,19 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                 ) {
                     OutlinedButton(
                         onClick = { viewModel.exportPlaylistsBackup() },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f),
-                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                     ) {
                         Text(translate("ذخیره پشتیبان", "Backup", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                     OutlinedButton(
                         onClick = { viewModel.restorePlaylistsBackup() },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f),
-                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                     ) {
                         Text(translate("بازیابی", "Restore", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
@@ -8076,19 +8078,19 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                 ) {
                     OutlinedButton(
                         onClick = { backupExportLauncher.launch("smusic_backup.json") },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f),
-                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                     ) {
                         Text(translate("خروجی به فایل", "Export to file", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                     OutlinedButton(
                         onClick = { backupImportLauncher.launch(arrayOf("application/json", "text/*", "application/octet-stream")) },
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f),
-                        border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                     ) {
                         Text(translate("بازیابی از فایل", "Restore from file", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
@@ -8119,7 +8121,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Switch(
                         checked = autoBackupEnabled,
                         onCheckedChange = { viewModel.setAutoBackupEnabled(it) },
-                        colors = SwitchDefaults.colors(checkedThumbColor = AppleRed, checkedTrackColor = AppleRed.copy(alpha = 0.5f))
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary, checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     )
                 }
             }
@@ -8144,7 +8146,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.AccountCircle,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -8159,9 +8161,9 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                 Button(
                     onClick = { viewModel.logout() },
                     modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed.copy(alpha = 0.1f), contentColor = AppleRed),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), contentColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.4f))
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.4f))
                 ) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -8171,7 +8173,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         Icon(
                             imageVector = Icons.Default.ExitToApp,
                             contentDescription = "Logout",
-                            tint = AppleRed
+                            tint = MaterialTheme.colorScheme.primary
                         )
                         Text(
                             text = translate("خروج از حساب کاربری", "Log Out of Account", viewModel),
@@ -8486,7 +8488,7 @@ fun FullscreenPlayer(
                     if (downloadProgress != null) {
                         CircularProgressIndicator(
                             progress = { downloadProgress },
-                            color = AppleRed,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(10.dp).size(20.dp),
                             strokeWidth = 2.dp
                         )
@@ -8503,7 +8505,7 @@ fun FullscreenPlayer(
                             Icon(
                                 imageVector = if (isDownloaded) Icons.Default.OfflinePin else Icons.Outlined.FileDownload,
                                 contentDescription = "دانلود",
-                                tint = if (isDownloaded) AppleRed else Color.White
+                                tint = if (isDownloaded) MaterialTheme.colorScheme.primary else Color.White
                             )
                         }
                     }
@@ -8522,7 +8524,7 @@ fun FullscreenPlayer(
                         Icon(
                             imageVector = if (sleepTimerLeft != null) Icons.Filled.Timer else Icons.Outlined.Timer,
                             contentDescription = "تایمر خواب",
-                            tint = if (sleepTimerLeft != null) AppleRed else Color.White
+                            tint = if (sleepTimerLeft != null) MaterialTheme.colorScheme.primary else Color.White
                         )
                     }
                 }
@@ -8667,7 +8669,7 @@ fun FullscreenPlayer(
                 } else {
                     // Scrolling Lyrics Board
                     if (isLoadingLyrics) {
-                        CircularProgressIndicator(color = AppleRed)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     } else if (lyrics == null) {
                         Text(translate("متن موسیقی یافت نشد.", "Lyrics not found.", viewModel), color = Color.White.copy(alpha = 0.6f), fontSize = 15.sp)
                     } else {
@@ -8805,7 +8807,7 @@ fun FullscreenPlayer(
                             Icon(
                                 imageVector = Icons.Default.Person,
                                 contentDescription = null,
-                                tint = AppleRed,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(14.dp)
                             )
 
@@ -8898,7 +8900,7 @@ fun FullscreenPlayer(
                                 Icon(
                                     imageVector = Icons.Default.Shuffle,
                                     contentDescription = "تصادفی",
-                                    tint = if (isShuffle) AppleRed else Color.White.copy(alpha = 0.6f),
+                                    tint = if (isShuffle) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -8907,7 +8909,7 @@ fun FullscreenPlayer(
                                 Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "قبلی", tint = Color.White, modifier = Modifier.size(36.dp))
                             }
 
-                            // Giant centered play/pause trigger with AppleRed fill
+                            // Giant centered play/pause trigger with MaterialTheme.colorScheme.primary fill
                             Box(contentAlignment = Alignment.Center) {
                                 if (isPlaying) {
                                     val pulseAnim = rememberInfiniteTransition(label = "pulse")
@@ -8939,7 +8941,7 @@ fun FullscreenPlayer(
                                     modifier = Modifier
                                         .size(72.dp)
                                         .shadow(8.dp, CircleShape)
-                                        .background(AppleRed, CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary, CircleShape)
                                         .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             viewModel.playbackConnection.togglePlayPause()
@@ -8967,7 +8969,7 @@ fun FullscreenPlayer(
                                 Icon(
                                     imageVector = icon,
                                     contentDescription = "تکرار",
-                                    tint = if (repeatMode != Player.REPEAT_MODE_OFF) AppleRed else Color.White.copy(alpha = 0.6f),
+                                    tint = if (repeatMode != Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -9019,7 +9021,7 @@ fun FullscreenPlayer(
                         .background(Color.White.copy(alpha = if (speed != 1f) 0.2f else 0.08f))
                         .border(
                             width = if (speed != 1f) 1.dp else 0.dp,
-                            color = if (speed != 1f) AppleRed else Color.Transparent,
+                            color = if (speed != 1f) MaterialTheme.colorScheme.primary else Color.Transparent,
                             shape = RoundedCornerShape(20.dp)
                         )
                         .clickable { showSpeedDialog = true }
@@ -9027,8 +9029,8 @@ fun FullscreenPlayer(
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = if (speed != 1f) AppleRed else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
-                        Text(text = "${speed}x", color = if (speed != 1f) AppleRed else Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = if (speed != 1f) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                        Text(text = "${speed}x", color = if (speed != 1f) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -9281,7 +9283,7 @@ fun FullscreenPlayer(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(if (isActive) AppleRed.copy(alpha = 0.15f) else Color.Transparent)
+                                        .background(if (isActive) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
                                         .clickable {
                                             viewModel.playbackConnection.playTrack(qSong, queue)
                                             showQueueSheet = false
@@ -9293,7 +9295,7 @@ fun FullscreenPlayer(
                                     Text(
                                         text = "${index + 1}",
                                         fontSize = 12.sp,
-                                        color = if (isActive) AppleRed else Color.Gray,
+                                        color = if (isActive) MaterialTheme.colorScheme.primary else Color.Gray,
                                         fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                                         modifier = Modifier.width(22.dp),
                                         textAlign = TextAlign.Center
@@ -9307,7 +9309,7 @@ fun FullscreenPlayer(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = qSong.title,
-                                            color = if (isActive) AppleRed else Color.White,
+                                            color = if (isActive) MaterialTheme.colorScheme.primary else Color.White,
                                             fontSize = 13.sp,
                                             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                                             maxLines = 1,
@@ -9324,7 +9326,7 @@ fun FullscreenPlayer(
                                         )
                                     }
                                     if (isActive) {
-                                        Icon(Icons.Default.VolumeUp, contentDescription = null, tint = AppleRed, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.VolumeUp, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
@@ -9348,7 +9350,7 @@ fun SleepTimerDialog(
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("تنظیم تایمر خواب", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 if (currentMinutes != null) {
-                    Text("تایمر فعال: $currentMinutes دقیقه باقی مانده", color = AppleRed, fontSize = 14.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                    Text("تایمر فعال: $currentMinutes دقیقه باقی مانده", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
 
                 val options = listOf(
@@ -9369,7 +9371,7 @@ fun SleepTimerDialog(
                     HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                 }
 
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AppleRed)) {
+                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
                     Text("انصراف", color = Color.White)
                 }
             }
@@ -9397,12 +9399,12 @@ fun PlaybackSpeedDialog(
                         onClick = { onSelect(spd) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "${spd}x", color = if (isSelected) AppleRed else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        Text(text = "${spd}x", color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                     }
                     HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
                 }
 
-                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = AppleRed)) {
+                Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
                     Text("انصراف", color = Color.White)
                 }
             }
@@ -9442,7 +9444,7 @@ fun SyncedLyricsView(
 
             Text(
                 text = line.text,
-                color = if (isActive) AppleRed else Color.White,
+                color = if (isActive) MaterialTheme.colorScheme.primary else Color.White,
                 fontSize = 18.sp,
                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -9518,7 +9520,7 @@ fun CarModeScreen(viewModel: MusicViewModel, onClose: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(imageVector = Icons.Default.DirectionsCar, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+                    Icon(imageVector = Icons.Default.DirectionsCar, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                     Text(text = "حالت خودرو", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, fontFamily = LocalAppFontFamily.current)
                 }
                 IconButton(onClick = onClose) {
@@ -9571,7 +9573,7 @@ fun CarModeScreen(viewModel: MusicViewModel, onClose: () -> Unit) {
             LinearProgressIndicator(
                 progress = { progressFraction },
                 modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
-                color = AppleRed,
+                color = MaterialTheme.colorScheme.primary,
                 trackColor = Color.White.copy(alpha = 0.15f)
             )
 
@@ -9593,7 +9595,7 @@ fun CarModeScreen(viewModel: MusicViewModel, onClose: () -> Unit) {
                     modifier = Modifier
                         .size(100.dp)
                         .shadow(12.dp, CircleShape)
-                        .background(AppleRed, CircleShape)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape)
                         .clickable { viewModel.playbackConnection.togglePlayPause() },
                     contentAlignment = Alignment.Center
                 ) {
@@ -9659,7 +9661,7 @@ fun DiscoverFeedScreen(
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            val activeColor = AppleRed
+            val activeColor = MaterialTheme.colorScheme.primary
             val inactiveColor = Color.White.copy(alpha = 0.55f)
             listOf(
                 translate("موسیقی شما", "Your Music", viewModel) to 0,
@@ -9705,7 +9707,7 @@ private fun AudioDiscoverFeed(
 
     if (shuffled.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = AppleRed)
+            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
         }
         return
     }
@@ -9786,7 +9788,7 @@ fun MusicVideoFeed(
     if (videos.isEmpty()) {
         Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator(color = AppleRed)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Text(translate("در حال دریافت موزیک ویدیو...", "Loading music videos...", viewModel), color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
             }
         }
@@ -9838,7 +9840,7 @@ fun MusicVideoFeed(
         }
         if (isLoadingMore) {
             CircularProgressIndicator(
-                color = AppleRed,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 20.dp).size(24.dp),
                 strokeWidth = 2.dp
             )
@@ -9946,7 +9948,7 @@ fun MusicVideoPage(
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(AppleRed)
+                        .background(MaterialTheme.colorScheme.primary)
                         .clickable { onOpenServerSong(serverSong) }
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -10009,8 +10011,8 @@ fun MusicVideoPage(
                         positionMs = (frac * durationMs).toLong()
                     },
                     colors = SliderDefaults.colors(
-                        thumbColor = AppleRed,
-                        activeTrackColor = AppleRed,
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
                         inactiveTrackColor = Color.White.copy(alpha = 0.25f)
                     ),
                     modifier = Modifier.fillMaxWidth().height(24.dp)
@@ -10192,7 +10194,7 @@ fun DiscoverPage(
                     Icon(
                         imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "لایک",
-                        tint = if (isLiked) AppleRed else Color.White,
+                        tint = if (isLiked) MaterialTheme.colorScheme.primary else Color.White,
                         modifier = Modifier.size(28.dp)
                     )
                 }
@@ -10295,7 +10297,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
             Spacer(Modifier.height(14.dp))
             Button(
                 onClick = { permissionLauncher.launch(permission) },
-                colors = ButtonDefaults.buttonColors(containerColor = AppleRed)
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text(translate("اجازه دسترسی", "Grant access", viewModel), color = Color.White, fontFamily = LocalAppFontFamily.current)
             }
@@ -10340,7 +10342,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+            Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             BasicTextField(
                 value = filterQuery,
                 onValueChange = { filterQuery = it },
@@ -10350,7 +10352,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                     fontFamily = LocalAppFontFamily.current,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(AppleRed),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
                 modifier = Modifier.weight(1f),
                 decorationBox = { innerTextField ->
                     Box(contentAlignment = Alignment.CenterStart) {
@@ -10390,7 +10392,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (selected) AppleRed else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                        .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                         .clickable { sortMode = mode }
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
@@ -10408,7 +10410,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
-                    .background(if (folderView) AppleRed else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                    .background(if (folderView) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                     .clickable {
                         folderView = !folderView
                         selectedFolder = null
@@ -10458,13 +10460,13 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                                 modifier = Modifier
                                     .size(46.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(AppleRed.copy(alpha = 0.12f)),
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Outlined.Folder,
                                     contentDescription = null,
-                                    tint = AppleRed,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(22.dp)
                                 )
                             }
@@ -10503,7 +10505,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                 IconButton(onClick = { selectedFolder = null }, modifier = Modifier.size(30.dp)) {
                     Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "بازگشت", modifier = Modifier.size(18.dp))
                 }
-                Icon(imageVector = Icons.Outlined.Folder, contentDescription = null, tint = AppleRed, modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.Outlined.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                 Text(folderName, fontSize = 14.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
             }
         }
@@ -10535,7 +10537,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                             Icon(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
-                                tint = AppleRed,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -10677,7 +10679,7 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                 if (highScore > 0) {
                     Text(
                         text = translate("🏆 رکورد شما: $highScore", "🏆 Your record: $highScore", viewModel),
-                        fontSize = 15.sp, fontWeight = FontWeight.Bold, color = AppleRed, fontFamily = LocalAppFontFamily.current
+                        fontSize = 15.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = LocalAppFontFamily.current
                     )
                     Spacer(Modifier.height(12.dp))
                 }
@@ -10685,7 +10687,7 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                     onClick = {
                         score = 0; round = 0; gameState = "playing"; startRound()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     contentPadding = PaddingValues(horizontal = 40.dp, vertical = 12.dp)
                 ) {
                     Text(translate("شروع بازی", "Start Game", viewModel), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
@@ -10707,7 +10709,7 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                     )
                     Text(
                         text = translate("امتیاز: $score", "Score: $score", viewModel),
-                        fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AppleRed, fontFamily = LocalAppFontFamily.current
+                        fontSize = 14.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontFamily = LocalAppFontFamily.current
                     )
                 }
                 Spacer(Modifier.height(28.dp))
@@ -10724,7 +10726,7 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                         .size(110.dp)
                         .scale(quizScale)
                         .clip(CircleShape)
-                        .background(AppleRed.copy(alpha = if (isClipPlaying) 0.9f else 0.5f))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = if (isClipPlaying) 0.9f else 0.5f))
                         .clickable { correctSong?.let { playClip(it) } },
                     contentAlignment = Alignment.Center
                 ) {
@@ -10749,7 +10751,7 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                     val revealed = answeredId != null
                     val bg = when {
                         revealed && isCorrect -> Color(0xFF34C759)
-                        revealed && option.id == answeredId -> AppleRed
+                        revealed && option.id == answeredId -> MaterialTheme.colorScheme.primary
                         else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                     }
                     Row(
@@ -10801,14 +10803,14 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                         translate("رکورد جدید! 🎉", "New record! 🎉", viewModel)
                     else
                         translate("رکورد شما: $highScore", "Your record: $highScore", viewModel),
-                    fontSize = 15.sp, color = AppleRed, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current
+                    fontSize = 15.sp, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current
                 )
                 Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = {
                         score = 0; round = 0; gameState = "playing"; startRound()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AppleRed),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     contentPadding = PaddingValues(horizontal = 40.dp, vertical = 12.dp)
                 ) {
                     Text(translate("دوباره بازی کن", "Play Again", viewModel), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
@@ -10861,16 +10863,16 @@ fun CatalogView(viewModel: MusicViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (shown.isNotEmpty()) {
                     TextButton(onClick = { viewModel.radioPlayCatalog(shown) }) {
-                        Icon(Icons.Default.Radio, contentDescription = null, tint = AppleRed, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Radio, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text(translate("رادیو", "Radio", viewModel), color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                        Text(translate("رادیو", "Radio", viewModel), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                     TextButton(onClick = { viewModel.playCatalogSong(shown.first(), shown) }) {
-                        Text(translate("پخش همه", "Play all", viewModel), color = AppleRed, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                        Text(translate("پخش همه", "Play all", viewModel), color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                     }
                 }
                 IconButton(onClick = { viewModel.fetchCatalog() }) {
-                    Icon(Icons.Default.Refresh, contentDescription = "بروزرسانی", tint = AppleRed, modifier = Modifier.size(20.dp))
+                    Icon(Icons.Default.Refresh, contentDescription = "بروزرسانی", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                 }
             }
         }
@@ -10895,7 +10897,7 @@ fun CatalogView(viewModel: MusicViewModel) {
 
         if (busy && songs.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = AppleRed)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (shown.isEmpty()) {
             EmptyStateView(message = translate("چیزی پیدا نشد.", "Nothing found.", viewModel))
@@ -10908,11 +10910,11 @@ fun CatalogView(viewModel: MusicViewModel) {
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(AppleRed.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                        Box(modifier = Modifier.size(46.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
                             if (s.coverUrl.isNotBlank()) {
                                 AsyncImage(model = s.coverUrl, contentDescription = null, modifier = Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
                             } else {
-                                Icon(Icons.Default.MusicNote, contentDescription = null, tint = AppleRed, modifier = Modifier.size(22.dp))
+                                Icon(Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
                             }
                         }
                         Column(modifier = Modifier.weight(1f)) {
@@ -10923,7 +10925,7 @@ fun CatalogView(viewModel: MusicViewModel) {
                             Icon(
                                 if (liked) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "پسندیدن",
-                                tint = if (liked) AppleRed else Color.Gray,
+                                tint = if (liked) MaterialTheme.colorScheme.primary else Color.Gray,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -10980,8 +10982,8 @@ fun PodcastsView(viewModel: MusicViewModel) {
                 }
                 OutlinedButton(
                     onClick = { viewModel.toggleFollowPodcast(currentPodcast) },
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = AppleRed),
-                    border = BorderStroke(1.dp, AppleRed.copy(alpha = 0.5f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                 ) {
                     Text(
@@ -10993,7 +10995,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
             }
             if (isLoading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = AppleRed)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (episodes.isEmpty()) {
                 EmptyStateView(message = translate("اپیزودی پیدا نشد.", "No episodes found.", viewModel))
@@ -11012,7 +11014,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
                             Icon(
                                 imageVector = Icons.Default.PlayCircleOutline,
                                 contentDescription = null,
-                                tint = AppleRed,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(30.dp)
                             )
                             Column(modifier = Modifier.weight(1f)) {
@@ -11058,7 +11060,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = AppleRed, modifier = Modifier.size(20.dp))
+            Icon(imageVector = Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             BasicTextField(
                 value = podcastQuery,
                 onValueChange = { podcastQuery = it },
@@ -11068,7 +11070,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
                     fontFamily = LocalAppFontFamily.current,
                     color = MaterialTheme.colorScheme.onSurface
                 ),
-                cursorBrush = androidx.compose.ui.graphics.SolidColor(AppleRed),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
                 modifier = Modifier.weight(1f),
                 decorationBox = { innerTextField ->
                     Box(contentAlignment = Alignment.CenterStart) {
@@ -11093,7 +11095,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
                 item {
                     Text(
                         text = translate("نتایج جستجو", "Search Results", viewModel),
-                        fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppleRed,
+                        fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary,
                         fontFamily = LocalAppFontFamily.current,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                     )
@@ -11107,7 +11109,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
                 item {
                     Text(
                         text = translate("دنبال‌شده‌ها", "Following", viewModel),
-                        fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppleRed,
+                        fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary,
                         fontFamily = LocalAppFontFamily.current,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                     )
@@ -11120,7 +11122,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
             item {
                 Text(
                     text = translate("پرطرفدارترین پادکست‌ها", "Top Podcasts", viewModel),
-                    fontWeight = FontWeight.Bold, fontSize = 16.sp, color = AppleRed,
+                    fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.primary,
                     fontFamily = LocalAppFontFamily.current,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                 )
@@ -11128,7 +11130,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
             if (topPodcasts.isEmpty()) {
                 item {
                     Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = AppleRed)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 }
             } else {
@@ -11218,7 +11220,7 @@ private fun TopChartsChips(viewModel: MusicViewModel, modifier: Modifier = Modif
                 modifier = Modifier
                     .clip(RoundedCornerShape(16.dp))
                     .tvFocusable(cornerRadius = 16.dp)
-                    .background(if (selected) AppleRed else Color.Black.copy(alpha = 0.5f))
+                    .background(if (selected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.5f))
                     .clickable { viewModel.fetchTopCharts(key) }
                     .padding(horizontal = 13.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
@@ -11254,7 +11256,7 @@ fun AppleTopSongsFeed(viewModel: MusicViewModel, onArtistClick: (String) -> Unit
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                CircularProgressIndicator(color = AppleRed)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 Text(translate("در حال دریافت برترین‌های جهان...", "Loading global top songs...", viewModel), color = Color.White.copy(0.6f), fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
             }
         }
@@ -11421,7 +11423,7 @@ fun AppleTopSongPage(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "#$rank از ۵۰ آهنگ برتر جهان",
-                        color = AppleRed,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = LocalAppFontFamily.current
@@ -11459,7 +11461,7 @@ fun AppleTopSongPage(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(24.dp))
                                 .tvFocusable(cornerRadius = 24.dp)
-                                .background(AppleRed)
+                                .background(MaterialTheme.colorScheme.primary)
                                 .clickable(onClick = onTogglePlay)
                                 .padding(horizontal = 22.dp, vertical = 10.dp),
                             contentAlignment = Alignment.Center
@@ -11598,7 +11600,7 @@ private fun TopSongArtwork(
             fontWeight = FontWeight.Bold,
             modifier = Modifier
                 .padding(10.dp)
-                .background(AppleRed, RoundedCornerShape(10.dp))
+                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(10.dp))
                 .padding(horizontal = 10.dp, vertical = 4.dp)
         )
     }
