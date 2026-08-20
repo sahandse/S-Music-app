@@ -2393,8 +2393,6 @@ fun SectionTitle(title: String) {
     )
 }
 
-// --- Big Vertical Artwork Card ---
-@Composable
 // --- Pill-shaped "See all" button, outline style (Aparat Music-style section header action) ---
 @Composable
 fun SectionSeeAllButton(text: String, onClick: () -> Unit) {
