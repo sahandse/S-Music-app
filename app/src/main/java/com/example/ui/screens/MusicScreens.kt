@@ -1770,20 +1770,17 @@ fun HomeScreen(
                         fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    TextButton(onClick = onCatalogClick) {
-                        Text(
-                            text = translate("مشاهده همه", "See all", viewModel),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontFamily = LocalAppFontFamily.current
-                        )
-                    }
+                    SectionSeeAllButton(
+                        text = translate("بیشتر", "See all", viewModel),
+                        onClick = onCatalogClick
+                    )
                 }
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(newestIranian) { song ->
-                        VerticalBigCard(
+                        HorizontalSuggestionCard(
                             title = song.title,
                             subtitle = song.artist.ifBlank { translate("هنرمند ناشناس", "Unknown Artist", viewModel) },
                             imageUrl = song.coverUrl,
@@ -1809,13 +1806,10 @@ fun HomeScreen(
                         fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    TextButton(onClick = onPodcastsClick) {
-                        Text(
-                            text = translate("مشاهده همه", "See all", viewModel),
-                            color = MaterialTheme.colorScheme.primary,
-                            fontFamily = LocalAppFontFamily.current
-                        )
-                    }
+                    SectionSeeAllButton(
+                        text = translate("بیشتر", "See all", viewModel),
+                        onClick = onPodcastsClick
+                    )
                 }
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
@@ -2400,6 +2394,91 @@ fun SectionTitle(title: String) {
 }
 
 // --- Big Vertical Artwork Card ---
+@Composable
+// --- Pill-shaped "See all" button, outline style (Aparat Music-style section header action) ---
+@Composable
+fun SectionSeeAllButton(text: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(percent = 50))
+            .border(1.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f), RoundedCornerShape(percent = 50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onSurface,
+            fontFamily = LocalAppFontFamily.current
+        )
+    }
+}
+
+// --- Wide horizontal suggestion card (Aparat Music-style top-of-home row):
+// cover art on the trailing edge, title/artist in the middle, play circle leading ---
+@Composable
+fun HorizontalSuggestionCard(
+    title: String,
+    subtitle: String,
+    imageUrl: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .width(280.dp)
+            .height(84.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = title,
+            modifier = Modifier
+                .size(64.dp)
+                .clip(RoundedCornerShape(10.dp)),
+            contentScale = ContentScale.Crop
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontFamily = LocalAppFontFamily.current
+            )
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontFamily = LocalAppFontFamily.current
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = Color.Black,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+    }
+}
+
 @Composable
 fun VerticalBigCard(
     title: String,
@@ -3406,15 +3485,16 @@ fun SearchScreen(
                         fontFamily = LocalAppFontFamily.current
                     )
 
+                    data class SearchCategory(val nameFa: String, val nameEn: String, val icon: androidx.compose.ui.graphics.vector.ImageVector, val iconColor: Color)
                     val categories = listOf(
-                        Triple("پاپ ایرانی", "Iranian Pop", Brush.linearGradient(colors = listOf(Color(0xFFFF5E62), Color(0xFFFF9966)))),
-                        Triple("کلاسیک و ملایم", "Classical & Calm", Brush.linearGradient(colors = listOf(Color(0xFF4CA1AF), Color(0xFF2C3E50)))),
-                        Triple("هیپ هاپ و رپ", "Hip Hop & Rap", Brush.linearGradient(colors = listOf(Color(0xFF11998e), Color(0xFF38ef7d)))),
-                        Triple("راک و متال", "Rock & Metal", Brush.linearGradient(colors = listOf(Color(0xFF1F1C2C), Color(0xFF928DAB)))),
-                        Triple("عاشقانه و غمگین", "Romantic & Sad", Brush.linearGradient(colors = listOf(Color(0xFFEA384D), Color(0xFFD31027)))),
-                        Triple("موزیک‌های جدید", "New Releases", Brush.linearGradient(colors = listOf(Color(0xFFf2709c), Color(0xFFff9472)))),
-                        Triple("باشگاه و ورزش", "Workout & Energy", Brush.linearGradient(colors = listOf(Color(0xFFF3904F), Color(0xFF3B4371)))),
-                        Triple("تایمر آرامش", "Meditation & Focus", Brush.linearGradient(colors = listOf(Color(0xFF00c6ff), Color(0xFF0072ff))))
+                        SearchCategory("پاپ ایرانی", "Iranian Pop", Icons.Default.MusicNote, Color(0xFFFF5E62)),
+                        SearchCategory("کلاسیک و ملایم", "Classical & Calm", Icons.Default.Headphones, Color(0xFF4CA1AF)),
+                        SearchCategory("هیپ هاپ و رپ", "Hip Hop & Rap", Icons.Default.Mic, Color(0xFF11998e)),
+                        SearchCategory("راک و متال", "Rock & Metal", Icons.Default.GraphicEq, Color(0xFF928DAB)),
+                        SearchCategory("عاشقانه و غمگین", "Romantic & Sad", Icons.Default.Favorite, Color(0xFFEA384D)),
+                        SearchCategory("موزیک‌های جدید", "New Releases", Icons.Default.NewReleases, Color(0xFFf2709c)),
+                        SearchCategory("باشگاه و ورزش", "Workout & Energy", Icons.Default.Timer, Color(0xFFF3904F)),
+                        SearchCategory("تایمر آرامش", "Meditation & Focus", Icons.Default.Hearing, Color(0xFF00c6ff))
                     )
 
                     Column(
@@ -3427,27 +3507,45 @@ fun SearchScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                pair.forEach { (nameFa, nameEn, gradient) ->
-                                    Box(
+                                pair.forEach { cat ->
+                                    Row(
                                         modifier = Modifier
                                             .weight(1f)
-                                            .height(72.dp)
+                                            .height(64.dp)
                                             .clip(RoundedCornerShape(14.dp))
-                                            .background(gradient)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                             .clickable {
-                                                viewModel.updateSearchQuery(nameEn)
-                                                viewModel.addSearchHistory(nameEn)
+                                                viewModel.updateSearchQuery(cat.nameEn)
+                                                viewModel.addSearchHistory(cat.nameEn)
                                             }
-                                            .padding(12.dp),
-                                        contentAlignment = Alignment.BottomStart
+                                            .padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         Text(
-                                            text = nameEn,
-                                            color = Color.White,
-                                            fontSize = 13.sp,
+                                            text = translate(cat.nameFa, cat.nameEn, viewModel),
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            fontFamily = LocalAppFontFamily.current
+                                            fontFamily = LocalAppFontFamily.current,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            modifier = Modifier.weight(1f)
                                         )
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(cat.iconColor),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = cat.icon,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
                                     }
                                 }
                                 if (pair.size < 2) {
