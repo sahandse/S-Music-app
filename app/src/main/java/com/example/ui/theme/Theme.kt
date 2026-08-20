@@ -147,7 +147,10 @@ fun MyApplicationTheme(
         else -> DarkColorScheme
     }
 
-    CompositionLocalProvider(LocalAppFontFamily provides appFontFamily(lang)) {
+    CompositionLocalProvider(
+        LocalAppFontFamily provides appFontFamily(lang),
+        LocalFlatTheme provides (themeMode == "aparat" || themeMode == "aparat-light")
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = appTypography(lang),

@@ -124,9 +124,10 @@ fun Modifier.glassmorphic(
     borderColor: Color = Color.Unspecified
 ): Modifier {
     val surfaceColor = MaterialTheme.colorScheme.surfaceVariant
+    val isFlat = com.example.ui.theme.LocalFlatTheme.current
     return this
         .clip(RoundedCornerShape(cornerRadius))
-        .background(surfaceColor.copy(alpha = 0.38f))
+        .background(if (isFlat) surfaceColor else surfaceColor.copy(alpha = 0.38f))
 }
 
 @Composable

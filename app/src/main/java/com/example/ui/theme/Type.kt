@@ -43,6 +43,10 @@ fun appFontFamily(lang: String): FontFamily = if (lang == "fa") VazirFontFamily 
 // Exposes the font matching the currently selected app language to any composable in the tree
 val LocalAppFontFamily = compositionLocalOf { VazirFontFamily }
 
+// True for flat, non-translucent themes (Aparat Music) — surfaces that would
+// otherwise use a frosted-glass effect render as plain opaque cards instead
+val LocalFlatTheme = compositionLocalOf { false }
+
 fun appTypography(lang: String): Typography {
     val fontFamily = appFontFamily(lang)
     return Typography(
