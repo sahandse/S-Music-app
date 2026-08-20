@@ -8389,6 +8389,11 @@ fun FullscreenPlayer(
     val downloadProgresses by viewModel.downloadProgresses.collectAsStateWithLifecycle()
     val queue by viewModel.playbackConnection.playbackQueue.collectAsStateWithLifecycle()
     val translatedLyrics by viewModel.translatedLyrics.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    // Aparat's (dark) player is flat — no blurred album-art backdrop or dominant-color glow.
+    // Limited to the dark variant: the rest of this screen hardcodes white text/icons, which
+    // would be unreadable on aparat-light's white background without a much larger rework.
+    val isMonochromePlayer = themeMode == "aparat"
 
     var showTimerDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
@@ -8447,47 +8452,49 @@ fun FullscreenPlayer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF050505))
+            .background(if (isMonochromePlayer) MaterialTheme.colorScheme.background else Color(0xFF050505))
     ) {
-        // Heavy-blur album art fill — Apple Music full-bleed ambient style
-        AsyncImage(
-            model = rememberSongCoverUrl(song, viewModel),
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxSize()
-                .blur(140.dp)
-                .graphicsLayer(alpha = 0.70f),
-            contentScale = ContentScale.Crop
-        )
+        if (!isMonochromePlayer) {
+            // Heavy-blur album art fill — Apple Music full-bleed ambient style
+            AsyncImage(
+                model = rememberSongCoverUrl(song, viewModel),
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .blur(140.dp)
+                    .graphicsLayer(alpha = 0.70f),
+                contentScale = ContentScale.Crop
+            )
 
-        // Dominant-color gradient: vivid top → transparent mid → near-black bottom
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0f to dominantColorAnimated.copy(alpha = 0.55f),
-                        0.38f to dominantColorAnimated.copy(alpha = 0.18f),
-                        0.65f to Color.Black.copy(alpha = 0.60f),
-                        1f to Color.Black.copy(alpha = 0.96f)
-                    )
-                )
-        )
-
-        // Subtle top-corner light bloom
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    drawRect(
-                        brush = Brush.radialGradient(
-                            colors = listOf(Color.White.copy(alpha = 0.09f), Color.Transparent),
-                            center = androidx.compose.ui.geometry.Offset(0f, 0f),
-                            radius = size.width * 1.0f
+            // Dominant-color gradient: vivid top → transparent mid → near-black bottom
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to dominantColorAnimated.copy(alpha = 0.55f),
+                            0.38f to dominantColorAnimated.copy(alpha = 0.18f),
+                            0.65f to Color.Black.copy(alpha = 0.60f),
+                            1f to Color.Black.copy(alpha = 0.96f)
                         )
                     )
-                }
-        )
+            )
+
+            // Subtle top-corner light bloom
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .drawBehind {
+                        drawRect(
+                            brush = Brush.radialGradient(
+                                colors = listOf(Color.White.copy(alpha = 0.09f), Color.Transparent),
+                                center = androidx.compose.ui.geometry.Offset(0f, 0f),
+                                radius = size.width * 1.0f
+                            )
+                        )
+                    }
+            )
+        }
 
         // Track-change toast: appears briefly when a new song starts, then fades out
         androidx.compose.animation.AnimatedVisibility(
@@ -9049,7 +9056,7 @@ fun FullscreenPlayer(
                                     Icon(
                                         imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                         contentDescription = "پخش/توقف",
-                                        tint = Color.White,
+                                        tint = MaterialTheme.colorScheme.onPrimary,
                                         modifier = Modifier.size(42.dp)
                                     )
                                 }
