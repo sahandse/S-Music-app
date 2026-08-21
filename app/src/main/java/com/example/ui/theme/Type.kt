@@ -9,22 +9,23 @@ import androidx.compose.ui.unit.sp
 
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.googlefonts.Font
+import androidx.compose.ui.text.font.Font as LocalFont
 import com.example.R
 
-// We use the Google Fonts API to dynamically load Vazirmatn for a modern, beautiful Persian typeface
+// We use the Google Fonts API to dynamically load fonts for the Latin (English) typeface
 val provider = GoogleFont.Provider(
     "com.google.android.gms.fonts",
     "com.google.android.gms",
     R.array.com_google_android_gms_fonts_certs
 )
 
-val VazirFont = GoogleFont("Vazirmatn")
-
-val VazirFontFamily = FontFamily(
-    Font(googleFont = VazirFont, fontProvider = provider, weight = FontWeight.Normal),
-    Font(googleFont = VazirFont, fontProvider = provider, weight = FontWeight.Medium),
-    Font(googleFont = VazirFont, fontProvider = provider, weight = FontWeight.SemiBold),
-    Font(googleFont = VazirFont, fontProvider = provider, weight = FontWeight.Bold)
+// IRANSans, bundled locally (only the Bold weight was supplied, so it's used across the
+// whole family — every weight renders with these bold glyphs)
+val IranSansFontFamily = FontFamily(
+    LocalFont(R.font.iran_sans_bold, FontWeight.Normal),
+    LocalFont(R.font.iran_sans_bold, FontWeight.Medium),
+    LocalFont(R.font.iran_sans_bold, FontWeight.SemiBold),
+    LocalFont(R.font.iran_sans_bold, FontWeight.Bold)
 )
 
 // Poppins from the Google Fonts API is used as the Latin typeface for the English UI
@@ -37,11 +38,11 @@ val EnglishFontFamily = FontFamily(
     Font(googleFont = PoppinsFont, fontProvider = provider, weight = FontWeight.Bold)
 )
 
-// Resolves to VazirFontFamily for Persian and EnglishFontFamily for English
-fun appFontFamily(lang: String): FontFamily = if (lang == "fa") VazirFontFamily else EnglishFontFamily
+// Resolves to IranSansFontFamily for Persian and EnglishFontFamily for English
+fun appFontFamily(lang: String): FontFamily = if (lang == "fa") IranSansFontFamily else EnglishFontFamily
 
 // Exposes the font matching the currently selected app language to any composable in the tree
-val LocalAppFontFamily = compositionLocalOf { VazirFontFamily }
+val LocalAppFontFamily = compositionLocalOf { IranSansFontFamily }
 
 // True for flat, non-translucent themes (Aparat Music) — surfaces that would
 // otherwise use a frosted-glass effect render as plain opaque cards instead
