@@ -97,11 +97,6 @@ import com.example.data.network.SubsonicArtist
 import com.example.ui.theme.CardDark
 import com.example.data.network.SubsonicSong
 import com.example.ui.MusicViewModel
-import com.example.ui.theme.AppleRed
-import com.example.ui.theme.SpotifyGreen
-import com.example.ui.theme.SpotifyBackground
-import com.example.ui.theme.AparatBackgroundDark
-import com.example.ui.theme.AparatBackgroundLight
 import com.example.ui.theme.LocalAppFontFamily
 import java.util.*
 import kotlin.math.roundToInt
@@ -409,144 +404,14 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
 fun AppNavigation(viewModel: MusicViewModel) {
     val isConfigured by viewModel.isServerConfigured.collectAsStateWithLifecycle()
     val onboardingPreferencesSet by viewModel.onboardingPreferencesSet.collectAsStateWithLifecycle()
-    val themeChoiceMade by viewModel.themeChoiceMade.collectAsStateWithLifecycle()
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        if (!themeChoiceMade) {
-            ThemeChoiceScreen(viewModel = viewModel)
-        } else if (!isConfigured) {
+        if (!isConfigured) {
             LoginScreen(viewModel = viewModel)
         } else if (!onboardingPreferencesSet) {
             GenrePreferenceScreen(viewModel = viewModel)
         } else {
             MainMusicApp(viewModel = viewModel)
-        }
-    }
-}
-
-// --- First-run look picker: Spotify (flat black + green), Aparat Music (monochrome black/white),
-// or Apple Music (glassy black + red) ---
-@Composable
-fun ThemeChoiceScreen(viewModel: MusicViewModel) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(28.dp)
-        ) {
-            Text(
-                text = translate("چه ظاهری رو دوست داری؟", "Pick your look", viewModel),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                fontFamily = LocalAppFontFamily.current,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                text = translate("بعداً هم می‌تونی از تنظیمات عوضش کنی", "You can change this later in Settings", viewModel),
-                fontSize = 13.sp,
-                color = Color.White.copy(alpha = 0.5f),
-                fontFamily = LocalAppFontFamily.current,
-                textAlign = TextAlign.Center
-            )
-
-            Row(
-                modifier = Modifier.horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                ThemePresetCard(
-                    title = "Spotify",
-                    subtitle = translate("مشکی مسطح و سبز", "Flat black & green", viewModel),
-                    previewBackground = SpotifyBackground,
-                    accent = SpotifyGreen,
-                    flat = true,
-                    onClick = { viewModel.applyThemePreset("spotify") }
-                )
-                ThemePresetCard(
-                    title = translate("آپارات موزیک", "Aparat Music", viewModel),
-                    subtitle = translate("مشکی خالص و مینیمال", "Pure black & minimal", viewModel),
-                    previewBackground = AparatBackgroundDark,
-                    accent = Color.White,
-                    flat = true,
-                    onClick = { viewModel.applyThemePreset("aparat") }
-                )
-                ThemePresetCard(
-                    title = translate("اپل موزیک", "Apple Music", viewModel),
-                    subtitle = translate("شیشه‌ای و قرمز", "Glassy & red", viewModel),
-                    previewBackground = Color.Black,
-                    accent = AppleRed,
-                    flat = false,
-                    onClick = { viewModel.applyThemePreset("apple") }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ThemePresetCard(
-    title: String,
-    subtitle: String,
-    previewBackground: Color,
-    accent: Color,
-    flat: Boolean,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(150.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(previewBackground)
-            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(if (flat) 14.dp else 18.dp))
-                .background(
-                    if (flat) androidx.compose.ui.graphics.SolidColor(accent)
-                    else Brush.linearGradient(colors = listOf(accent, Color(0xFFFF2D55)))
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.MusicNote,
-                contentDescription = null,
-                tint = if (flat) Color.Black else Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-        }
-        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current)
-        Text(
-            subtitle,
-            color = Color.White.copy(alpha = 0.55f),
-            fontSize = 11.sp,
-            fontFamily = LocalAppFontFamily.current,
-            textAlign = TextAlign.Center
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(28.dp)
-                .clip(RoundedCornerShape(if (flat) 6.dp else 14.dp))
-                .background(accent),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = if (flat) Color.Black else Color.White,
-                modifier = Modifier.size(16.dp)
-            )
         }
     }
 }
@@ -566,9 +431,8 @@ fun LoginScreen(viewModel: MusicViewModel) {
 
     val isAuthenticating by viewModel.isAuthenticating.collectAsStateWithLifecycle()
     val loginError by viewModel.loginError.collectAsStateWithLifecycle()
-    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val isSpotify = themeMode == "spotify"
     val accentColor = MaterialTheme.colorScheme.primary
+    val onAccentColor = MaterialTheme.colorScheme.onPrimary
     val context = LocalContext.current
 
     if (showRegisterSuccessDialog) {
@@ -657,21 +521,18 @@ fun LoginScreen(viewModel: MusicViewModel) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Floating music note logo, matching the picked theme (flat for Spotify, gradient for Apple Music)
+            // Floating music note logo, flat and monochrome (Aparat Music style)
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        if (isSpotify) androidx.compose.ui.graphics.SolidColor(accentColor)
-                        else Brush.linearGradient(colors = listOf(accentColor, Color(0xFFFF2D55)))
-                    ),
+                    .background(accentColor),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.MusicNote,
                     contentDescription = "High Music Logo",
-                    tint = if (isSpotify) Color.Black else Color.White,
+                    tint = onAccentColor,
                     modifier = Modifier.size(48.dp)
                 )
             }
@@ -831,11 +692,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     .testTag("register_button"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isRegisterMode) accentColor else Color.White.copy(alpha = 0.12f),
-                    contentColor = when {
-                        !isRegisterMode -> Color.White.copy(alpha = 0.85f)
-                        isSpotify -> Color.Black
-                        else -> Color.White
-                    }
+                    contentColor = if (isRegisterMode) onAccentColor else Color.White.copy(alpha = 0.85f)
                 ),
                 shape = RoundedCornerShape(14.dp),
                 border = if (!isRegisterMode) BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)) else null
@@ -868,18 +725,14 @@ fun LoginScreen(viewModel: MusicViewModel) {
                     .testTag("login_button"),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (!isRegisterMode) accentColor else Color.White.copy(alpha = 0.12f),
-                    contentColor = when {
-                        isRegisterMode -> Color.White.copy(alpha = 0.85f)
-                        isSpotify -> Color.Black
-                        else -> Color.White
-                    }
+                    contentColor = if (!isRegisterMode) onAccentColor else Color.White.copy(alpha = 0.85f)
                 ),
                 shape = RoundedCornerShape(14.dp),
                 border = if (isRegisterMode) BorderStroke(1.dp, Color.White.copy(alpha = 0.15f)) else null
             ) {
                 if (isAuthenticating && !isRegisterMode) {
                     CircularProgressIndicator(
-                        color = if (isSpotify) Color.Black else Color.White,
+                        color = onAccentColor,
                         modifier = Modifier.size(20.dp)
                     )
                 } else {
@@ -917,15 +770,9 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val isPlaying by viewModel.playbackConnection.isPlaying.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
 
-    val dominantColorArgb by viewModel.dominantColorArgb.collectAsStateWithLifecycle()
-    // Aparat's look is monochrome by design — don't let album-art color creep into nav/controls there
-    val isMonochromeTheme = themeMode == "aparat" || themeMode == "aparat-light"
-    val monochromeAccent = MaterialTheme.colorScheme.primary
-    val accentColor by animateColorAsState(
-        targetValue = if (isMonochromeTheme) monochromeAccent else Color(dominantColorArgb),
-        animationSpec = tween(durationMillis = 900),
-        label = "AppAccentColor"
-    )
+    // Aparat's look is flat and monochrome — no album-art-driven accent, no ambient glow
+    val accentColor = MaterialTheme.colorScheme.primary
+    val backgroundColor = MaterialTheme.colorScheme.background
 
     // Internal sub-navigation state (Artist / Album details)
     var currentSubScreen by remember {
@@ -935,45 +782,13 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
-    val isLight = themeMode == "light" || themeMode == "glass" || themeMode == "aparat-light"
-    val backgroundColor = when (themeMode) {
-        "glass" -> Color(0xFFF0F2F6)
-        "spotify" -> SpotifyBackground
-        "aparat" -> AparatBackgroundDark
-        "aparat-light" -> AparatBackgroundLight
-        else -> if (isLight) Color.White else Color.Black
-    }
-    val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x55
-    val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x38
-    val ambientColor1 = accentColor.copy(alpha = ambientAlpha1 / 255f)
-    val ambientColor2 = accentColor.copy(alpha = ambientAlpha2 / 255f)
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = backgroundColor,
         contentColor = MaterialTheme.colorScheme.onBackground
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawBehind {
-                    // Ambient backlight top right
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(ambientColor1, Color.Transparent),
-                            center = androidx.compose.ui.geometry.Offset(size.width * 0.9f, size.height * 0.2f),
-                            radius = size.width * 1.0f
-                        )
-                    )
-                    // Ambient backlight bottom left
-                    drawCircle(
-                        brush = Brush.radialGradient(
-                            colors = listOf(ambientColor2, Color.Transparent),
-                            center = androidx.compose.ui.geometry.Offset(size.width * 0.1f, size.height * 0.8f),
-                            radius = size.width * 0.8f
-                        )
-                    )
-                }
+            modifier = Modifier.fillMaxSize()
         ) {
         // Car Mode overlay
         if (showCarMode) {
@@ -7402,7 +7217,6 @@ fun AddServerDialog(
 @Composable
 fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    val themeAccent by viewModel.themeAccent.collectAsStateWithLifecycle()
     val audioQuality by viewModel.audioQuality.collectAsStateWithLifecycle()
     val downloadQuality by viewModel.downloadQuality.collectAsStateWithLifecycle()
     val cacheSize by viewModel.cacheSizeMb.collectAsStateWithLifecycle()
@@ -7518,7 +7332,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
 
                 HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
 
-                // App Theme (Sleek minimalist switcher)
+                // App Theme — Aparat Music's own dark/light toggle
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -7531,7 +7345,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = translate("ظاهر برنامه (پوسته)", "App Theme", viewModel),
+                        text = translate("ظاهر برنامه", "App Theme", viewModel),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         fontFamily = LocalAppFontFamily.current,
@@ -7539,24 +7353,18 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     )
                 }
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     val themes = listOf(
-                        "light" to translate("روشن", "Light", viewModel),
-                        "dark" to translate("تاریک", "Dark", viewModel),
-                        "amoled" to translate("آمولد", "Amoled", viewModel),
-                        "glass" to translate("شیشه‌ای", "Glass", viewModel),
-                        "spotify" to "Spotify",
-                        "aparat" to translate("آپارات تیره", "Aparat Dark", viewModel),
-                        "aparat-light" to translate("آپارات روشن", "Aparat Light", viewModel)
+                        "aparat" to translate("تیره", "Dark", viewModel),
+                        "aparat-light" to translate("روشن", "Light", viewModel)
                     )
                     themes.forEach { t ->
                         val isSelected = themeMode == t.first
                         Box(
                             modifier = Modifier
+                                .weight(1f)
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else Color.Transparent)
                                 .border(
@@ -7565,151 +7373,16 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                                     shape = RoundedCornerShape(10.dp)
                                 )
                                 .clickable { viewModel.setThemeMode(t.first) }
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                                .padding(vertical = 10.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = t.second,
-                                fontSize = 11.sp,
+                                fontSize = 13.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 fontFamily = LocalAppFontFamily.current,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
-                                maxLines = 1
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
-                        }
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
-
-                // Accent Color
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ColorLens,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = translate("رنگ اصلی برنامه", "Accent Color", viewModel),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        fontFamily = LocalAppFontFamily.current,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                val accentColorMap = remember {
-                    mapOf(
-                        "red" to Color(0xFFFA2D48),
-                        "blue" to Color(0xFF007AFF),
-                        "green" to Color(0xFF34C759),
-                        "orange" to Color(0xFFFF9500),
-                        "purple" to Color(0xFFAF52DE),
-                        "pink" to Color(0xFFFF2D55)
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    accentColorMap.forEach { (key, color) ->
-                        val isSelected = themeAccent == key
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(color)
-                                .border(
-                                    width = if (isSelected) 2.dp else 0.dp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    shape = CircleShape
-                                )
-                                .clickable { viewModel.setThemeAccent(key) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
-
-                // Live preview
-                val liveAccentColor by animateColorAsState(
-                    targetValue = accentColorMap[themeAccent] ?: Color(0xFFFA2D48),
-                    animationSpec = tween(300),
-                    label = "accentPreview"
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Visibility,
-                        contentDescription = null,
-                        tint = liveAccentColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = translate("پیش‌نمایش زنده", "Live Preview", viewModel),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        fontFamily = LocalAppFontFamily.current,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.6f))
-                        .padding(12.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(liveAccentColor.copy(alpha = 0.18f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(imageVector = Icons.Default.MusicNote, contentDescription = null, tint = liveAccentColor, modifier = Modifier.size(22.dp))
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(translate("نام آهنگ", "Song Name", viewModel), fontSize = 13.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current, color = liveAccentColor)
-                            Text(translate("هنرمند", "Artist", viewModel), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), fontFamily = LocalAppFontFamily.current)
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = null, tint = liveAccentColor, modifier = Modifier.size(20.dp))
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(liveAccentColor),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            }
-                            Icon(imageVector = Icons.Default.SkipNext, contentDescription = null, tint = liveAccentColor, modifier = Modifier.size(20.dp))
                         }
                     }
                 }

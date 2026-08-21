@@ -189,11 +189,8 @@ class MusicViewModel(
     val isLoadingLyrics: StateFlow<Boolean> = _isLoadingLyrics.asStateFlow()
 
     // --- Settings State ---
-    private val _themeMode = MutableStateFlow("dark") // "light", "dark", "amoled", "glass"
+    private val _themeMode = MutableStateFlow("aparat") // "aparat" (dark) or "aparat-light"
     val themeMode: StateFlow<String> = _themeMode.asStateFlow()
-
-    private val _themeAccent = MutableStateFlow("red") // "red", "blue", "green", "orange", "purple", "pink"
-    val themeAccent: StateFlow<String> = _themeAccent.asStateFlow()
 
     private val _language = MutableStateFlow("fa") // "fa", "en"
     val language: StateFlow<String> = _language.asStateFlow()
@@ -206,10 +203,6 @@ class MusicViewModel(
 
     private val _onboardingPreferencesSet = MutableStateFlow(false)
     val onboardingPreferencesSet: StateFlow<Boolean> = _onboardingPreferencesSet.asStateFlow()
-
-    // Whether the user has picked a look (Spotify/Apple Music) on first entry
-    private val _themeChoiceMade = MutableStateFlow(false)
-    val themeChoiceMade: StateFlow<Boolean> = _themeChoiceMade.asStateFlow()
 
     private val _preferredGenres = MutableStateFlow<Set<String>>(emptySet())
     val preferredGenres: StateFlow<Set<String>> = _preferredGenres.asStateFlow()
@@ -372,13 +365,11 @@ class MusicViewModel(
 
         // Initialize Settings from preferences
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
-        _themeMode.value = prefs.getString("theme_mode", "dark") ?: "dark"
-        _themeAccent.value = prefs.getString("theme_accent", "red") ?: "red"
+        _themeMode.value = prefs.getString("theme_mode", "aparat") ?: "aparat"
         _language.value = prefs.getString("app_language", "fa") ?: "fa"
         _userName.value = prefs.getString("user_name", "") ?: ""
         _profilePhotoUri.value = prefs.getString("profile_photo_uri", "") ?: ""
         _onboardingPreferencesSet.value = prefs.getBoolean("onboarding_preferences_set", false)
-        _themeChoiceMade.value = prefs.getBoolean("theme_choice_made", false)
         _preferredGenres.value = prefs.getStringSet("preferred_genres", emptySet()) ?: emptySet()
         _downloadLocation.value = prefs.getString("download_location", "") ?: ""
         _audioQuality.value = prefs.getString("audio_quality", "high") ?: "high"
@@ -984,31 +975,6 @@ class MusicViewModel(
         _themeMode.value = mode
         val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
         prefs.edit().putString("theme_mode", mode).apply()
-    }
-
-    fun setThemeAccent(accent: String) {
-        _themeAccent.value = accent
-        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putString("theme_accent", accent).apply()
-    }
-
-    // First-run look picker: "spotify" (flat black + green), "aparat" (monochrome black/white),
-    // or "apple" (glassy black + red)
-    fun applyThemePreset(preset: String) {
-        val mode = when (preset) {
-            "spotify" -> "spotify"
-            "aparat" -> "aparat"
-            else -> "dark"
-        }
-        val accent = when (preset) {
-            "spotify" -> "green"
-            else -> "red"
-        }
-        setThemeMode(mode)
-        setThemeAccent(accent)
-        _themeChoiceMade.value = true
-        val prefs = getApplication<Application>().getSharedPreferences("smusic_prefs", Context.MODE_PRIVATE)
-        prefs.edit().putBoolean("theme_choice_made", true).apply()
     }
 
     fun setLanguage(lang: String) {
