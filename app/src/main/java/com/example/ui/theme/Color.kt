@@ -2,8 +2,6 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val CardDark = Color(0xFF1C1C1E)
-
 // Aparat Music look: monochrome black/white, flat cards, no glass blur.
 // Both a dark and a light variant, since Aparat Music itself supports both.
 val AparatBackgroundDark = Color(0xFF000000)

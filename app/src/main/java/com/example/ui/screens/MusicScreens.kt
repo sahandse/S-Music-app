@@ -97,7 +97,6 @@ import com.example.data.network.InternetRadioStation
 import com.example.data.network.MusicBrainzArtistDetail
 import com.example.data.network.SubsonicAlbum
 import com.example.data.network.SubsonicArtist
-import com.example.ui.theme.CardDark
 import com.example.data.network.SubsonicSong
 import com.example.ui.MusicViewModel
 import com.example.ui.theme.LocalAppFontFamily
@@ -237,7 +236,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -256,7 +255,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                         (if (lang == "fa") "هنرمندان مورد علاقه‌ات رو انتخاب کن" else "Choose your favorite artists"),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontFamily = LocalAppFontFamily.current,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -267,7 +266,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                     else
                         (if (lang == "fa") "این کمک می‌کنه پیشنهادهای بهتری بهت بدیم" else "This helps us give you better recommendations"),
                     fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     fontFamily = LocalAppFontFamily.current,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -290,8 +289,8 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.08f))
-                                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                    .background(if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f))
+                                    .border(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
                                     .clickable {
                                         selectedGenres = if (isSelected) selectedGenres - genre else selectedGenres + genre
                                     }
@@ -300,7 +299,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                             ) {
                                 Text(
                                     text = genre,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = LocalAppFontFamily.current
@@ -316,20 +315,20 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                         placeholder = {
                             Text(
                                 text = translate("جستجوی هنرمند...", "Search artists...", viewModel),
-                                color = Color.White.copy(alpha = 0.4f),
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
                                 fontFamily = LocalAppFontFamily.current
                             )
                         },
                         leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = null, tint = Color.White.copy(alpha = 0.6f))
+                            Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f))
                         },
                         singleLine = true,
                         textStyle = androidx.compose.ui.text.TextStyle(fontFamily = LocalAppFontFamily.current),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
+                            focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onBackground,
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f),
+                            unfocusedBorderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.2f),
                             cursorColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(14.dp)
@@ -365,7 +364,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                             modifier = Modifier
                                 .size(if (step == index) 10.dp else 8.dp)
                                 .clip(CircleShape)
-                                .background(if (step == index) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.3f))
+                                .background(if (step == index) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.3f))
                         )
                     }
                 }
@@ -384,7 +383,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                 ) {
                     Text(
                         text = if (step == 0) (if (lang == "fa") "بعدی" else "Next") else (if (lang == "fa") "شروع سفر موسیقی" else "Start Music Journey"),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         fontFamily = LocalAppFontFamily.current,
                         fontSize = 15.sp
@@ -393,7 +392,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                 TextButton(onClick = { viewModel.setOnboardingPreferencesSet(true) }, modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = if (lang == "fa") "رد کردن" else "Skip",
-                        color = Color.White.copy(alpha = 0.5f),
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                         fontFamily = LocalAppFontFamily.current
                     )
                 }
@@ -8086,11 +8085,6 @@ fun FullscreenPlayer(
     val downloadProgresses by viewModel.downloadProgresses.collectAsStateWithLifecycle()
     val queue by viewModel.playbackConnection.playbackQueue.collectAsStateWithLifecycle()
     val translatedLyrics by viewModel.translatedLyrics.collectAsStateWithLifecycle()
-    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
-    // Aparat's (dark) player is flat — no blurred album-art backdrop or dominant-color glow.
-    // Limited to the dark variant: the rest of this screen hardcodes white text/icons, which
-    // would be unreadable on aparat-light's white background without a much larger rework.
-    val isMonochromePlayer = themeMode == "aparat"
 
     var showTimerDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
@@ -8150,50 +8144,8 @@ fun FullscreenPlayer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (isMonochromePlayer) MaterialTheme.colorScheme.background else Color(0xFF050505))
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        if (!isMonochromePlayer) {
-            // Heavy-blur album art fill — Apple Music full-bleed ambient style
-            AsyncImage(
-                model = rememberSongCoverUrl(song, viewModel),
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .blur(140.dp)
-                    .graphicsLayer(alpha = 0.70f),
-                contentScale = ContentScale.Crop
-            )
-
-            // Dominant-color gradient: vivid top → transparent mid → near-black bottom
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            0f to dominantColorAnimated.copy(alpha = 0.55f),
-                            0.38f to dominantColorAnimated.copy(alpha = 0.18f),
-                            0.65f to Color.Black.copy(alpha = 0.60f),
-                            1f to Color.Black.copy(alpha = 0.96f)
-                        )
-                    )
-            )
-
-            // Subtle top-corner light bloom
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .drawBehind {
-                        drawRect(
-                            brush = Brush.radialGradient(
-                                colors = listOf(Color.White.copy(alpha = 0.09f), Color.Transparent),
-                                center = androidx.compose.ui.geometry.Offset(0f, 0f),
-                                radius = size.width * 1.0f
-                            )
-                        )
-                    }
-            )
-        }
-
         // Track-change toast: appears briefly when a new song starts, then fades out
         androidx.compose.animation.AnimatedVisibility(
             visible = showTrackToast,
@@ -8207,15 +8159,15 @@ fun FullscreenPlayer(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(24.dp))
-                    .background(Color.White.copy(alpha = 0.13f))
-                    .border(0.5.dp, Color.White.copy(0.18f), RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.13f))
+                    .border(0.5.dp, MaterialTheme.colorScheme.onBackground.copy(0.18f), RoundedCornerShape(24.dp))
                     .padding(horizontal = 24.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = song.title,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = LocalAppFontFamily.current,
@@ -8225,7 +8177,7 @@ fun FullscreenPlayer(
                     if (!song.artist.isNullOrBlank()) {
                         Text(
                             text = song.artist,
-                            color = Color.White.copy(alpha = 0.65f),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.65f),
                             fontSize = 12.sp,
                             fontFamily = LocalAppFontFamily.current,
                             maxLines = 1
@@ -8251,35 +8203,35 @@ fun FullscreenPlayer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onDismiss) {
-                    Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "بستن", tint = Color.White, modifier = Modifier.size(32.dp))
+                    Icon(imageVector = Icons.Default.KeyboardArrowDown, contentDescription = "بستن", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(32.dp))
                 }
 
                 // Apple Music inspired tab selector for artwork / lyrics
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f))
                         .padding(4.dp)
                 ) {
                     Text(
                         text = "کاور",
-                        color = if (playerTab == 0) Color.Black else Color.White,
+                        color = if (playerTab == 0) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onBackground,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (playerTab == 0) Color.White else Color.Transparent)
+                            .background(if (playerTab == 0) MaterialTheme.colorScheme.onBackground else Color.Transparent)
                             .clickable { playerTab = 0 }
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     )
                     Text(
                         text = "متن شعر",
-                        color = if (playerTab == 1) Color.Black else Color.White,
+                        color = if (playerTab == 1) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onBackground,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (playerTab == 1) Color.White else Color.Transparent)
+                            .background(if (playerTab == 1) MaterialTheme.colorScheme.onBackground else Color.Transparent)
                             .clickable { playerTab = 1 }
                             .padding(horizontal = 16.dp, vertical = 6.dp)
                     )
@@ -8305,7 +8257,7 @@ fun FullscreenPlayer(
                             Icon(
                                 imageVector = Icons.Default.MoreVert,
                                 contentDescription = "بیشتر",
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onBackground
                             )
                         }
                         DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
@@ -8421,7 +8373,7 @@ fun FullscreenPlayer(
                             Text(
                                 text = translate("درحال بارگذاری متن...", "Loading lyrics...", viewModel),
                                 fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.5f),
+                                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
                                 fontFamily = LocalAppFontFamily.current
                             )
                         } else if (lyrics != null) {
@@ -8434,8 +8386,8 @@ fun FullscreenPlayer(
                                 modifier = Modifier
                                     .fillMaxWidth(0.9f)
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(Color.White.copy(alpha = 0.08f))
-                                    .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f))
+                                    .border(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
                                     .clickable { playerTab = 1 }
                                     .padding(horizontal = 16.dp, vertical = 10.dp),
                                 contentAlignment = Alignment.Center
@@ -8460,7 +8412,7 @@ fun FullscreenPlayer(
 
                                     Text(
                                         text = lyricDisplay,
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onBackground,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
@@ -8481,11 +8433,11 @@ fun FullscreenPlayer(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
-                                    Icon(imageVector = Icons.Default.MusicNote, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                    Icon(imageVector = Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(14.dp))
                                     Text(
                                         text = translate("فاقد متن آنلاین (لمس برای ورود دستی/جستجو)", "No lyrics available (Tap to view details)", viewModel),
                                         fontSize = 11.sp,
-                                        color = Color.White,
+                                        color = MaterialTheme.colorScheme.onBackground,
                                         fontFamily = LocalAppFontFamily.current
                                     )
                                 }
@@ -8497,7 +8449,7 @@ fun FullscreenPlayer(
                     if (isLoadingLyrics) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     } else if (lyrics == null) {
-                        Text(translate("متن موسیقی یافت نشد.", "Lyrics not found.", viewModel), color = Color.White.copy(alpha = 0.6f), fontSize = 15.sp)
+                        Text(translate("متن موسیقی یافت نشد.", "Lyrics not found.", viewModel), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 15.sp)
                     } else {
                         val parsedLyrics = remember(lyrics) { parseLrc(lyrics!!) }
                         if (parsedLyrics.isEmpty()) {
@@ -8516,31 +8468,31 @@ fun FullscreenPlayer(
                                 ) {
                                     OutlinedButton(
                                         onClick = { showLyricCardPicker = true },
-                                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)),
                                         shape = RoundedCornerShape(20.dp),
                                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(translate("کارت متن ✨", "Lyric Card ✨", viewModel), color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                        Text(translate("کارت متن ✨", "Lyric Card ✨", viewModel), color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                     }
                                     Spacer(Modifier.width(8.dp))
                                     if (translatedLyrics != null) {
                                         TextButton(onClick = { viewModel.clearTranslatedLyrics() }) {
-                                            Text(translate("بستن ترجمه", "Hide Translation", viewModel), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                            Text(translate("بستن ترجمه", "Hide Translation", viewModel), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                         }
                                     } else {
                                         OutlinedButton(
                                             onClick = { viewModel.translateLyrics(lyrics!!) },
-                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)),
                                             shape = RoundedCornerShape(20.dp),
                                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                         ) {
-                                            Text(translate("ترجمه 🌐", "Translate 🌐", viewModel), color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                            Text(translate("ترجمه 🌐", "Translate 🌐", viewModel), color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                         }
                                     }
                                 }
                                 Text(
                                     text = lyrics!!,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     lineHeight = 32.sp,
@@ -8549,11 +8501,11 @@ fun FullscreenPlayer(
                                 )
                                 if (translatedLyrics != null) {
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    HorizontalDivider(color = Color.White.copy(alpha = 0.15f), modifier = Modifier.padding(horizontal = 24.dp))
+                                    HorizontalDivider(color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f), modifier = Modifier.padding(horizontal = 24.dp))
                                     Spacer(modifier = Modifier.height(16.dp))
                                     Text(
                                         text = translatedLyrics!!,
-                                        color = Color.White.copy(alpha = 0.6f),
+                                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                                         fontSize = 15.sp,
                                         lineHeight = 26.sp,
                                         textAlign = TextAlign.Center,
@@ -8572,25 +8524,25 @@ fun FullscreenPlayer(
                                 ) {
                                     OutlinedButton(
                                         onClick = { showLyricCardPicker = true },
-                                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)),
                                         shape = RoundedCornerShape(20.dp),
                                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                     ) {
-                                        Text(translate("کارت متن ✨", "Lyric Card ✨", viewModel), color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                        Text(translate("کارت متن ✨", "Lyric Card ✨", viewModel), color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                     }
                                     Spacer(Modifier.width(8.dp))
                                     if (translatedLyrics != null) {
                                         TextButton(onClick = { viewModel.clearTranslatedLyrics() }) {
-                                            Text(translate("بستن ترجمه", "Hide Translation", viewModel), color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                            Text(translate("بستن ترجمه", "Hide Translation", viewModel), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                         }
                                     } else {
                                         OutlinedButton(
                                             onClick = { viewModel.translateLyrics(parsedLyrics.joinToString("\n") { it.text }) },
-                                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)),
                                             shape = RoundedCornerShape(20.dp),
                                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                         ) {
-                                            Text(translate("ترجمه 🌐", "Translate 🌐", viewModel), color = Color.White, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
+                                            Text(translate("ترجمه 🌐", "Translate 🌐", viewModel), color = MaterialTheme.colorScheme.onBackground, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current)
                                         }
                                     }
                                 }
@@ -8614,7 +8566,7 @@ fun FullscreenPlayer(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = song.title,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onBackground,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -8640,7 +8592,7 @@ fun FullscreenPlayer(
                             participatingArtists.forEachIndexed { index, artist ->
                                 Text(
                                     text = artist.name + (if (index < participatingArtists.size - 1) "، " else ""),
-                                    color = Color.White.copy(alpha = 0.85f),
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     fontFamily = LocalAppFontFamily.current,
@@ -8658,12 +8610,12 @@ fun FullscreenPlayer(
                                 Icon(
                                     imageVector = Icons.Default.Album,
                                     contentDescription = null,
-                                    tint = Color.White.copy(alpha = 0.45f),
+                                    tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Text(
                                     text = song.album,
-                                    color = Color.White.copy(alpha = 0.45f),
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
                                     fontSize = 12.sp,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
@@ -8680,7 +8632,7 @@ fun FullscreenPlayer(
                             Icon(
                                 imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                 contentDescription = "پسندیدن",
-                                tint = if (isFav) MaterialTheme.colorScheme.primary else Color.White,
+                                tint = if (isFav) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
                                 modifier = Modifier.size(26.dp)
                             )
                         }
@@ -8710,8 +8662,8 @@ fun FullscreenPlayer(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text(text = formatTime(progress), color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
-                            Text(text = formatTime(duration), color = Color.White.copy(alpha = 0.6f), fontSize = 11.sp)
+                            Text(text = formatTime(progress), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 11.sp)
+                            Text(text = formatTime(duration), color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f), fontSize = 11.sp)
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
@@ -8726,13 +8678,13 @@ fun FullscreenPlayer(
                                 Icon(
                                     imageVector = Icons.Default.Shuffle,
                                     contentDescription = "تصادفی",
-                                    tint = if (isShuffle) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f),
+                                    tint = if (isShuffle) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
 
                             IconButton(onClick = { viewModel.playbackConnection.skipToPrevious() }) {
-                                Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "قبلی", tint = Color.White, modifier = Modifier.size(36.dp))
+                                Icon(imageVector = Icons.Default.SkipPrevious, contentDescription = "قبلی", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(36.dp))
                             }
 
                             // Giant centered play/pause trigger with MaterialTheme.colorScheme.primary fill
@@ -8784,7 +8736,7 @@ fun FullscreenPlayer(
                             }
 
                             IconButton(onClick = { viewModel.playbackConnection.skipToNext() }) {
-                                Icon(imageVector = Icons.Default.SkipNext, contentDescription = "بعدی", tint = Color.White, modifier = Modifier.size(36.dp))
+                                Icon(imageVector = Icons.Default.SkipNext, contentDescription = "بعدی", tint = MaterialTheme.colorScheme.onBackground, modifier = Modifier.size(36.dp))
                             }
 
                             IconButton(onClick = { viewModel.playbackConnection.toggleRepeatMode() }) {
@@ -8795,7 +8747,7 @@ fun FullscreenPlayer(
                                 Icon(
                                     imageVector = icon,
                                     contentDescription = "تکرار",
-                                    tint = if (repeatMode != Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.6f),
+                                    tint = if (repeatMode != Player.REPEAT_MODE_OFF) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -8817,7 +8769,7 @@ fun FullscreenPlayer(
                         Icon(
                             imageVector = Icons.Default.Forward30,
                             contentDescription = "۳۰ ثانیه جلو",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.size(32.dp)
                         )
                     }
@@ -8826,7 +8778,7 @@ fun FullscreenPlayer(
                         Icon(
                             imageVector = Icons.Default.Replay30,
                             contentDescription = "۳۰ ثانیه عقب",
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.size(32.dp)
                         )
                     }
@@ -8844,7 +8796,7 @@ fun FullscreenPlayer(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = if (speed != 1f) 0.2f else 0.08f))
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = if (speed != 1f) 0.2f else 0.08f))
                         .border(
                             width = if (speed != 1f) 1.dp else 0.dp,
                             color = if (speed != 1f) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -8855,8 +8807,8 @@ fun FullscreenPlayer(
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = if (speed != 1f) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
-                        Text(text = "${speed}x", color = if (speed != 1f) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Icon(imageVector = Icons.Default.Speed, contentDescription = null, tint = if (speed != 1f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                        Text(text = "${speed}x", color = if (speed != 1f) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
 
@@ -8864,14 +8816,14 @@ fun FullscreenPlayer(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
+                        .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.08f))
                         .clickable { showQueueSheet = true }
                         .padding(horizontal = 14.dp, vertical = 7.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Icon(imageVector = Icons.Default.QueueMusic, contentDescription = "صف پخش", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
-                        Text(text = "صف پخش", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Icon(imageVector = Icons.Default.QueueMusic, contentDescription = "صف پخش", tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
+                        Text(text = "صف پخش", color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -8881,14 +8833,14 @@ fun FullscreenPlayer(
                     Box(
                         modifier = Modifier
                             .size(72.dp)
-                            .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                            .background(MaterialTheme.colorScheme.onBackground.copy(alpha = 0.15f), CircleShape)
                             .clickable { viewModel.playbackConnection.togglePlayPause() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = MaterialTheme.colorScheme.onBackground,
                             modifier = Modifier.size(40.dp)
                         )
                     }
@@ -8990,7 +8942,7 @@ fun FullscreenPlayer(
         Dialog(onDismissRequest = { showQueueSheet = false }) {
             Surface(
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 16.dp, bottomEnd = 16.dp),
-                color = CardDark,
+                color = MaterialTheme.colorScheme.surface,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(16.dp).heightIn(max = 480.dp)) {
@@ -9002,12 +8954,12 @@ fun FullscreenPlayer(
                         Text(
                             text = "صف پخش (${queue.size} آهنگ)",
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onSurface,
                             fontSize = 17.sp,
                             fontFamily = LocalAppFontFamily.current
                         )
                         IconButton(onClick = { showQueueSheet = false }) {
-                            Icon(Icons.Default.Close, contentDescription = "بستن", tint = Color.White.copy(alpha = 0.6f))
+                            Icon(Icons.Default.Close, contentDescription = "بستن", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                         }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -9066,7 +9018,7 @@ fun FullscreenPlayer(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = qSong.title,
-                                            color = if (isActive) MaterialTheme.colorScheme.primary else Color.White,
+                                            color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                                             fontSize = 13.sp,
                                             fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
                                             maxLines = 1,
@@ -9088,7 +9040,7 @@ fun FullscreenPlayer(
                                     Icon(
                                         imageVector = Icons.Default.DragHandle,
                                         contentDescription = translate("جابه‌جایی", "Reorder", viewModel),
-                                        tint = Color.White.copy(alpha = 0.35f),
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
                                         modifier = Modifier
                                             .size(20.dp)
                                             .pointerInput(qSong.id) {
@@ -9142,9 +9094,9 @@ fun SleepTimerDialog(
     onSelect: (Int) -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(16.dp), color = CardDark) {
+        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("تنظیم تایمر خواب", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text("تنظیم تایمر خواب", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 if (currentMinutes != null) {
                     Text("تایمر فعال: $currentMinutes دقیقه باقی مانده", color = MaterialTheme.colorScheme.primary, fontSize = 14.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 }
@@ -9162,13 +9114,13 @@ fun SleepTimerDialog(
                         onClick = { onSelect(opt.first) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(opt.second, color = if (opt.first == 0) Color.Gray else Color.White)
+                        Text(opt.second, color = if (opt.first == 0) Color.Gray else MaterialTheme.colorScheme.onSurface)
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                 }
 
                 Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                    Text("انصراف", color = Color.White)
+                    Text("انصراف", color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }
@@ -9183,9 +9135,9 @@ fun PlaybackSpeedDialog(
     onSelect: (Float) -> Unit
 ) {
     Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(16.dp), color = CardDark) {
+        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface) {
             Column(modifier = Modifier.padding(16.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("سرعت پخش", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 18.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
+                Text("سرعت پخش", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface, fontSize = 18.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
 
                 val speeds = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
 
@@ -9195,13 +9147,13 @@ fun PlaybackSpeedDialog(
                         onClick = { onSelect(spd) },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "${spd}x", color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                        Text(text = "${spd}x", color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
                 }
 
                 Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) {
-                    Text("انصراف", color = Color.White)
+                    Text("انصراف", color = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }
@@ -9725,100 +9677,109 @@ fun MusicVideoPage(
             )
         }
 
-        // Bottom gradient + info
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .align(Alignment.BottomCenter)
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.9f))))
-        )
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter)
-                .padding(horizontal = 16.dp, vertical = 16.dp)
+        // Bottom gradient + info — hidden while playing so nothing sits over the video;
+        // pausing (tap) reveals it again, like a "tap for controls" video player.
+        AnimatedVisibility(
+            visible = !isVideoPlaying,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter)
         ) {
-            // "This song is on your server" shortcut
-            if (serverSong != null) {
-                Row(
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(MaterialTheme.colorScheme.primary)
-                        .clickable { onOpenServerSong(serverSong) }
-                        .padding(horizontal = 14.dp, vertical = 7.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MusicNote,
-                        contentDescription = null,
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "این آهنگ تو سرور هست — برو به آهنگ",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = LocalAppFontFamily.current
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.Bottom,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current, maxLines = 2, modifier = Modifier.clickable { onArtistClick(video.artistName) })
-                    Text(video.artistName, color = Color.White.copy(0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current, modifier = Modifier.clickable { onArtistClick(video.artistName) })
-                    Text("Apple Music · پیش‌نمایش", color = Color.White.copy(0.45f), fontSize = 10.sp, fontFamily = LocalAppFontFamily.current)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = {
-                        if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
-                        isVideoPlaying = exoPlayer.isPlaying
-                    }) {
-                        Icon(
-                            imageVector = if (isVideoPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = if (isVideoPlaying) "توقف" else "پخش",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = onToggleMute) {
-                        Icon(
-                            imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
-                            contentDescription = if (isMuted) "صدا روشن" else "بی‌صدا",
-                            tint = Color.White
-                        )
-                    }
-                }
-            }
-
-            // Seek bar + timing (active page only)
-            if (isActive && durationMs > 0) {
-                Slider(
-                    value = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f),
-                    onValueChange = { frac ->
-                        exoPlayer.seekTo((frac * durationMs).toLong())
-                        positionMs = (frac * durationMs).toLong()
-                    },
-                    colors = SliderDefaults.colors(
-                        thumbColor = MaterialTheme.colorScheme.primary,
-                        activeTrackColor = MaterialTheme.colorScheme.primary,
-                        inactiveTrackColor = Color.White.copy(alpha = 0.25f)
-                    ),
-                    modifier = Modifier.fillMaxWidth().height(24.dp)
+                        .fillMaxWidth()
+                        .height(220.dp)
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.9f))))
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(horizontal = 16.dp, vertical = 16.dp)
                 ) {
-                    Text(formatVideoTime(positionMs), color = Color.White.copy(0.6f), fontSize = 10.sp)
-                    Text(formatVideoTime(durationMs), color = Color.White.copy(0.6f), fontSize = 10.sp)
+                    // "This song is on your server" shortcut
+                    if (serverSong != null) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(MaterialTheme.colorScheme.primary)
+                                .clickable { onOpenServerSong(serverSong) }
+                                .padding(horizontal = 14.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.MusicNote,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "این آهنگ تو سرور هست — برو به آهنگ",
+                                color = Color.White,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = LocalAppFontFamily.current
+                            )
+                        }
+                        Spacer(Modifier.height(8.dp))
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(video.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current, maxLines = 2, modifier = Modifier.clickable { onArtistClick(video.artistName) })
+                            Text(video.artistName, color = Color.White.copy(0.7f), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current, modifier = Modifier.clickable { onArtistClick(video.artistName) })
+                            Text("Apple Music · پیش‌نمایش", color = Color.White.copy(0.45f), fontSize = 10.sp, fontFamily = LocalAppFontFamily.current)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = {
+                                if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
+                                isVideoPlaying = exoPlayer.isPlaying
+                            }) {
+                                Icon(
+                                    imageVector = if (isVideoPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                    contentDescription = if (isVideoPlaying) "توقف" else "پخش",
+                                    tint = Color.White
+                                )
+                            }
+                            IconButton(onClick = onToggleMute) {
+                                Icon(
+                                    imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                                    contentDescription = if (isMuted) "صدا روشن" else "بی‌صدا",
+                                    tint = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    // Seek bar + timing (active page only)
+                    if (isActive && durationMs > 0) {
+                        Slider(
+                            value = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f),
+                            onValueChange = { frac ->
+                                exoPlayer.seekTo((frac * durationMs).toLong())
+                                positionMs = (frac * durationMs).toLong()
+                            },
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+                            ),
+                            modifier = Modifier.fillMaxWidth().height(24.dp)
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(formatVideoTime(positionMs), color = Color.White.copy(0.6f), fontSize = 10.sp)
+                            Text(formatVideoTime(durationMs), color = Color.White.copy(0.6f), fontSize = 10.sp)
+                        }
+                    }
                 }
             }
         }
