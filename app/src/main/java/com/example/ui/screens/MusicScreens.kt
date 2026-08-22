@@ -77,6 +77,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
 import com.example.ui.MusicVideoItem
 import com.example.ui.ApplePreviewTrack
@@ -6077,17 +6078,37 @@ fun ArtistDetailView(
                         }
                     }
                     DisposableEffect(videoPlayer) { onDispose { videoPlayer.release() } }
+                    // Real aspect ratio of the video (falls back to 16:9 until the player
+                    // reports it) — stretching every clip to fillMaxSize() distorted anything
+                    // that wasn't already exactly the screen's own ratio.
+                    var overlayAspectRatio by remember(currentVideoUrl) { mutableStateOf(16f / 9f) }
+                    DisposableEffect(videoPlayer) {
+                        val listener = object : Player.Listener {
+                            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                                if (videoSize.width != 0 && videoSize.height != 0) {
+                                    overlayAspectRatio = (videoSize.width * videoSize.pixelWidthHeightRatio) / videoSize.height
+                                }
+                            }
+                        }
+                        videoPlayer.addListener(listener)
+                        onDispose { videoPlayer.removeListener(listener) }
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(Color.Black)
                             .zIndex(20f)
                     ) {
+                        val overlayVideoModifier = if (overlayAspectRatio >= 1f) {
+                            Modifier.fillMaxWidth().aspectRatio(overlayAspectRatio)
+                        } else {
+                            Modifier.fillMaxHeight().aspectRatio(overlayAspectRatio)
+                        }
                         AndroidView(
                             factory = { ctx ->
                                 android.view.SurfaceView(ctx).also { sv -> videoPlayer.setVideoSurfaceView(sv) }
                             },
-                            modifier = Modifier.fillMaxSize()
+                            modifier = overlayVideoModifier.align(Alignment.Center)
                         )
                         IconButton(
                             onClick = { videoPlayerUrl = null },
@@ -9636,6 +9657,17 @@ fun MusicVideoPage(
     var positionMs by remember(video.id) { mutableStateOf(0L) }
     var durationMs by remember(video.id) { mutableStateOf(0L) }
 
+    // Real aspect ratio of the currently decoded video (falls back to 16:9 until
+    // the player reports it) — videos aren't all landscape, so a hardcoded ratio
+    // stretches vertical/square clips out of shape.
+    fun VideoSize.aspectRatioOrNull(): Float? {
+        if (width == 0 || height == 0) return null
+        return (width * pixelWidthHeightRatio) / height
+    }
+    var videoAspectRatio by remember(video.id) {
+        mutableStateOf(exoPlayer.videoSize.aspectRatioOrNull() ?: (16f / 9f))
+    }
+
     // Poll playback position while this page is the active one
     LaunchedEffect(isActive, video.id) {
         if (!isActive) return@LaunchedEffect
@@ -9645,6 +9677,18 @@ fun MusicVideoPage(
             isVideoPlaying = exoPlayer.isPlaying
             delay(400L)
         }
+    }
+
+    DisposableEffect(isActive, video.id) {
+        if (!isActive) return@DisposableEffect onDispose {}
+        val listener = object : Player.Listener {
+            override fun onVideoSizeChanged(videoSize: VideoSize) {
+                videoSize.aspectRatioOrNull()?.let { videoAspectRatio = it }
+            }
+        }
+        exoPlayer.addListener(listener)
+        exoPlayer.videoSize.aspectRatioOrNull()?.let { videoAspectRatio = it }
+        onDispose { exoPlayer.removeListener(listener) }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -9658,22 +9702,25 @@ fun MusicVideoPage(
 
         // Video surface (only active page renders the player); tap toggles play/pause
         if (isActive) {
+            // Fill by whichever axis matches the video's own orientation so a portrait
+            // clip fills the screen like landscape ones fill the width, instead of both
+            // being forced into the same box and stretched to fit it.
+            val videoBoxModifier = if (videoAspectRatio >= 1f) {
+                Modifier.fillMaxWidth().aspectRatio(videoAspectRatio)
+            } else {
+                Modifier.fillMaxHeight().aspectRatio(videoAspectRatio)
+            }
             AndroidView(
                 factory = { ctx ->
                     android.view.SurfaceView(ctx).also { sv ->
                         exoPlayer.setVideoSurfaceView(sv)
                     }
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
-                    .align(Alignment.Center)
+                modifier = videoBoxModifier.align(Alignment.Center)
             )
             // Transparent tap layer over the video for play/pause
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(16f / 9f)
+                modifier = videoBoxModifier
                     .align(Alignment.Center)
                     .clickable {
                         if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
