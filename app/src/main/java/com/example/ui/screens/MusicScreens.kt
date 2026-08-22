@@ -2911,7 +2911,6 @@ fun PlaylistSelectorDialog(
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
-                            HorizontalDivider()
                         }
                     }
                 }
@@ -3228,7 +3227,6 @@ fun SearchScreen(
                                     Icon(imageVector = Icons.Default.History, contentDescription = null, tint = Color.Gray)
                                     Text(text = hist, fontSize = 14.sp, fontFamily = LocalAppFontFamily.current)
                                 }
-                                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
                             }
                         }
                     }
@@ -3716,36 +3714,33 @@ fun LibraryScreen(
         )
 
         items(categories) { cat ->
-            Column {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onItemClick(cat.first) }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    Icon(
-                        imageVector = cat.third,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Text(
-                        text = translate(cat.second.first, cat.second.second, viewModel),
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f),
-                        fontFamily = LocalAppFontFamily.current
-                    )
-                    Icon(
-                        imageVector = Icons.Default.ChevronLeft,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-                HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f), thickness = 0.5.dp, modifier = Modifier.padding(start = 50.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onItemClick(cat.first) }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Icon(
+                    imageVector = cat.third,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp)
+                )
+                Text(
+                    text = translate(cat.second.first, cat.second.second, viewModel),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.weight(1f),
+                    fontFamily = LocalAppFontFamily.current
+                )
+                Icon(
+                    imageVector = Icons.Default.ChevronLeft,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
 
@@ -3894,38 +3889,35 @@ fun LibraryScreen(
             }
         } else {
             items(playlists) { playlist ->
-                Column {
-                    Row(
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onPlaylistClick(playlist) }
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onPlaylistClick(playlist) }
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.QueueMusic,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(text = playlist.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current)
-                            Text(text = playlist.description ?: "", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f), fontFamily = LocalAppFontFamily.current)
-                        }
-                        IconButton(onClick = { viewModel.deletePlaylist(playlist.id) }) {
-                            Icon(imageVector = Icons.Default.Delete, contentDescription = "حذف", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
-                        }
+                        Icon(
+                            imageVector = Icons.Default.QueueMusic,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            modifier = Modifier.size(22.dp)
+                        )
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f), thickness = 0.5.dp, modifier = Modifier.padding(start = 76.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = playlist.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, fontFamily = LocalAppFontFamily.current)
+                        Text(text = playlist.description ?: "", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f), fontFamily = LocalAppFontFamily.current)
+                    }
+                    IconButton(onClick = { viewModel.deletePlaylist(playlist.id) }) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "حذف", tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f), modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }
@@ -6298,10 +6290,6 @@ fun AlbumDetailView(
                             viewModel = viewModel,
                             backgroundTint = trackTint
                         )
-                        HorizontalDivider(
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f),
-                            modifier = Modifier.padding(horizontal = 16.dp)
-                        )
                     }
                 }
 
@@ -6426,7 +6414,6 @@ fun PlaylistDetailView(
                                 Icon(imageVector = Icons.Default.RemoveCircleOutline, contentDescription = "حذف از پلی‌لیست", tint = Color.Gray)
                             }
                         }
-                        HorizontalDivider()
                     }
                 }
             }
@@ -8841,7 +8828,6 @@ fun FullscreenPlayer(
                                     }
                                     .padding(vertical = 10.dp, horizontal = 8.dp)
                             )
-                            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                         }
                     }
                 }
@@ -10203,7 +10189,6 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                                 modifier = Modifier.size(16.dp)
                             )
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                     }
                 }
             }
@@ -10283,7 +10268,6 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                 }
             }
         }
@@ -10650,7 +10634,6 @@ fun CatalogView(viewModel: MusicViewModel) {
                             Icon(Icons.Default.Share, contentDescription = "اشتراک", tint = Color.Gray, modifier = Modifier.size(18.dp))
                         }
                     }
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                 }
             }
         }
@@ -10746,7 +10729,6 @@ fun PodcastsView(viewModel: MusicViewModel) {
                                 )
                             }
                         }
-                        HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
                     }
                 }
             }
