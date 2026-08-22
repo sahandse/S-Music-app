@@ -155,44 +155,6 @@ fun Modifier.tvFocusable(
 }
 
 @Composable
-fun Modifier.coloredShadow(
-    color: Color,
-    borderRadius: Dp = 12.dp,
-    blurRadius: Dp = 16.dp,
-    offsetY: Dp = 8.dp,
-    alpha: Float = 0.28f
-): Modifier {
-    return this.drawBehind {
-        this.drawIntoCanvas {
-            val paint = androidx.compose.ui.graphics.Paint()
-            val frameworkPaint = paint.asFrameworkPaint()
-            val spreadPixel = blurRadius.toPx()
-            frameworkPaint.color = android.graphics.Color.TRANSPARENT
-            frameworkPaint.setShadowLayer(
-                spreadPixel,
-                0f,
-                offsetY.toPx(),
-                android.graphics.Color.argb(
-                    (255 * alpha).toInt(),
-                    (color.red * 255).toInt(),
-                    (color.green * 255).toInt(),
-                    (color.blue * 255).toInt()
-                )
-            )
-            it.drawRoundRect(
-                left = 0f,
-                top = 0f,
-                right = this.size.width,
-                bottom = this.size.height,
-                radiusX = borderRadius.toPx(),
-                radiusY = borderRadius.toPx(),
-                paint = paint
-            )
-        }
-    }
-}
-
-@Composable
 fun translate(fa: String, en: String, viewModel: MusicViewModel): String {
     val lang by viewModel.language.collectAsStateWithLifecycle()
     return if (lang == "fa") fa else en
@@ -2240,14 +2202,14 @@ fun HorizontalSuggestionCard(
     imageUrl: String,
     onClick: () -> Unit
 ) {
+    // Borderless: the cover art itself is the only visual frame — no card background
     Row(
         modifier = Modifier
             .width(280.dp)
             .height(84.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .clickable(onClick = onClick)
-            .padding(10.dp),
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -2255,8 +2217,8 @@ fun HorizontalSuggestionCard(
             model = imageUrl,
             contentDescription = title,
             modifier = Modifier
-                .size(64.dp)
-                .clip(RoundedCornerShape(10.dp)),
+                .size(72.dp)
+                .clip(RoundedCornerShape(12.dp)),
             contentScale = ContentScale.Crop
         )
         Column(modifier = Modifier.weight(1f)) {
@@ -2282,13 +2244,13 @@ fun HorizontalSuggestionCard(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(Color.White),
+                .background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.PlayArrow,
                 contentDescription = null,
-                tint = Color.Black,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(22.dp)
             )
         }
@@ -2313,7 +2275,6 @@ fun VerticalBigCard(
             contentDescription = title,
             modifier = Modifier
                 .size(150.dp)
-                .coloredShadow(color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f), borderRadius = 10.dp)
                 .clip(RoundedCornerShape(10.dp)),
             contentScale = ContentScale.Crop
         )
@@ -4963,6 +4924,7 @@ fun AlbumGridCard(
         label = "AlbumCardScale"
     )
 
+    // Borderless: no card background, the cover art itself is the only frame
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -4972,8 +4934,6 @@ fun AlbumGridCard(
                 indication = LocalIndication.current,
                 onClick = onClick
             )
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-            .padding(8.dp)
     ) {
         Box(
             modifier = Modifier
