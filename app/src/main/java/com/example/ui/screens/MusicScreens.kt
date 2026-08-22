@@ -79,6 +79,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import com.example.ui.MusicVideoItem
 import com.example.ui.ApplePreviewTrack
 import com.example.ui.PodcastItem
@@ -9657,17 +9659,6 @@ fun MusicVideoPage(
     var positionMs by remember(video.id) { mutableStateOf(0L) }
     var durationMs by remember(video.id) { mutableStateOf(0L) }
 
-    // Real aspect ratio of the currently decoded video (falls back to 16:9 until
-    // the player reports it) — videos aren't all landscape, so a hardcoded ratio
-    // stretches vertical/square clips out of shape.
-    fun VideoSize.aspectRatioOrNull(): Float? {
-        if (width == 0 || height == 0) return null
-        return (width * pixelWidthHeightRatio) / height
-    }
-    var videoAspectRatio by remember(video.id) {
-        mutableStateOf(exoPlayer.videoSize.aspectRatioOrNull() ?: (16f / 9f))
-    }
-
     // Poll playback position while this page is the active one
     LaunchedEffect(isActive, video.id) {
         if (!isActive) return@LaunchedEffect
@@ -9679,18 +9670,6 @@ fun MusicVideoPage(
         }
     }
 
-    DisposableEffect(isActive, video.id) {
-        if (!isActive) return@DisposableEffect onDispose {}
-        val listener = object : Player.Listener {
-            override fun onVideoSizeChanged(videoSize: VideoSize) {
-                videoSize.aspectRatioOrNull()?.let { videoAspectRatio = it }
-            }
-        }
-        exoPlayer.addListener(listener)
-        exoPlayer.videoSize.aspectRatioOrNull()?.let { videoAspectRatio = it }
-        onDispose { exoPlayer.removeListener(listener) }
-    }
-
     Box(Modifier.fillMaxSize()) {
         // Blurred thumbnail background
         AsyncImage(
@@ -9700,28 +9679,25 @@ fun MusicVideoPage(
             contentScale = ContentScale.Crop
         )
 
-        // Video surface (only active page renders the player); tap toggles play/pause
+        // Video surface (only active page renders the player); tap toggles play/pause.
+        // Instagram/Reels-style: the video fills the entire screen edge-to-edge — scaled
+        // up and center-cropped (RESIZE_MODE_ZOOM) rather than letterboxed to its real ratio.
         if (isActive) {
-            // Fill by whichever axis matches the video's own orientation so a portrait
-            // clip fills the screen like landscape ones fill the width, instead of both
-            // being forced into the same box and stretched to fit it.
-            val videoBoxModifier = if (videoAspectRatio >= 1f) {
-                Modifier.fillMaxWidth().aspectRatio(videoAspectRatio)
-            } else {
-                Modifier.fillMaxHeight().aspectRatio(videoAspectRatio)
-            }
             AndroidView(
                 factory = { ctx ->
-                    android.view.SurfaceView(ctx).also { sv ->
-                        exoPlayer.setVideoSurfaceView(sv)
+                    PlayerView(ctx).apply {
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        player = exoPlayer
                     }
                 },
-                modifier = videoBoxModifier.align(Alignment.Center)
+                modifier = Modifier.fillMaxSize()
             )
             // Transparent tap layer over the video for play/pause
             Box(
-                modifier = videoBoxModifier
-                    .align(Alignment.Center)
+                modifier = Modifier
+                    .fillMaxSize()
                     .clickable {
                         if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play()
                         isVideoPlaying = exoPlayer.isPlaying
@@ -9744,8 +9720,8 @@ fun MusicVideoPage(
             AsyncImage(
                 model = video.thumbnailUrl,
                 contentDescription = null,
-                modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f).align(Alignment.Center),
-                contentScale = ContentScale.Fit
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
         }
 
