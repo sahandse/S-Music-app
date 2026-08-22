@@ -1559,13 +1559,24 @@ fun HomeScreen(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(newestIranian) { song ->
-                        HorizontalSuggestionCard(
-                            title = song.title,
-                            subtitle = song.artist.ifBlank { translate("هنرمند ناشناس", "Unknown Artist", viewModel) },
-                            imageUrl = song.coverUrl,
-                            onClick = { viewModel.playCatalogSong(song, newestIranian) }
-                        )
+                    itemsIndexed(newestIranian) { index, song ->
+                        // The first tile leads the row as a larger featured card,
+                        // breaking up the otherwise uniform strip of equal-size cards.
+                        if (index == 0) {
+                            FeaturedSuggestionCard(
+                                title = song.title,
+                                subtitle = song.artist.ifBlank { translate("هنرمند ناشناس", "Unknown Artist", viewModel) },
+                                imageUrl = song.coverUrl,
+                                onClick = { viewModel.playCatalogSong(song, newestIranian) }
+                            )
+                        } else {
+                            HorizontalSuggestionCard(
+                                title = song.title,
+                                subtitle = song.artist.ifBlank { translate("هنرمند ناشناس", "Unknown Artist", viewModel) },
+                                imageUrl = song.coverUrl,
+                                onClick = { viewModel.playCatalogSong(song, newestIranian) }
+                            )
+                        }
                     }
                 }
             }
@@ -2190,6 +2201,77 @@ fun SectionSeeAllButton(text: String, onClick: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface,
             fontFamily = LocalAppFontFamily.current
         )
+    }
+}
+
+// --- Tall featured card — leads a row with one larger tile before the regular
+// (HorizontalSuggestionCard) ones, breaking up an otherwise uniform grid ---
+@Composable
+fun FeaturedSuggestionCard(
+    title: String,
+    subtitle: String,
+    imageUrl: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(180.dp)
+            .height(220.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+    ) {
+        AsyncImage(
+            model = imageUrl,
+            contentDescription = title,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .align(Alignment.BottomCenter)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(10.dp)
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onPrimary,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(12.dp)
+        ) {
+            Text(
+                text = title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                fontFamily = LocalAppFontFamily.current
+            )
+            Text(
+                text = subtitle,
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.7f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontFamily = LocalAppFontFamily.current
+            )
+        }
     }
 }
 
