@@ -8073,6 +8073,7 @@ fun FullscreenPlayer(
     var showSpeedDialog by remember { mutableStateOf(false) }
     var showQueueSheet by remember { mutableStateOf(false) }
     var showAddToPlaylist by remember { mutableStateOf(false) }
+    var showOverflowMenu by remember { mutableStateOf(false) }
 
     val haptic = LocalHapticFeedback.current
 
@@ -8261,9 +8262,12 @@ fun FullscreenPlayer(
                     )
                 }
 
-                Row {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     val isDownloaded = downloadedTracks.any { it.id == song.id }
                     val downloadProgress = downloadProgresses[song.id]
+
+                    CastButton()
+
                     if (downloadProgress != null) {
                         CircularProgressIndicator(
                             progress = { downloadProgress },
@@ -8271,40 +8275,60 @@ fun FullscreenPlayer(
                             modifier = Modifier.padding(10.dp).size(20.dp),
                             strokeWidth = 2.dp
                         )
-                    } else {
-                        IconButton(
-                            onClick = {
-                                if (isDownloaded) {
-                                    viewModel.deleteDownload(song.id)
-                                } else {
-                                    viewModel.startDownload(song)
-                                }
-                            }
-                        ) {
+                    }
+
+                    Box {
+                        IconButton(onClick = { showOverflowMenu = true }) {
                             Icon(
-                                imageVector = if (isDownloaded) Icons.Default.OfflinePin else Icons.Outlined.FileDownload,
-                                contentDescription = "دانلود",
-                                tint = if (isDownloaded) MaterialTheme.colorScheme.primary else Color.White
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "بیشتر",
+                                tint = Color.White
                             )
                         }
-                    }
-
-                    IconButton(onClick = { viewModel.shareSongCard(song) }) {
-                        Icon(
-                            imageVector = Icons.Outlined.Share,
-                            contentDescription = "اشتراک‌گذاری",
-                            tint = Color.White
-                        )
-                    }
-
-                    CastButton()
-
-                    IconButton(onClick = { showTimerDialog = true }) {
-                        Icon(
-                            imageVector = if (sleepTimerLeft != null) Icons.Filled.Timer else Icons.Outlined.Timer,
-                            contentDescription = "تایمر خواب",
-                            tint = if (sleepTimerLeft != null) MaterialTheme.colorScheme.primary else Color.White
-                        )
+                        DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
+                            if (downloadProgress == null) {
+                                DropdownMenuItem(
+                                    text = { Text(if (isDownloaded) "حذف دانلود" else "دانلود") },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = if (isDownloaded) Icons.Default.OfflinePin else Icons.Outlined.FileDownload,
+                                            contentDescription = null,
+                                            tint = if (isDownloaded) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                                        )
+                                    },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        if (isDownloaded) {
+                                            viewModel.deleteDownload(song.id)
+                                        } else {
+                                            viewModel.startDownload(song)
+                                        }
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("اشتراک‌گذاری") },
+                                leadingIcon = { Icon(imageVector = Icons.Outlined.Share, contentDescription = null) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    viewModel.shareSongCard(song)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(if (sleepTimerLeft != null) "تایمر خواب (فعال)" else "تایمر خواب") },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = if (sleepTimerLeft != null) Icons.Filled.Timer else Icons.Outlined.Timer,
+                                        contentDescription = null,
+                                        tint = if (sleepTimerLeft != null) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                                    )
+                                },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    showTimerDialog = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -8787,7 +8811,7 @@ fun FullscreenPlayer(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            // Lower accessories toolbar (Speed dial, Queue, equalizer)
+            // Lower accessories toolbar (Speed dial, Queue)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -8825,92 +8849,6 @@ fun FullscreenPlayer(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                         Icon(imageVector = Icons.Default.QueueMusic, contentDescription = "صف پخش", tint = Color.White.copy(alpha = 0.7f), modifier = Modifier.size(14.dp))
                         Text(text = "صف پخش", color = Color.White.copy(alpha = 0.7f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-
-                // Equalizer chip
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = 0.08f))
-                        .padding(horizontal = 14.dp, vertical = 7.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        Icon(imageVector = Icons.Default.Equalizer, contentDescription = null, tint = Color.White.copy(alpha = 0.55f), modifier = Modifier.size(14.dp))
-                        Text(text = "EQ", color = Color.White.copy(alpha = 0.55f), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-
-            // Up Next — show next 3 tracks from the queue (Spotify style)
-            val currentIdx = remember(queue, song.id) { queue.indexOfFirst { it.id == song.id } }
-            val upNextSongs = remember(currentIdx, queue) {
-                if (currentIdx >= 0) queue.drop(currentIdx + 1).take(3) else emptyList()
-            }
-            if (upNextSongs.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "بعدی در صف",
-                        color = Color.White.copy(alpha = 0.5f),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        fontFamily = LocalAppFontFamily.current
-                    )
-                    Text(
-                        text = "${upNextSongs.size} آهنگ",
-                        color = Color.White.copy(alpha = 0.3f),
-                        fontSize = 10.sp
-                    )
-                }
-                Spacer(modifier = Modifier.height(10.dp))
-                upNextSongs.forEach { nextSong ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.06f))
-                            .clickable { viewModel.playbackConnection.playTrack(nextSong, queue) }
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        AsyncImage(
-                            model = viewModel.getCoverArtUrl(nextSong.coverArt),
-                            contentDescription = nextSong.title,
-                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)),
-                            contentScale = ContentScale.Crop
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = nextSong.title,
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontFamily = LocalAppFontFamily.current
-                            )
-                            Text(
-                                text = nextSong.artist ?: "—",
-                                color = Color.White.copy(alpha = 0.45f),
-                                fontSize = 11.sp,
-                                maxLines = 1,
-                                fontFamily = LocalAppFontFamily.current
-                            )
-                        }
-                        Icon(
-                            imageVector = Icons.Default.DragHandle,
-                            contentDescription = null,
-                            tint = Color.White.copy(alpha = 0.25f),
-                            modifier = Modifier.size(18.dp)
-                        )
                     }
                 }
             }
