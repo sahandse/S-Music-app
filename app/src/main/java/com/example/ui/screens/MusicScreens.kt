@@ -3058,7 +3058,7 @@ fun SearchScreen(
                         .background(MaterialTheme.colorScheme.primary, CircleShape)
                         .size(40.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Mic, contentDescription = "Voice Search", tint = Color.White, modifier = Modifier.size(20.dp))
+                    Icon(imageVector = Icons.Default.Mic, contentDescription = "Voice Search", tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(20.dp))
                 }
             }
 
@@ -6096,6 +6096,7 @@ fun AlbumDetailView(
     val isLoading by viewModel.isLoadingDetail.collectAsStateWithLifecycle()
     val relatedAlbums by viewModel.relatedAlbums.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    var showAlbumOverflowMenu by remember { mutableStateOf(false) }
 
     LaunchedEffect(album.id) {
         viewModel.loadAlbumDetails(album)
@@ -6239,7 +6240,8 @@ fun AlbumDetailView(
                             }
                         }
 
-                        // Action buttons
+                        // Action buttons — only Play All and Favorite stay visible;
+                        // less-frequent actions live behind the overflow menu
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -6253,9 +6255,6 @@ fun AlbumDetailView(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(translate("پخش همه", "Play All", viewModel), fontFamily = LocalAppFontFamily.current)
                             }
-                            IconButton(onClick = { viewModel.shufflePlayAllSongsInQueue(songs) }) {
-                                Icon(imageVector = Icons.Default.Shuffle, contentDescription = translate("پخش تصادفی", "Shuffle", viewModel), tint = MaterialTheme.colorScheme.onSurface)
-                            }
                             var isFav by remember { mutableStateOf(false) }
                             LaunchedEffect(album.id) { isFav = viewModel.favoriteAlbums.value.any { it.id == album.id } }
                             IconButton(onClick = { viewModel.toggleFavoriteAlbum(album); isFav = !isFav }) {
@@ -6265,11 +6264,36 @@ fun AlbumDetailView(
                                     tint = if (isFav) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                            IconButton(onClick = { viewModel.addToQueue(songs) }) {
-                                Icon(imageVector = Icons.Default.QueueMusic, contentDescription = translate("افزودن به صف", "Add to queue", viewModel), tint = MaterialTheme.colorScheme.onSurface)
-                            }
-                            IconButton(onClick = { viewModel.startDownloadAll(songs) }) {
-                                Icon(imageVector = Icons.Default.Download, contentDescription = translate("دانلود", "Download", viewModel), tint = MaterialTheme.colorScheme.onSurface)
+                            Box {
+                                IconButton(onClick = { showAlbumOverflowMenu = true }) {
+                                    Icon(imageVector = Icons.Default.MoreVert, contentDescription = translate("بیشتر", "More", viewModel), tint = MaterialTheme.colorScheme.onSurface)
+                                }
+                                DropdownMenu(expanded = showAlbumOverflowMenu, onDismissRequest = { showAlbumOverflowMenu = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text(translate("پخش تصادفی", "Shuffle", viewModel)) },
+                                        leadingIcon = { Icon(imageVector = Icons.Default.Shuffle, contentDescription = null) },
+                                        onClick = {
+                                            showAlbumOverflowMenu = false
+                                            viewModel.shufflePlayAllSongsInQueue(songs)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(translate("افزودن به صف", "Add to queue", viewModel)) },
+                                        leadingIcon = { Icon(imageVector = Icons.Default.QueueMusic, contentDescription = null) },
+                                        onClick = {
+                                            showAlbumOverflowMenu = false
+                                            viewModel.addToQueue(songs)
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(translate("دانلود همه", "Download all", viewModel)) },
+                                        leadingIcon = { Icon(imageVector = Icons.Default.Download, contentDescription = null) },
+                                        onClick = {
+                                            showAlbumOverflowMenu = false
+                                            viewModel.startDownloadAll(songs)
+                                        }
+                                    )
+                                }
                             }
                         }
                     }
