@@ -10787,6 +10787,27 @@ fun CatalogView(viewModel: MusicViewModel) {
 }
 
 
+@Composable
+private fun MusicVideoGenreChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .tvFocusable(cornerRadius = 20.dp)
+            .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+            fontFamily = LocalAppFontFamily.current
+        )
+    }
+}
+
 // --- Library: Music Video catalog (admin-curated + Telegram-scraped direct links).
 // YouTube-style minimal browsing: a plain thumbnail list, tap to play full-screen. ---
 @Composable
@@ -10820,13 +10841,24 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                translate("${shown.size} ویدیو", "${shown.size} videos", viewModel),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                fontFamily = LocalAppFontFamily.current
-            )
-            IconButton(onClick = { viewModel.fetchMusicVideoCatalog() }) {
+            Column {
+                Text(
+                    translate("موزیک ویدیو", "Music Videos", viewModel),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = LocalAppFontFamily.current
+                )
+                Text(
+                    translate("${shown.size} ویدیو", "${shown.size} videos", viewModel),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                    fontFamily = LocalAppFontFamily.current
+                )
+            }
+            IconButton(
+                onClick = { viewModel.fetchMusicVideoCatalog() },
+                modifier = Modifier.tvFocusable(cornerRadius = 20.dp)
+            ) {
                 Icon(Icons.Default.Refresh, contentDescription = "بروزرسانی", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
             }
         }
@@ -10837,26 +10869,27 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
             placeholder = { Text(translate("جستجوی موزیک ویدیو...", "Search music videos…", viewModel), fontFamily = LocalAppFontFamily.current) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).tvFocusable(cornerRadius = 14.dp)
         )
 
         if (genres.isNotEmpty()) {
             LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 item {
-                    FilterChip(
+                    MusicVideoGenreChip(
+                        label = translate("همه", "All", viewModel),
                         selected = selectedGenre == null,
-                        onClick = { selectedGenre = null },
-                        label = { Text(translate("همه", "All", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current) }
+                        onClick = { selectedGenre = null }
                     )
                 }
                 items(genres) { g ->
-                    FilterChip(
+                    MusicVideoGenreChip(
+                        label = g,
                         selected = selectedGenre == g,
-                        onClick = { selectedGenre = if (selectedGenre == g) null else g },
-                        label = { Text(g, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current) }
+                        onClick = { selectedGenre = if (selectedGenre == g) null else g }
                     )
                 }
             }
@@ -10871,19 +10904,22 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 itemsIndexed(shown, key = { i, v -> "$i:${v.videoUrl}" }) { _, v ->
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .tvFocusable(cornerRadius = 14.dp)
                             .clickable { playingVideo = v }
-                            .padding(bottom = 16.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(14.dp))
                         ) {
                             if (v.coverUrl.isNotBlank()) {
                                 AsyncImage(
@@ -10900,11 +10936,37 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
                                     Icon(Icons.Default.PlayCircleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
                                 }
                             }
+                            // Bottom scrim so the duration badge stays legible over any cover
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(40.dp)
+                                    .align(Alignment.BottomCenter)
+                                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
+                            )
+                            if (v.genre.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(8.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                                ) {
+                                    Text(
+                                        text = v.genre,
+                                        color = MaterialTheme.colorScheme.onPrimary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = LocalAppFontFamily.current
+                                    )
+                                }
+                            }
                             if (v.durationSec > 0) {
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.BottomEnd)
-                                        .padding(6.dp)
+                                        .padding(8.dp)
                                         .clip(RoundedCornerShape(4.dp))
                                         .background(Color.Black.copy(alpha = 0.75f))
                                         .padding(horizontal = 5.dp, vertical = 2.dp)
@@ -10917,8 +10979,18 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
                                     )
                                 }
                             }
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.9f),
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .size(48.dp)
+                                    .background(Color.Black.copy(alpha = 0.35f), CircleShape)
+                                    .padding(10.dp)
+                            )
                         }
-                        Row(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 16.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = v.title.ifBlank { translate("بدون عنوان", "Untitled", viewModel) },
@@ -10928,11 +11000,10 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
                                     overflow = TextOverflow.Ellipsis,
                                     fontFamily = LocalAppFontFamily.current
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
-                                val metaLine = listOf(v.artist, v.genre).filter { it.isNotBlank() }.joinToString(" · ")
-                                if (metaLine.isNotBlank()) {
+                                if (v.artist.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = metaLine,
+                                        text = v.artist,
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                                         maxLines = 1,
@@ -11026,6 +11097,7 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
                     modifier = Modifier
                         .statusBarsPadding()
                         .padding(12.dp)
+                        .tvFocusable(cornerRadius = 24.dp)
                         .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "بستن", tint = Color.White)
