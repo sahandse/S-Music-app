@@ -82,6 +82,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.example.ui.MusicVideoItem
+import com.example.ui.MusicVideoCatalogItem
 import com.example.ui.ApplePreviewTrack
 import com.example.ui.PodcastItem
 import com.example.ui.PodcastEpisode
@@ -10912,7 +10913,7 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
                                 }
                             }
                         }
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, top = 8.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 8.dp, end = 16.dp)) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = v.title.ifBlank { translate("بدون عنوان", "Untitled", viewModel) },
