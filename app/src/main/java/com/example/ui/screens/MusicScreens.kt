@@ -4391,9 +4391,9 @@ fun SubLibraryItemsView(
                                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 6.dp)
                                 ) {
-                                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Icon(imageVector = Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(4.dp))
-                                    Text(translate("پخش همه", "Play All", viewModel), color = Color.White, fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
+                                    Text(translate("پخش همه", "Play All", viewModel), color = MaterialTheme.colorScheme.onPrimary, fontSize = 13.sp, fontFamily = LocalAppFontFamily.current)
                                 }
                             }
                             LazyColumn(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -5683,7 +5683,7 @@ fun ArtistDetailView(
                                             Icon(
                                                 imageVector = if (isFav) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                                                 contentDescription = null,
-                                                tint = if (isFav) MaterialTheme.colorScheme.primary else Color.White,
+                                                tint = if (isFav) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary,
                                                 modifier = Modifier.size(13.dp)
                                             )
                                             Text(
@@ -5691,7 +5691,7 @@ fun ArtistDetailView(
                                                 fontFamily = LocalAppFontFamily.current,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = if (isFav) MaterialTheme.colorScheme.primary else Color.White
+                                                color = if (isFav) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary
                                             )
                                         }
                                     }
@@ -9279,7 +9279,7 @@ fun SyncedLyricsView(
 
             Text(
                 text = line.text,
-                color = if (isActive) MaterialTheme.colorScheme.primary else Color.White,
+                color = if (isActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground,
                 fontSize = 18.sp,
                 fontWeight = if (isActive) FontWeight.Bold else FontWeight.SemiBold,
                 textAlign = TextAlign.Center,
@@ -9515,7 +9515,7 @@ fun DiscoverFeedScreen(
                 ) {
                     Text(
                         text = label,
-                        color = if (selected) Color.White else inactiveColor,
+                        color = if (selected) MaterialTheme.colorScheme.onPrimary else inactiveColor,
                         fontSize = 13.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                         fontFamily = LocalAppFontFamily.current
@@ -9719,14 +9719,14 @@ fun MusicVideoPage(
         )
 
         // Video surface (only active page renders the player); tap toggles play/pause.
-        // Instagram/Reels-style: the video fills the entire screen edge-to-edge — scaled
-        // up and center-cropped (RESIZE_MODE_ZOOM) rather than letterboxed to its real ratio.
+        // Real aspect ratio (letterboxed against the blurred backdrop below), not
+        // cropped/zoomed — the clip keeps its own original proportions.
         if (isActive) {
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
                         useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                         setShutterBackgroundColor(android.graphics.Color.TRANSPARENT)
                         player = exoPlayer
                     }
@@ -9799,12 +9799,12 @@ fun MusicVideoPage(
                             Icon(
                                 imageVector = Icons.Default.MusicNote,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(16.dp)
                             )
                             Text(
                                 text = "این آهنگ تو سرور هست — برو به آهنگ",
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.onPrimary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = LocalAppFontFamily.current
@@ -10143,7 +10143,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                 onClick = { permissionLauncher.launch(permission) },
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
-                Text(translate("اجازه دسترسی", "Grant access", viewModel), color = Color.White, fontFamily = LocalAppFontFamily.current)
+                Text(translate("اجازه دسترسی", "Grant access", viewModel), color = MaterialTheme.colorScheme.onPrimary, fontFamily = LocalAppFontFamily.current)
             }
         }
         return
@@ -10245,7 +10245,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                         text = label,
                         fontSize = 11.sp,
                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                        color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                         fontFamily = LocalAppFontFamily.current
                     )
                 }
@@ -10266,7 +10266,7 @@ fun DeviceSongsView(viewModel: MusicViewModel) {
                     text = translate("📁 پوشه‌ها", "📁 Folders", viewModel),
                     fontSize = 11.sp,
                     fontWeight = if (folderView) FontWeight.Bold else FontWeight.Normal,
-                    color = if (folderView) Color.White else MaterialTheme.colorScheme.onSurface,
+                    color = if (folderView) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     fontFamily = LocalAppFontFamily.current
                 )
             }
@@ -10532,7 +10532,7 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     contentPadding = PaddingValues(horizontal = 40.dp, vertical = 12.dp)
                 ) {
-                    Text(translate("شروع بازی", "Start Game", viewModel), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
+                    Text(translate("شروع بازی", "Start Game", viewModel), color = MaterialTheme.colorScheme.onPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
                 }
             }
         }
@@ -10607,16 +10607,21 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
+                            val revealedFg = when {
+                                revealed && isCorrect -> Color.White
+                                revealed && option.id == answeredId -> MaterialTheme.colorScheme.onPrimary
+                                else -> null
+                            }
                             Text(
                                 text = option.title,
                                 fontSize = 14.sp, fontWeight = FontWeight.Bold,
-                                color = if (revealed && (isCorrect || option.id == answeredId)) Color.White else MaterialTheme.colorScheme.onSurface,
+                                color = revealedFg ?: MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current
                             )
                             Text(
                                 text = option.artist ?: "",
                                 fontSize = 12.sp,
-                                color = if (revealed && (isCorrect || option.id == answeredId)) Color.White.copy(alpha = 0.8f) else Color.Gray,
+                                color = revealedFg?.copy(alpha = 0.8f) ?: Color.Gray,
                                 maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current
                             )
                         }
@@ -10655,7 +10660,7 @@ fun MusicQuizView(viewModel: MusicViewModel) {
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     contentPadding = PaddingValues(horizontal = 40.dp, vertical = 12.dp)
                 ) {
-                    Text(translate("دوباره بازی کن", "Play Again", viewModel), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
+                    Text(translate("دوباره بازی کن", "Play Again", viewModel), color = MaterialTheme.colorScheme.onPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current)
                 }
             }
         }
@@ -10943,7 +10948,9 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
         }
     }
 
-    // Full-screen player — real aspect ratio (letterboxed, YouTube-style), not cropped
+    // Full-screen player — real aspect ratio (letterboxed, YouTube-style), not cropped.
+    // Nothing overlays the video while it plays; a tap pauses and brings the close
+    // button/title/seek bar back, same tap-to-reveal behavior as the Reels feed.
     val currentVideo = playingVideo
     if (currentVideo != null) {
         val context = LocalContext.current
@@ -10956,6 +10963,24 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
         }
         DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
 
+        var isPlaying by remember(currentVideo.videoUrl) { mutableStateOf(true) }
+        var positionMs by remember(currentVideo.videoUrl) { mutableStateOf(0L) }
+        var durationMs by remember(currentVideo.videoUrl) { mutableStateOf(0L) }
+        DisposableEffect(exoPlayer) {
+            val listener = object : Player.Listener {
+                override fun onIsPlayingChanged(playing: Boolean) { isPlaying = playing }
+            }
+            exoPlayer.addListener(listener)
+            onDispose { exoPlayer.removeListener(listener) }
+        }
+        LaunchedEffect(exoPlayer) {
+            while (true) {
+                positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+                durationMs = exoPlayer.duration.coerceAtLeast(0L)
+                delay(400L)
+            }
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -10965,38 +10990,80 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
             AndroidView(
                 factory = { ctx ->
                     PlayerView(ctx).apply {
-                        useController = true
+                        useController = false
                         resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                         player = exoPlayer
                     }
                 },
                 modifier = Modifier.fillMaxSize().align(Alignment.Center)
             )
-            Column(
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .statusBarsPadding()
-                    .padding(12.dp)
+                    .fillMaxSize()
+                    .clickable { if (exoPlayer.isPlaying) exoPlayer.pause() else exoPlayer.play() },
+                contentAlignment = Alignment.Center
+            ) {
+                if (!isPlaying) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = "پخش",
+                        tint = Color.White.copy(alpha = 0.9f),
+                        modifier = Modifier
+                            .size(72.dp)
+                            .background(Color.Black.copy(alpha = 0.45f), CircleShape)
+                            .padding(12.dp)
+                    )
+                }
+            }
+            AnimatedVisibility(
+                visible = !isPlaying,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.TopStart)
             ) {
                 IconButton(
                     onClick = { playingVideo = null },
                     modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(12.dp)
                         .background(Color.Black.copy(alpha = 0.5f), CircleShape)
                 ) {
                     Icon(Icons.Default.Close, contentDescription = "بستن", tint = Color.White)
                 }
             }
-            Column(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))))
-                    .padding(16.dp)
+            AnimatedVisibility(
+                visible = !isPlaying,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth()
             ) {
-                Text(currentVideo.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
-                val metaLine = listOf(currentVideo.artist, currentVideo.genre).filter { it.isNotBlank() }.joinToString(" · ")
-                if (metaLine.isNotBlank()) {
-                    Text(metaLine, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))))
+                        .padding(16.dp)
+                ) {
+                    Text(currentVideo.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                    val metaLine = listOf(currentVideo.artist, currentVideo.genre).filter { it.isNotBlank() }.joinToString(" · ")
+                    if (metaLine.isNotBlank()) {
+                        Text(metaLine, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                    }
+                    if (durationMs > 0) {
+                        Spacer(Modifier.height(8.dp))
+                        Slider(
+                            value = (positionMs.toFloat() / durationMs).coerceIn(0f, 1f),
+                            onValueChange = { frac ->
+                                exoPlayer.seekTo((frac * durationMs).toLong())
+                                positionMs = (frac * durationMs).toLong()
+                            },
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                                inactiveTrackColor = Color.White.copy(alpha = 0.25f)
+                            ),
+                            modifier = Modifier.fillMaxWidth().height(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -11288,7 +11355,7 @@ private fun TopChartsChips(viewModel: MusicViewModel, modifier: Modifier = Modif
             ) {
                 Text(
                     text = translate(labels.first, labels.second, viewModel),
-                    color = if (selected) Color.White else Color.White.copy(alpha = 0.7f),
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary else Color.White.copy(alpha = 0.7f),
                     fontSize = 12.sp,
                     fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
                     fontFamily = LocalAppFontFamily.current
@@ -11531,12 +11598,12 @@ fun AppleTopSongPage(
                                 Icon(
                                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                     contentDescription = null,
-                                    tint = Color.White,
+                                    tint = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Text(
                                     text = if (isPlaying) "توقف" else "پخش",
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = LocalAppFontFamily.current
