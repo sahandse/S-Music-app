@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -820,6 +821,15 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
                         modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    NavigationRailItem(
+                        selected = selectedTab == 4 && currentSubScreen == null,
+                        onClick = { selectedTab = 4; currentSubScreen = null },
+                        icon = { Icon(imageVector = if (selectedTab == 4) Icons.Filled.SmartDisplay else Icons.Outlined.SmartDisplay, contentDescription = "موزیک ویدیو") },
+                        label = { Text(translate("ویدیو", "Video", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                        colors = NavigationRailItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f)),
+                        modifier = Modifier.tvFocusable(cornerRadius = 12.dp)
+                    )
                 }
 
                 // Right Content Panel
@@ -908,7 +918,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings },
                                             onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
                                             onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") },
-                                            onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") }
+                                            onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") },
+                                            onMusicVideoClick = { selectedTab = 4; currentSubScreen = null }
                                         )
                                         1 -> DiscoverFeedScreen(
                                             viewModel = viewModel,
@@ -932,6 +943,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             viewModel = viewModel,
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings }
                                         )
+                                        4 -> MusicVideoCatalogView(viewModel = viewModel)
                                         else -> HomeScreen(
                                             viewModel = viewModel,
                                             onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
@@ -943,7 +955,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                             onSettingsClick = { currentSubScreen = SubScreen.Settings },
                                             onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
                                             onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") },
-                                            onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") }
+                                            onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") },
+                                            onMusicVideoClick = { selectedTab = 4; currentSubScreen = null }
                                         )
                                     }
                                 }
@@ -1060,6 +1073,13 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 label = { Text(translate("پروفایل", "Profile", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
                                 colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
                             )
+                            NavigationBarItem(
+                                selected = selectedTab == 4 && currentSubScreen == null,
+                                onClick = { selectedTab = 4; currentSubScreen = null },
+                                icon = { Icon(imageVector = if (selectedTab == 4) Icons.Filled.SmartDisplay else Icons.Outlined.SmartDisplay, contentDescription = "موزیک ویدیو") },
+                                label = { Text(translate("ویدیو", "Video", viewModel), fontSize = 11.sp, fontFamily = LocalAppFontFamily.current) },
+                                colors = NavigationBarItemDefaults.colors(selectedIconColor = accentColor, selectedTextColor = accentColor, indicatorColor = accentColor.copy(alpha = 0.14f))
+                            )
                         }
                     }
                 }
@@ -1148,7 +1168,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings },
                                         onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
                                         onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") },
-                                        onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") }
+                                        onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") },
+                                        onMusicVideoClick = { selectedTab = 4; currentSubScreen = null }
                                     )
                                     1 -> DiscoverFeedScreen(
                                         viewModel = viewModel,
@@ -1172,6 +1193,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         viewModel = viewModel,
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings }
                                     )
+                                    4 -> MusicVideoCatalogView(viewModel = viewModel)
                                     else -> HomeScreen(
                                         viewModel = viewModel,
                                         onArtistClick = { currentSubScreen = SubScreen.ArtistDetail(it) },
@@ -1183,7 +1205,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                         onSettingsClick = { currentSubScreen = SubScreen.Settings },
                                         onDiscoverClick = { selectedTab = 1; currentSubScreen = null },
                                         onCatalogClick = { currentSubScreen = SubScreen.SubLibraryItem("catalog") },
-                                        onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") }
+                                        onPodcastsClick = { currentSubScreen = SubScreen.SubLibraryItem("podcasts") },
+                                        onMusicVideoClick = { selectedTab = 4; currentSubScreen = null }
                                     )
                                 }
                             }
@@ -1371,12 +1394,15 @@ fun HomeScreen(
     onDiscoverClick: () -> Unit = {},
     onSearchClick: () -> Unit = {},
     onCatalogClick: () -> Unit = {},
-    onPodcastsClick: () -> Unit = {}
+    onPodcastsClick: () -> Unit = {},
+    onMusicVideoClick: () -> Unit = {}
 ) {
     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
     val catalogSongs by viewModel.catalogSongs.collectAsStateWithLifecycle()
     val topPodcasts by viewModel.topPodcasts.collectAsStateWithLifecycle()
+    val musicVideos by viewModel.musicVideoCatalog.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.fetchTopPodcasts() }
+    LaunchedEffect(Unit) { if (viewModel.musicVideoCatalog.value.isEmpty()) viewModel.fetchMusicVideoCatalog() }
     // Auto-refresh the online catalog while Home is open so newly-posted songs
     // appear in the "Newest Iranian" row without any manual action.
     LaunchedEffect(Unit) {
@@ -1599,6 +1625,37 @@ fun HomeScreen(
                                 onClick = { viewModel.playCatalogSong(song, newestIranian) }
                             )
                         }
+                    }
+                }
+            }
+
+            // Music Videos — YouTube-style thumbnail row, "See all" opens the dedicated tab.
+            if (musicVideos.isNotEmpty()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = translate("🎬 موزیک ویدیو", "🎬 Music Videos", viewModel),
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    SectionSeeAllButton(
+                        text = translate("بیشتر", "See all", viewModel),
+                        onClick = onMusicVideoClick
+                    )
+                }
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(musicVideos.take(10), key = { it.videoUrl }) { v ->
+                        MusicVideoThumbCard(video = v, onClick = onMusicVideoClick)
                     }
                 }
             }
@@ -2299,6 +2356,99 @@ fun FeaturedSuggestionCard(
 
 // --- Wide horizontal suggestion card (Aparat Music-style top-of-home row):
 // cover art on the trailing edge, title/artist in the middle, play circle leading ---
+@Composable
+fun MusicVideoThumbCard(
+    video: MusicVideoCatalogItem,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier.width(160.dp),
+    showGenre: Boolean = false
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .tvFocusable(cornerRadius = 12.dp)
+            .clickable(onClick = onClick)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            if (video.coverUrl.isNotBlank()) {
+                AsyncImage(
+                    model = video.coverUrl,
+                    contentDescription = video.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.PlayCircleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(32.dp))
+                }
+            }
+            if (showGenre && video.genre.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(6.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = video.genre,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = LocalAppFontFamily.current
+                    )
+                }
+            }
+            if (video.durationSec > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(6.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color.Black.copy(alpha = 0.75f))
+                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "%d:%02d".format(video.durationSec / 60, video.durationSec % 60),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = video.title.ifBlank { "بدون عنوان" },
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontFamily = LocalAppFontFamily.current
+        )
+        if (video.artist.isNotBlank()) {
+            Text(
+                text = video.artist,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                fontFamily = LocalAppFontFamily.current
+            )
+        }
+    }
+}
+
 @Composable
 fun HorizontalSuggestionCard(
     title: String,
@@ -10902,118 +11052,21 @@ fun MusicVideoCatalogView(viewModel: MusicViewModel) {
         } else if (shown.isEmpty()) {
             EmptyStateView(message = translate("موزیک ویدیویی پیدا نشد.", "No music videos found.", viewModel))
         } else {
-            LazyColumn(
+            // YouTube/Aparat/Filimo-style minimal browse grid — two columns of thumbnail tiles.
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                itemsIndexed(shown, key = { i, v -> "$i:${v.videoUrl}" }) { _, v ->
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(14.dp))
-                            .tvFocusable(cornerRadius = 14.dp)
-                            .clickable { playingVideo = v }
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .aspectRatio(16f / 9f)
-                                .clip(RoundedCornerShape(14.dp))
-                        ) {
-                            if (v.coverUrl.isNotBlank()) {
-                                AsyncImage(
-                                    model = v.coverUrl,
-                                    contentDescription = v.title,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.PlayCircleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
-                                }
-                            }
-                            // Bottom scrim so the duration badge stays legible over any cover
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(40.dp)
-                                    .align(Alignment.BottomCenter)
-                                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f))))
-                            )
-                            if (v.genre.isNotBlank()) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.TopStart)
-                                        .padding(8.dp)
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.85f))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Text(
-                                        text = v.genre,
-                                        color = MaterialTheme.colorScheme.onPrimary,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = LocalAppFontFamily.current
-                                    )
-                                }
-                            }
-                            if (v.durationSec > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(8.dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(Color.Black.copy(alpha = 0.75f))
-                                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "%d:%02d".format(v.durationSec / 60, v.durationSec % 60),
-                                        color = Color.White,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            }
-                            Icon(
-                                imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = null,
-                                tint = Color.White.copy(alpha = 0.9f),
-                                modifier = Modifier
-                                    .align(Alignment.Center)
-                                    .size(48.dp)
-                                    .background(Color.Black.copy(alpha = 0.35f), CircleShape)
-                                    .padding(10.dp)
-                            )
-                        }
-                        Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = v.title.ifBlank { translate("بدون عنوان", "Untitled", viewModel) },
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontFamily = LocalAppFontFamily.current
-                                )
-                                if (v.artist.isNotBlank()) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = v.artist,
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        fontFamily = LocalAppFontFamily.current
-                                    )
-                                }
-                            }
-                        }
-                    }
+                gridItemsIndexed(shown, key = { i, v -> "$i:${v.videoUrl}" }) { _, v ->
+                    MusicVideoThumbCard(
+                        video = v,
+                        onClick = { playingVideo = v },
+                        modifier = Modifier.fillMaxWidth(),
+                        showGenre = true
+                    )
                 }
             }
         }
