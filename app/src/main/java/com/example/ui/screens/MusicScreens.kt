@@ -713,7 +713,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
 }
 
 // --- Main App Shell with Bottom Bar and Player sheet ---
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun MainMusicApp(viewModel: MusicViewModel) {
     // Launcher-shortcut destination (long-press app icon)
@@ -760,6 +760,9 @@ fun MainMusicApp(viewModel: MusicViewModel) {
             return@Box
         }
 
+        // Wraps both layout branches so the mini player's and full player's cover
+        // art can share a continuous morph/scale transition between the two.
+        SharedTransitionLayout {
         if (isLandscape) {
             Row(modifier = Modifier.fillMaxSize()) {
                 // Side Navigation Rail (TV / Landscape)
@@ -964,7 +967,9 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 onArtistClick = { artist ->
                                     currentSubScreen = SubScreen.ArtistDetail(artist)
                                     isPlayerExpanded = false
-                                }
+                                },
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this
                             )
                         }
                     }
@@ -985,7 +990,9 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                 onClose = { viewModel.playbackConnection.stopPlayback() },
                                 onCarMode = { showCarMode = true },
                                 accentColor = accentColor,
-                                viewModel = viewModel
+                                viewModel = viewModel,
+                                sharedTransitionScope = this@SharedTransitionLayout,
+                                animatedVisibilityScope = this
                             )
                         }
                     }
@@ -1010,7 +1017,9 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                                     onClick = { isPlayerExpanded = true },
                                     onClose = { viewModel.playbackConnection.stopPlayback() },
                                     onCarMode = { showCarMode = true },
-                                    viewModel = viewModel
+                                    viewModel = viewModel,
+                                    sharedTransitionScope = this@SharedTransitionLayout,
+                                    animatedVisibilityScope = this
                                 )
                             }
                         }
@@ -1198,13 +1207,16 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                             onArtistClick = { artist ->
                                 currentSubScreen = SubScreen.ArtistDetail(artist)
                                 isPlayerExpanded = false
-                            }
+                            },
+                            sharedTransitionScope = this@SharedTransitionLayout,
+                            animatedVisibilityScope = this
                         )
                     }
                 }
             }
         }
     }
+        }
     }
 }
 
@@ -1220,6 +1232,7 @@ sealed class SubScreen {
 }
 
 // --- Mini Player Bar Component ---
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MiniPlayer(
     song: SubsonicSong,
@@ -1230,7 +1243,9 @@ fun MiniPlayer(
     onClose: () -> Unit = {},
     onCarMode: () -> Unit = {},
     accentColor: Color = MaterialTheme.colorScheme.primary,
-    viewModel: MusicViewModel
+    viewModel: MusicViewModel,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val playbackProgress by viewModel.playbackConnection.playbackProgress.collectAsStateWithLifecycle()
     val progressFraction = remember(playbackProgress, song.duration) {
@@ -1260,9 +1275,15 @@ fun MiniPlayer(
                 AsyncImage(
                     model = rememberSongCoverUrl(song, viewModel),
                     contentDescription = song.title,
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(8.dp)),
+                    modifier = with(sharedTransitionScope) {
+                        Modifier
+                            .size(46.dp)
+                            .sharedElement(
+                                rememberSharedContentState(key = "album_art_${song.id}"),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
+                            .clip(RoundedCornerShape(8.dp))
+                    },
                     contentScale = ContentScale.Crop
                 )
 
@@ -8117,12 +8138,14 @@ private fun CastButton(modifier: Modifier = Modifier) {
 }
 
 // --- Gorgeous Sliding Fullscreen Player Sheet ---
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun FullscreenPlayer(
     viewModel: MusicViewModel,
     onDismiss: () -> Unit,
-    onArtistClick: (SubsonicArtist) -> Unit
+    onArtistClick: (SubsonicArtist) -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope
 ) {
     val currentTrack by viewModel.playbackConnection.currentTrack.collectAsStateWithLifecycle()
     val isPlaying by viewModel.playbackConnection.isPlaying.collectAsStateWithLifecycle()
@@ -8405,19 +8428,25 @@ fun FullscreenPlayer(
                         AsyncImage(
                             model = rememberSongCoverUrl(song, viewModel),
                             contentDescription = song.title,
-                            modifier = Modifier
-                                .size(270.dp)
-                                .graphicsLayer(scaleX = scale, scaleY = scale)
-                                .clip(RoundedCornerShape(20.dp))
-                                .shadow(elevation = 24.dp, shape = RoundedCornerShape(20.dp), clip = false)
-                                .pointerInput(song.id) {
-                                    detectTapGestures(
-                                        onLongPress = {
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            showAddToPlaylist = true
-                                        }
+                            modifier = with(sharedTransitionScope) {
+                                Modifier
+                                    .size(270.dp)
+                                    .sharedElement(
+                                        rememberSharedContentState(key = "album_art_${song.id}"),
+                                        animatedVisibilityScope = animatedVisibilityScope
                                     )
-                                },
+                                    .graphicsLayer(scaleX = scale, scaleY = scale)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .shadow(elevation = 24.dp, shape = RoundedCornerShape(20.dp), clip = false)
+                                    .pointerInput(song.id) {
+                                        detectTapGestures(
+                                            onLongPress = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                showAddToPlaylist = true
+                                            }
+                                        )
+                                    }
+                            },
                             contentScale = ContentScale.Crop
                         )
 
