@@ -86,6 +86,15 @@ data class CatalogSong(
     val durationSec: Int
 )
 
+data class MusicVideoCatalogItem(
+    val title: String,
+    val artist: String,
+    val genre: String,
+    val coverUrl: String,
+    val videoUrl: String,
+    val durationSec: Int
+)
+
 class MusicViewModel(
     application: Application,
     private val repository: MusicRepository,
@@ -2384,6 +2393,62 @@ class MusicViewModel(
         if (!next.add(audioUrl)) next.remove(audioUrl)
         _catalogLikes.value = next
         tgPrefs().edit().putStringSet("catalog_likes", next).apply()
+    }
+
+    // --- Music video catalog: merges the Telegram-scraped "videos" array in
+    // catalog.json with manual-videos.json (hand-edited on GitHub by the admin —
+    // title/artist/genre/videoUrl). Both are public JSON, no token needed. ---
+    private val _musicVideoCatalog = MutableStateFlow<List<MusicVideoCatalogItem>>(emptyList())
+    val musicVideoCatalog: StateFlow<List<MusicVideoCatalogItem>> = _musicVideoCatalog.asStateFlow()
+
+    private val _isMusicVideoCatalogBusy = MutableStateFlow(false)
+    val isMusicVideoCatalogBusy: StateFlow<Boolean> = _isMusicVideoCatalogBusy.asStateFlow()
+
+    private val manualVideosUrl =
+        "https://raw.githubusercontent.com/sahandse/himusic-catalog/main/manual-videos.json"
+
+    private fun parseVideosArray(body: String): List<MusicVideoCatalogItem> {
+        val arr = org.json.JSONObject(body).optJSONArray("videos") ?: org.json.JSONArray()
+        val list = mutableListOf<MusicVideoCatalogItem>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val videoUrl = o.optString("videoUrl")
+            if (videoUrl.isBlank()) continue
+            list.add(
+                MusicVideoCatalogItem(
+                    title = o.optString("title"),
+                    artist = o.optString("artist"),
+                    genre = o.optString("genre"),
+                    coverUrl = o.optString("coverUrl"),
+                    videoUrl = videoUrl,
+                    durationSec = o.optInt("durationSec", 0)
+                )
+            )
+        }
+        return list
+    }
+
+    fun fetchMusicVideoCatalog() {
+        viewModelScope.launch(Dispatchers.IO) {
+            _isMusicVideoCatalogBusy.value = true
+            try {
+                val client = okhttp3.OkHttpClient()
+                fun fetchJson(url: String): String {
+                    val busted = url + "?t=" + System.currentTimeMillis()
+                    return client.newCall(okhttp3.Request.Builder().url(busted).build())
+                        .execute().use { it.body?.string() } ?: "{}"
+                }
+                // Manual entries first so their clean title/artist/genre win over
+                // the auto-scraped Telegram copy when the same link appears twice.
+                val manual = try { parseVideosArray(fetchJson(manualVideosUrl)) } catch (_: Exception) { emptyList() }
+                val auto = try { parseVideosArray(fetchJson(catalogUrl())) } catch (_: Exception) { emptyList() }
+                _musicVideoCatalog.value = (manual + auto).distinctBy { it.videoUrl }
+            } catch (_: Exception) {
+                // Keep whatever was loaded before; the screen shows its own empty state.
+            } finally {
+                _isMusicVideoCatalogBusy.value = false
+            }
+        }
     }
 
     override fun onCleared() {

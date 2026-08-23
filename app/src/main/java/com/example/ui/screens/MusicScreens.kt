@@ -3812,6 +3812,7 @@ fun LibraryScreen(
             Triple("downloads", "دانلودهای آفلاین" to "Offline Downloads", Icons.Outlined.OfflinePin),
             Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid),
             Triple("catalog", "🎵 کاتالوگ آنلاین" to "🎵 Online Catalog", Icons.Outlined.LibraryMusic),
+            Triple("music_videos", "🎬 موزیک ویدیو" to "🎬 Music Videos", Icons.Outlined.SmartDisplay),
             Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts),
             Triple("quiz", "🎮 بازی حدس آهنگ" to "🎮 Music Quiz", Icons.Outlined.SportsEsports)
         )
@@ -4315,6 +4316,7 @@ fun SubLibraryItemsView(
         "smart_never" -> translate("هرگز گوش نداده", "Never Played", viewModel)
         "podcasts" -> translate("پادکست", "Podcasts", viewModel)
         "catalog" -> translate("کاتالوگ آنلاین", "Online Catalog", viewModel)
+        "music_videos" -> translate("موزیک ویدیو", "Music Videos", viewModel)
         "quiz" -> translate("بازی حدس آهنگ", "Music Quiz", viewModel)
         else -> translate("دانلودها", "Downloads", viewModel)
     }
@@ -4344,6 +4346,9 @@ fun SubLibraryItemsView(
                 }
                 "catalog" -> {
                     CatalogView(viewModel = viewModel)
+                }
+                "music_videos" -> {
+                    MusicVideoCatalogView(viewModel = viewModel)
                 }
                 "smart_top", "smart_recent", "smart_never" -> {
                     val randomSongs by viewModel.homeRandomSongs.collectAsStateWithLifecycle()
@@ -10775,6 +10780,227 @@ fun CatalogView(viewModel: MusicViewModel) {
     }
 }
 
+
+// --- Library: Music Video catalog (admin-curated + Telegram-scraped direct links).
+// YouTube-style minimal browsing: a plain thumbnail list, tap to play full-screen. ---
+@Composable
+fun MusicVideoCatalogView(viewModel: MusicViewModel) {
+    val videos by viewModel.musicVideoCatalog.collectAsStateWithLifecycle()
+    val busy by viewModel.isMusicVideoCatalogBusy.collectAsStateWithLifecycle()
+    var query by remember { mutableStateOf("") }
+    var selectedGenre by remember { mutableStateOf<String?>(null) }
+    var playingVideo by remember { mutableStateOf<MusicVideoCatalogItem?>(null) }
+
+    LaunchedEffect(Unit) {
+        if (viewModel.musicVideoCatalog.value.isEmpty()) viewModel.fetchMusicVideoCatalog()
+    }
+
+    val genres = remember(videos) {
+        videos.map { it.genre.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+
+    val shown = remember(videos, query, selectedGenre) {
+        videos.filter { v ->
+            (selectedGenre == null || v.genre.equals(selectedGenre, ignoreCase = true)) &&
+                (query.isBlank() ||
+                    v.title.contains(query, ignoreCase = true) ||
+                    v.artist.contains(query, ignoreCase = true))
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                translate("${shown.size} ویدیو", "${shown.size} videos", viewModel),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                fontFamily = LocalAppFontFamily.current
+            )
+            IconButton(onClick = { viewModel.fetchMusicVideoCatalog() }) {
+                Icon(Icons.Default.Refresh, contentDescription = "بروزرسانی", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+            }
+        }
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            placeholder = { Text(translate("جستجوی موزیک ویدیو...", "Search music videos…", viewModel), fontFamily = LocalAppFontFamily.current) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        )
+
+        if (genres.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedGenre == null,
+                        onClick = { selectedGenre = null },
+                        label = { Text(translate("همه", "All", viewModel), fontSize = 12.sp, fontFamily = LocalAppFontFamily.current) }
+                    )
+                }
+                items(genres) { g ->
+                    FilterChip(
+                        selected = selectedGenre == g,
+                        onClick = { selectedGenre = if (selectedGenre == g) null else g },
+                        label = { Text(g, fontSize = 12.sp, fontFamily = LocalAppFontFamily.current) }
+                    )
+                }
+            }
+        }
+
+        if (busy && videos.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        } else if (shown.isEmpty()) {
+            EmptyStateView(message = translate("موزیک ویدیویی پیدا نشد.", "No music videos found.", viewModel))
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 16.dp)
+            ) {
+                itemsIndexed(shown, key = { i, v -> "$i:${v.videoUrl}" }) { _, v ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { playingVideo = v }
+                            .padding(bottom = 16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                        ) {
+                            if (v.coverUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = v.coverUrl,
+                                    contentDescription = v.title,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.PlayCircleOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(48.dp))
+                                }
+                            }
+                            if (v.durationSec > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(6.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color.Black.copy(alpha = 0.75f))
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "%d:%02d".format(v.durationSec / 60, v.durationSec % 60),
+                                        color = Color.White,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, top = 8.dp)) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = v.title.ifBlank { translate("بدون عنوان", "Untitled", viewModel) },
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                val metaLine = listOf(v.artist, v.genre).filter { it.isNotBlank() }.joinToString(" · ")
+                                if (metaLine.isNotBlank()) {
+                                    Text(
+                                        text = metaLine,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        fontFamily = LocalAppFontFamily.current
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Full-screen player — real aspect ratio (letterboxed, YouTube-style), not cropped
+    val currentVideo = playingVideo
+    if (currentVideo != null) {
+        val context = LocalContext.current
+        val exoPlayer = remember(currentVideo.videoUrl) {
+            ExoPlayer.Builder(context).build().apply {
+                setMediaItem(MediaItem.fromUri(currentVideo.videoUrl))
+                prepare()
+                playWhenReady = true
+            }
+        }
+        DisposableEffect(exoPlayer) { onDispose { exoPlayer.release() } }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .zIndex(20f)
+        ) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        useController = true
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        player = exoPlayer
+                    }
+                },
+                modifier = Modifier.fillMaxSize().align(Alignment.Center)
+            )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .statusBarsPadding()
+                    .padding(12.dp)
+            ) {
+                IconButton(
+                    onClick = { playingVideo = null },
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "بستن", tint = Color.White)
+                }
+            }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))))
+                    .padding(16.dp)
+            ) {
+                Text(currentVideo.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                val metaLine = listOf(currentVideo.artist, currentVideo.genre).filter { it.isNotBlank() }.joinToString(" · ")
+                if (metaLine.isNotBlank()) {
+                    Text(metaLine, color = Color.White.copy(alpha = 0.7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, fontFamily = LocalAppFontFamily.current)
+                }
+            }
+        }
+    }
+}
 
 // --- Library: Podcasts (search + top charts + followed + full episode playback) ---
 @Composable
