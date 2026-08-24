@@ -11,6 +11,7 @@ import { Search } from './pages/Search'
 import { Starred } from './pages/Starred'
 import { MySongs } from './pages/MySongs'
 import { Catalog } from './pages/Catalog'
+import { MusicVideos } from './pages/MusicVideos'
 import { Podcasts } from './pages/Podcasts'
 import { Local } from './pages/Local'
 import { Settings } from './pages/Settings'
@@ -138,6 +139,8 @@ function Content({ view, param }: { view: string; param: string | null }) {
       return <MySongs />
     case 'catalog':
       return <Catalog />
+    case 'musicVideos':
+      return <MusicVideos />
     case 'podcasts':
       return <Podcasts />
     case 'local':

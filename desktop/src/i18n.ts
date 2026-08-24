@@ -12,6 +12,7 @@ const DICT: Record<string, [string, string]> = {
   'nav.starred': ['پسندیده‌ها', 'Favorites'],
   'nav.search': ['جستجو', 'Search'],
   'nav.catalog': ['کاتالوگ آنلاین', 'Online Catalog'],
+  'nav.musicVideos': ['موزیک ویدیو', 'Music Videos'],
   'nav.mysongs': ['آهنگ‌های من', 'My Songs'],
   'nav.local': ['آهنگ‌های محلی', 'Local Files'],
   'nav.podcasts': ['پادکست‌ها', 'Podcasts'],
@@ -80,7 +81,15 @@ const DICT: Record<string, [string, string]> = {
   'home.genres': ['ژانرها', 'Genres'],
   'home.newSongs': ['آهنگ‌های جدید', 'New songs'],
   'home.newestIranian': ['جدیدترین ایرانی', 'Newest Iranian'],
+  'home.musicVideos': ['🎬 موزیک ویدیو', '🎬 Music Videos'],
+  'home.seeAll': ['بیشتر', 'See all'],
   'catalog.all': ['همه', 'All'],
+
+  // music videos
+  'mv.count': ['ویدیو', 'videos'],
+  'mv.search': ['جستجوی موزیک ویدیو...', 'Search music videos…'],
+  'mv.empty': ['موزیک ویدیویی پیدا نشد.', 'No music videos found.'],
+  'mv.untitled': ['بدون عنوان', 'Untitled'],
 
   // artist bio
   'artist.bio': ['بیوگرافی', 'Biography'],

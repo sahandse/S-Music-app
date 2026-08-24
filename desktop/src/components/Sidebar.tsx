@@ -12,6 +12,7 @@ const NAV = [
   { id: 'search', icon: '🔍' },
   { id: 'podcasts', icon: '🎙' },
   { id: 'catalog', icon: '🎵' },
+  { id: 'musicVideos', icon: '🎬' },
   { id: 'mysongs', icon: '➕' },
   ...(isDesktop() ? [{ id: 'local', icon: '📁' }] : []),
   { id: 'settings', icon: '⚙' }
