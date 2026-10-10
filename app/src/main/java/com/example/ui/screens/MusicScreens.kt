@@ -1303,10 +1303,10 @@ fun MiniPlayer(
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .fillMaxWidth()
-            .height(64.dp)
-            .glassmorphic(cornerRadius = 16.dp)
+            .height(68.dp)
+            .glassmorphic(cornerRadius = 20.dp)
             .clickable(onClick = onClick)
     ) {
         Row(
@@ -3682,9 +3682,10 @@ fun LibraryScreen(
         item {
             Text(
                 text = translate("کتابخانه", "Library", viewModel),
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 12.dp),
+                fontFamily = LocalAppFontFamily.current
             )
         }
 
@@ -3706,6 +3707,8 @@ fun LibraryScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f))
                         .clickable { onItemClick(cat.first) }
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -6524,7 +6527,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
         ) {
             Text(
                 text = translate("پروفایل", "Profile", viewModel),
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = LocalAppFontFamily.current
             )
@@ -7236,7 +7239,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
             }
             Text(
                 text = translate("تنظیمات", "Settings", viewModel),
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = LocalAppFontFamily.current
             )
@@ -7262,7 +7265,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.Language,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
