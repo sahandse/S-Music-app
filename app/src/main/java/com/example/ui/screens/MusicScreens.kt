@@ -781,7 +781,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     }
 
     val configuration = LocalConfiguration.current
-    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val isTelevision = (configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) == Configuration.UI_MODE_TYPE_TELEVISION
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE || isTelevision
 
     val isLight = themeMode == "light" || themeMode == "glass"
     val backgroundColor = if (themeMode == "glass") Color(0xFFF0F2F6) else if (isLight) Color.White else Color.Black
