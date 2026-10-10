@@ -3,14 +3,18 @@ name: Build Windows Desktop
 on:
   push:
     branches:
-      - claude/music-app-fonts-q1foo3
+      - main
+    paths:
+      - 'desktop/**'
+      - '.github/workflows/build-windows.yml'
+  pull_request:
     paths:
       - 'desktop/**'
       - '.github/workflows/build-windows.yml'
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -36,7 +40,7 @@ jobs:
         # is handled by the ncipollo step below instead.
         run: npm run build
 
-      - name: List build output
+      - name: Verify packaged output
         id: out
         shell: bash
         run: |
@@ -44,16 +48,3 @@ jobs:
           INSTALLER=$(find release -maxdepth 1 -name "*.exe" | head -n 1)
           echo "installer=$INSTALLER" >> "$GITHUB_OUTPUT"
 
-      # Distribution happens via the release below; Actions-artifact uploads
-      # were dropped because they exhaust the account's artifact storage quota.
-      - name: Publish/update GitHub Release with installer
-        uses: ncipollo/release-action@v1
-        with:
-          tag: latest-windows-build
-          name: "High Music — Windows Desktop"
-          body: "Automatically built Windows desktop app from `${{ github.ref_name }}`. Commit: ${{ github.sha }}"
-          artifacts: desktop/release/*.exe
-          allowUpdates: true
-          replacesArtifacts: true
-          makeLatest: false
-          token: ${{ secrets.GITHUB_TOKEN }}
