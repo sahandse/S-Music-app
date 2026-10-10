@@ -56,10 +56,16 @@ export function Home() {
   }, [creds, retry])
 
   useEffect(() => {
-    if (!creds || !genre) return
+    if (!creds || !genre) {
+      setGenreSongs([])
+      return
+    }
+    let active = true
+    setGenreSongs([])
     getSongsByGenre(creds, genre, 20)
-      .then(setGenreSongs)
-      .catch(() => setGenreSongs([]))
+      .then(songs => { if (active) setGenreSongs(songs) })
+      .catch(() => { if (active) setGenreSongs([]) })
+    return () => { active = false }
   }, [creds, genre])
 
   if (loading) return <div className="home-loading" role="status" aria-label={t('common.loading')}><div className="skeleton-heading" /> <div className="grid">{Array.from({ length: 8 }, (_, i) => <div className="skeleton-card" key={i}><div className="skeleton-cover"/><div className="skeleton-line"/><div className="skeleton-line short"/></div>)}</div><span className="sr-only">{t('common.loading')}</span></div>
