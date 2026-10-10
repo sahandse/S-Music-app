@@ -34,8 +34,8 @@ jobs:
       - uses: android-actions/setup-android@v3
       - name: Generate local debug keystore
         run: |
-          keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \\
-            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \\
+          keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
             -dname "CN=Android Debug,O=S-Music,C=US"
       - name: Verify Gradle wrapper
         run: test -f gradle/wrapper/gradle-wrapper.jar
