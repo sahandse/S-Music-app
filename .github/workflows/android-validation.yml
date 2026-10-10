@@ -1,0 +1,35 @@
+name: Android validation
+
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - '*.gradle.kts'
+      - '.github/workflows/android-validation.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'gradle/**'
+      - 'gradlew'
+      - '*.gradle.kts'
+      - '.github/workflows/android-validation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Validate Android debug build
+        run: bash ./gradlew :app:assembleDebug --stacktrace --no-daemon
