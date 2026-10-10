@@ -3695,9 +3695,9 @@ fun LibraryScreen(
             Triple("all_artists", "مرور همه هنرمندان" to "Browse All Artists", Icons.Outlined.Groups),
             Triple("downloads", "دانلودهای آفلاین" to "Offline Downloads", Icons.Outlined.OfflinePin),
             Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid),
-            Triple("catalog", "🎵 کاتالوگ آنلاین" to "🎵 Online Catalog", Icons.Outlined.LibraryMusic),
+            Triple("catalog", "کاتالوگ آنلاین" to "Online Catalog", Icons.Outlined.LibraryMusic),
             Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts),
-            Triple("quiz", "🎮 بازی حدس آهنگ" to "🎮 Music Quiz", Icons.Outlined.SportsEsports)
+            Triple("quiz", "بازی حدس آهنگ" to "Music Quiz", Icons.Outlined.SportsEsports)
         )
 
         items(categories) { cat ->
@@ -4889,8 +4889,33 @@ fun SubLibraryItemsView(
 
 @Composable
 fun EmptyStateView(message: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = message, color = Color.Gray, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier.size(76.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.LibraryMusic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = message,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = LocalAppFontFamily.current,
+            fontSize = 14.sp,
+            lineHeight = 22.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
