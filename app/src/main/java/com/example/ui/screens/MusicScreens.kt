@@ -832,7 +832,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                         Spacer(modifier = Modifier.height(24.dp))
                         Icon(
                             imageVector = Icons.Filled.MusicNote,
-                            contentDescription = "آوا",
+                            contentDescription = translate("موسیقی", "Music", viewModel),
                             tint = AppleRed,
                             modifier = Modifier.size(36.dp)
                         )
@@ -841,8 +841,8 @@ fun MainMusicApp(viewModel: MusicViewModel) {
                     modifier = Modifier
                         .fillMaxHeight()
                         .padding(start = 12.dp, top = 16.dp, bottom = 16.dp, end = 4.dp)
-                        .width(76.dp)
-                        .glassmorphic(cornerRadius = 20.dp)
+                        .width(84.dp)
+                        .glassmorphic(cornerRadius = 22.dp)
                 ) {
                     NavigationRailItem(
                         selected = selectedTab == 0 && currentSubScreen == null,
@@ -5667,7 +5667,7 @@ fun ArtistDetailView(
                                             Icon(
                                                 imageVector = Icons.Default.Info,
                                                 contentDescription = null,
-                                                tint = AppleRed,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Text(
@@ -5728,7 +5728,7 @@ fun ArtistDetailView(
                                             Icon(
                                                 imageVector = Icons.Default.OpenInBrowser,
                                                 contentDescription = null,
-                                                tint = AppleRed,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
@@ -6008,7 +6008,7 @@ fun ArtistDetailView(
                                         Icon(
                                             imageVector = Icons.Default.PlayCircleOutline,
                                             contentDescription = "موزیک ویدیو",
-                                            tint = AppleRed,
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -6037,7 +6037,7 @@ fun ArtistDetailView(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "بازگشت",
+                        contentDescription = translate("بازگشت", "Back", viewModel),
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
@@ -6340,7 +6340,7 @@ fun AlbumDetailView(
         ) {
             Icon(
                 imageVector = Icons.Default.ArrowBack,
-                contentDescription = "بازگشت",
+                contentDescription = translate("بازگشت", "Back", viewModel),
                 tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
@@ -10854,7 +10854,7 @@ fun PodcastsView(viewModel: MusicViewModel) {
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 IconButton(onClick = { selectedPodcast = null }) {
-                    Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "بازگشت")
+                    Icon(imageVector = Icons.Default.ArrowForward, contentDescription = translate("بازگشت", "Back", viewModel))
                 }
                 AsyncImage(
                     model = currentPodcast.artworkUrl,
