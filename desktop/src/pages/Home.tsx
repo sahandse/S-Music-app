@@ -73,7 +73,7 @@ export function Home() {
   return (
     <div>
       <header className="home-head"><h1 className="page-title">{t('nav.home')}</h1><button type="button" className="home-search-btn" onClick={() => navigate('search')}>{t('nav.search')} <span aria-hidden="true">⌕</span></button></header>
-      {loadError && <div className="home-error" role="alert"><span>Could not load server music.</span><button type="button" className="btn-sm" onClick={() => setRetry(v => v + 1)}>Retry</button></div>
+      {loadError && <div className="home-error" role="alert"><span>{t('common.loadError')}</span><button type="button" className="btn-sm" onClick={() => setRetry(v => v + 1)}>{t('common.retry')}</button></div>
 
       {newSongs.length > 0 && (
         <>
