@@ -146,7 +146,7 @@ fun Modifier.tvFocusable(
         .scale(scale)
         .border(
             width = if (isFocused) 2.dp else 0.dp,
-            color = if (isFocused) AppleRed.copy(alpha = borderAlpha) else Color.Transparent,
+            color = if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha) else Color.Transparent,
             shape = RoundedCornerShape(cornerRadius)
         )
 }
@@ -404,15 +404,15 @@ fun AppNavigation(viewModel: MusicViewModel) {
     val isConfigured by viewModel.isServerConfigured.collectAsStateWithLifecycle()
     val onboardingPreferencesSet by viewModel.onboardingPreferencesSet.collectAsStateWithLifecycle()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        if (!isConfigured) {
+    // Layout direction follows the selected language at the Activity root.
+    // Do not force RTL here: English must remain LTR on phones and TV.
+    if (!isConfigured) {
             LoginScreen(viewModel = viewModel)
         } else if (!onboardingPreferencesSet) {
             GenrePreferenceScreen(viewModel = viewModel)
         } else {
             MainMusicApp(viewModel = viewModel)
         }
-    }
 }
 
 // --- Login & Server Configuration ---
@@ -1474,18 +1474,7 @@ fun HomeScreen(
 
     val remixSongs = remember(randomSongs) {
         val existingRemixes = randomSongs.filter { it.title.contains("remix", ignoreCase = true) || it.title.contains("mix", ignoreCase = true) }
-        if (existingRemixes.isNotEmpty()) {
-            existingRemixes
-        } else {
-            randomSongs.take(5).map { song ->
-                val remixSuffix = when (song.id.hashCode() % 3) {
-                    0 -> " (Remix)"
-                    1 -> " (Club Mix)"
-                    else -> " (Deep Chill Remix)"
-                }
-                song.copy(title = song.title + remixSuffix)
-            }
-        }
+        existingRemixes.take(10)
     }
 
     // Themed rows built from library genre tags. Only rendered when matching
