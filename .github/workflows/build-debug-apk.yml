@@ -3,11 +3,14 @@ name: Build Debug APK
 on:
   push:
     branches:
-      - claude/music-app-fonts-q1foo3
+      - main
+    paths:
+      - 'app/**'
+      - '.github/workflows/build-debug-apk.yml'
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -46,16 +49,3 @@ jobs:
           APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
           echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
-      # Distribution happens via the release below; Actions-artifact uploads
-      # were dropped because they exhaust the account's artifact storage quota.
-      - name: Publish/update GitHub Release with APK
-        uses: ncipollo/release-action@v1
-        with:
-          tag: latest-debug-build
-          name: "S-Music App - Latest Debug Build"
-          body: "Automatically built debug APK from the latest push to `${{ github.ref_name }}`. Commit: ${{ github.sha }}"
-          artifacts: ${{ steps.apk.outputs.path }}
-          allowUpdates: true
-          replacesArtifacts: true
-          makeLatest: true
-          token: ${{ secrets.GITHUB_TOKEN }}
