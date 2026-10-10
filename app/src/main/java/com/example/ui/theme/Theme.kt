@@ -1,16 +1,11 @@
 package com.example.ui.theme
 
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
 private val LightColorScheme = lightColorScheme(
     primary = AppleRed,
@@ -105,9 +100,10 @@ fun MyApplicationTheme(
         "amoled" -> AmoledColorScheme
         "glass" -> LightColorScheme.copy(
             background = Color(0xFFF0F2F6),
-            surface = Color(0xC0FFFFFF),
-            onSurface = Color.Black,
-            onBackground = Color.Black
+            surface = Color(0xF0FFFFFF),
+            surfaceVariant = Color(0xFFE8EBF1),
+            onSurface = Color(0xFF17171D),
+            onBackground = Color(0xFF17171D)
         )
         else -> DarkColorScheme
     }
