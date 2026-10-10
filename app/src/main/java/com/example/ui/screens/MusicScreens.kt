@@ -505,7 +505,7 @@ fun LoginScreen(viewModel: MusicViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -6365,7 +6365,7 @@ fun PlaylistDetailView(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(playlist.name, fontWeight = FontWeight.Bold) },
+                title = { Text(playlist.name, fontWeight = FontWeight.Bold, fontFamily = LocalAppFontFamily.current, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(imageVector = Icons.Default.ArrowForward, contentDescription = "بازگشت")
@@ -6376,7 +6376,7 @@ fun PlaylistDetailView(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding).padding(bottom = 80.dp)) {
             if (items.isEmpty()) {
-                EmptyStateView(message = "این لیست پخش خالی است.")
+                EmptyStateView(message = translate("این لیست پخش خالی است.", "This playlist is empty.", viewModel))
             } else {
                 LazyColumn(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -9547,7 +9547,7 @@ fun DiscoverFeedScreen(
                 .padding(horizontal = 4.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            val activeColor = AppleRed
+            val activeColor = MaterialTheme.colorScheme.primary
             val inactiveColor = Color.White.copy(alpha = 0.55f)
             listOf(
                 translate("موسیقی شما", "Your Music", viewModel) to 0,
@@ -10741,7 +10741,7 @@ fun CatalogView(viewModel: MusicViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                "🎵 " + translate("${shown.size} آهنگ", "${shown.size} songs", viewModel),
+                translate("${shown.size} آهنگ", "${shown.size} songs", viewModel),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 fontFamily = LocalAppFontFamily.current
