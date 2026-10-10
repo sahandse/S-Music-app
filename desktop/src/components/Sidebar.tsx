@@ -2,6 +2,7 @@ import React from 'react'
 import { useApp } from '../store'
 import { isDesktop } from '../desktop'
 import { t } from '../i18n'
+import './sidebar-icons.css'
 
 const NAV = [
   { id: 'home', icon: '🏠' },
@@ -41,9 +42,9 @@ export function Sidebar() {
         <div className="card-sub" style={{ padding: '0 12px 8px' }}>
           {creds?.username}
         </div>
-        <div className="nav-item" onClick={logout}>
+        <button type="button" className="nav-item" onClick={logout}>
           <span className="ico">⎋</span> {t('nav.logout')}
-        </div>
+        </button>
       </div>
     </aside>
   )
