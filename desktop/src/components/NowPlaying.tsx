@@ -36,8 +36,12 @@ export function NowPlaying() {
   useEffect(() => {
     setLyrics([])
     if (!current) return
-    fetchLyrics(current.title, current.artist || '').then(setLyrics)
-  }, [current?.id])
+    let active = true
+    fetchLyrics(current.title, current.artist || '')
+      .then(lines => { if (active) setLyrics(lines) })
+      .catch(() => { if (active) setLyrics([]) })
+    return () => { active = false }
+  }, [current?.id, current?.title, current?.artist])
 
   // Derive a dominant color from the cover for the background
   useEffect(() => {
@@ -47,7 +51,9 @@ export function NowPlaying() {
     }
     const img = new Image()
     img.crossOrigin = 'anonymous'
+    let active = true
     img.onload = () => {
+      if (!active) return
       try {
         const c = document.createElement('canvas')
         c.width = c.height = 16
@@ -65,8 +71,9 @@ export function NowPlaying() {
         setBg('#1a1a1f')
       }
     }
-    img.onerror = () => setBg('#1a1a1f')
+    img.onerror = () => { if (active) setBg('#1a1a1f') }
     img.src = cover
+    return () => { active = false; img.onload = null; img.onerror = null }
   }, [cover])
 
   // Current synced lyric line

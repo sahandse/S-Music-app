@@ -101,6 +101,7 @@ fun MyApplicationTheme(
         "glass" -> LightColorScheme.copy(
             background = Color(0xFFF0F2F6),
             surface = Color(0xF0FFFFFF),
+            onPrimary = Color.White,
             surfaceVariant = Color(0xFFE8EBF1),
             onSurface = Color(0xFF17171D),
             onBackground = Color(0xFF17171D)

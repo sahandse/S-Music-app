@@ -23,40 +23,49 @@ export function Home() {
     if (!creds) return
     setLoading(true)
     setLoadError(false)
+    let active = true
     Promise.all([
       getAlbumList(creds, 'newest', 18),
       getAlbumList(creds, 'frequent', 18),
       getRandomSongs(creds, 20)
     ])
       .then(([n, f, r]) => {
+        if (!active) return
         setRecent(n)
         setFrequent(f)
         setRandom(r)
       })
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false))
+      .catch(() => { if (active) setLoadError(true) })
+      .finally(() => { if (active) setLoading(false) })
     getGenres(creds)
       .then((g) => {
+        if (!active) return
         setGenres(g)
         if (g.length) setGenre(g[0])
       })
-      .catch(() => setGenres([]))
+      .catch(() => { if (active) setGenres([]) })
     // Latest shared-catalog songs ("Newest Iranian"), refreshed periodically so
     // songs newly posted to the channel appear without a manual reload.
     const loadCatalog = () =>
       fetchCatalog()
-        .then((list) => setNewSongs(list.slice(0, 12).map(catalogToSong)))
+        .then((list) => { if (active) setNewSongs(list.slice(0, 12).map(catalogToSong)) })
         .catch(() => {})
     loadCatalog()
     const id = setInterval(loadCatalog, 60000)
-    return () => clearInterval(id)
+    return () => { active = false; clearInterval(id) }
   }, [creds, retry])
 
   useEffect(() => {
-    if (!creds || !genre) return
+    if (!creds || !genre) {
+      setGenreSongs([])
+      return
+    }
+    let active = true
+    setGenreSongs([])
     getSongsByGenre(creds, genre, 20)
-      .then(setGenreSongs)
-      .catch(() => setGenreSongs([]))
+      .then(songs => { if (active) setGenreSongs(songs) })
+      .catch(() => { if (active) setGenreSongs([]) })
+    return () => { active = false }
   }, [creds, genre])
 
   if (loading) return <div className="home-loading" role="status" aria-label={t('common.loading')}><div className="skeleton-heading" /> <div className="grid">{Array.from({ length: 8 }, (_, i) => <div className="skeleton-card" key={i}><div className="skeleton-cover"/><div className="skeleton-line"/><div className="skeleton-line short"/></div>)}</div><span className="sr-only">{t('common.loading')}</span></div>
