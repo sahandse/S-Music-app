@@ -1544,7 +1544,7 @@ fun HomeScreen(
         Box(modifier = Modifier.fillMaxSize()) {
         if (currentTrack != null) {
             AsyncImage(
-                model = viewModel.getCoverArtUrl(currentTrack!!.coverArt),
+                model = viewModel.getCoverArtUrl(currentTrack?.coverArt),
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
@@ -4967,7 +4967,7 @@ fun AlbumGridCard(
             // Year and Song Count badges on cover art
             val tracksLabel = translate("آهنگ", "tracks", viewModel)
             val badgeText = remember(album) {
-                val yearPart = if (album.year != null && album.year!! > 0) "${album.year} • " else ""
+                val yearPart = if ((album.year ?: 0) > 0) "${album.year} • " else ""
                 val songCountPart = "${album.songCount ?: 0} $tracksLabel"
                 "$yearPart$songCountPart"
             }
@@ -5375,7 +5375,7 @@ fun ArtistDetailView(
                 v.title.contains(song.title, ignoreCase = true) ||
                 song.title.contains(v.title, ignoreCase = true)
             }
-        }.filterValues { it != null }.mapValues { it.value!! }
+        }.mapNotNull { (key, value) -> value?.let { key to it } }.toMap()
     }
 
     LaunchedEffect(artist.id) {
@@ -5473,8 +5473,8 @@ fun ArtistDetailView(
                                         .background(
                                             Brush.verticalGradient(
                                                 colors = listOf(
-                                                    artistDominantColor!!.copy(alpha = 0.35f),
-                                                    artistDominantColor!!.copy(alpha = 0.10f),
+                                                    artistDominantColor.copy(alpha = 0.35f),
+                                                    artistDominantColor.copy(alpha = 0.10f),
                                                     Color.Transparent
                                                 )
                                             )
@@ -5704,8 +5704,8 @@ fun ArtistDetailView(
 
                     // MusicBrainz: Wikipedia link + band members
                     if (artistMbDetail != null) {
-                        val wikiRelation = artistMbDetail!!.relations?.firstOrNull { it.type == "wikipedia" }
-                        val memberRelations = artistMbDetail!!.relations?.filter {
+                        val wikiRelation = artistMbDetail.relations?.firstOrNull { it.type == "wikipedia" }
+                        val memberRelations = artistMbDetail.relations?.filter {
                             it.type == "member of band" || it.type == "members"
                         } ?: emptyList()
 
@@ -6493,7 +6493,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
 
     val topArtists = remember(recentPlays) {
         recentPlays.filter { !it.artist.isNullOrBlank() }
-            .groupBy { it.artist!! }
+            .groupBy { it.artist.orEmpty() }
             .mapValues { it.value.size }
             .toList()
             .sortedByDescending { it.second }
