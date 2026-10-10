@@ -121,11 +121,11 @@ export function NowPlaying() {
             <span className="time">{fmtDuration(duration)}</span>
           </div>
           <div className="np-controls">
-            <button className={shuffle ? 'active' : ''} onClick={toggleShuffle} aria-label={t('player.shuffle')} title={t('player.shuffle')}>🔀</button>
+            <button className={shuffle ? 'active' : ''} onClick={toggleShuffle} aria-label={t('player.shuffle')} title={t('player.shuffle')} aria-pressed={shuffle}>🔀</button>
             <button onClick={prev} aria-label={t('player.prev')} title={t('player.prev')}>⏮</button>
             <button className="play-btn" onClick={togglePlay} aria-label={t('player.playPause')} title={t('player.playPause')}>{isPlaying ? '⏸' : '▶'}</button>
             <button onClick={next} aria-label={t('player.next')} title={t('player.next')}>⏭</button>
-            <button className={repeat !== 'off' ? 'active' : ''} onClick={cycleRepeat} aria-label={t('player.repeat')} title={t('player.repeat')}>
+            <button className={repeat !== 'off' ? 'active' : ''} onClick={cycleRepeat} aria-label={t('player.repeat')} title={t('player.repeat')} aria-pressed={repeat !== 'off'}>
               {repeat === 'one' ? '🔂' : '🔁'}
             </button>
           </div>
