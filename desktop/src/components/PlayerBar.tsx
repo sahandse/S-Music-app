@@ -75,22 +75,24 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
 
       <div className="player-center">
         <div className="controls">
-          <button className={shuffle ? 'active' : ''} onClick={toggleShuffle} title={t('player.shuffle')}>
+          <button className={shuffle ? 'active' : ''} onClick={toggleShuffle} title={t('player.shuffle')} aria-label={t('player.shuffle')} aria-pressed={shuffle}>
             🔀
           </button>
-          <button onClick={prev} title={t('player.prev')}>
+          <button onClick={prev} title={t('player.prev')} aria-label={t('player.prev')}>
             ⏮
           </button>
-          <button className="play-btn" onClick={togglePlay} title={t('player.playPause')}>
+          <button className="play-btn" onClick={togglePlay} title={t('player.playPause')} aria-label={t('player.playPause')}>
             {isPlaying ? '⏸' : '▶'}
           </button>
-          <button onClick={next} title={t('player.next')}>
+          <button onClick={next} title={t('player.next')} aria-label={t('player.next')}>
             ⏭
           </button>
           <button
             className={repeat !== 'off' ? 'active' : ''}
             onClick={cycleRepeat}
             title={t('player.repeat')}
+            aria-label={t('player.repeat')}
+            aria-pressed={repeat !== 'off'}
           >
             {repeat === 'one' ? '🔂' : '🔁'}
           </button>
