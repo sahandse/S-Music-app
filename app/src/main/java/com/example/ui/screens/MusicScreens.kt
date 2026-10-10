@@ -8243,8 +8243,8 @@ fun FullscreenPlayer(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .blur(140.dp)
-                .graphicsLayer(alpha = 0.70f),
+                .blur(64.dp)
+                .graphicsLayer(alpha = 0.48f),
             contentScale = ContentScale.Crop
         )
 
