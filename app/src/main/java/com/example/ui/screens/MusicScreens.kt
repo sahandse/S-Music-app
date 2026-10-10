@@ -5369,13 +5369,19 @@ fun ArtistDetailView(
     val artistMusicVideos by viewModel.artistMusicVideos.collectAsStateWithLifecycle()
 
     val songVideoMap = remember(allSongs, artistMusicVideos) {
-        allSongs.associateWith { song ->
-            artistMusicVideos.firstOrNull { v ->
-                v.title.equals(song.title, ignoreCase = true) ||
-                v.title.contains(song.title, ignoreCase = true) ||
-                song.title.contains(v.title, ignoreCase = true)
+        allSongs.mapNotNull { song ->
+            val title = song.title.trim()
+            if (title.isBlank()) return@mapNotNull null
+            val video = artistMusicVideos.firstOrNull { v ->
+                val videoTitle = v.title.trim()
+                videoTitle.isNotBlank() && (
+                    videoTitle.equals(title, ignoreCase = true) ||
+                    (title.length >= 4 && videoTitle.contains(title, ignoreCase = true)) ||
+                    (videoTitle.length >= 4 && title.contains(videoTitle, ignoreCase = true))
+                )
             }
-        }.mapNotNull { (key, value) -> value?.let { key to it } }.toMap()
+            video?.let { song to it }
+        }.toMap()
     }
 
     LaunchedEffect(artist.id) {
