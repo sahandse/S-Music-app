@@ -46,3 +46,6 @@
 .player .p-title, .player .p-artist { display:block; max-width:100%; text-align:start; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .player .player-cover-btn { position:relative; display:inline-flex; border-radius:9px; flex-shrink:0; }
 .sleep-menu .sleep-item { display:block; width:100%; text-align:start; }
+
+.nowplaying .lyric-line[role='button']:focus-visible { outline:2px solid var(--accent); outline-offset:3px; border-radius:8px; }
+@media (prefers-reduced-motion:reduce) { .nowplaying * {scroll-behavior:auto;} }
