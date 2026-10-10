@@ -45,25 +45,27 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
       <div className="player-track">
         {current ? (
           <>
-            <div
+            <button type="button"
               className="player-cover-btn"
               onClick={() => setFullscreen(true)}
               title={t('player.fullscreen')}
+              aria-label={t('player.fullscreen')}
             >
               <Cover id={current.coverArt} directUrl={current.coverImageUrl} size={120} />
               <span className="cover-expand">⤢</span>
-            </div>
+            </button>
             <div className="info">
-              <div className="p-title" onClick={() => setFullscreen(true)}>
+              <button type="button" className="p-title" onClick={() => setFullscreen(true)}>
                 {current.title}
-              </div>
-              <div
+              </button>
+              <button type="button"
+                disabled={!current.artistId}
                 className="p-artist"
                 style={{ cursor: current.artistId ? 'pointer' : 'default' }}
                 onClick={() => current.artistId && navigate('artist', current.artistId)}
               >
                 {current.artist}
-              </div>
+              </button>
             </div>
           </>
         ) : (
@@ -97,6 +99,7 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
           <span className="time">{fmtDuration(progress)}</span>
           <input
             type="range"
+            aria-label="Playback position"
             min={0}
             max={duration || 0}
             step={1}
@@ -112,6 +115,7 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
           <span>🔊</span>
           <input
             type="range"
+            aria-label="Volume"
             min={0}
             max={1}
             step={0.01}
@@ -130,7 +134,7 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
           {sleepMenu && (
             <div className="sleep-menu" onMouseLeave={() => setSleepMenu(false)}>
               {SLEEP_OPTS.map((o) => (
-                <div
+                <button type="button"
                   key={String(o)}
                   className={`sleep-item ${sleep === o ? 'on' : ''}`}
                   onClick={() => {
@@ -139,7 +143,7 @@ export function PlayerBar({ onToggleQueue }: { onToggleQueue: () => void }) {
                   }}
                 >
                   {o === 'off' ? t('sleep.off') : o === 'track' ? t('sleep.track') : t('sleep.min', { n: o })}
-                </div>
+                </button>
               ))}
             </div>
           )}
