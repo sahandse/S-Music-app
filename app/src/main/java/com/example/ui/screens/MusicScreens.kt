@@ -5473,8 +5473,8 @@ fun ArtistDetailView(
                                         .background(
                                             Brush.verticalGradient(
                                                 colors = listOf(
-                                                    artistDominantColor.copy(alpha = 0.35f),
-                                                    artistDominantColor.copy(alpha = 0.10f),
+                                                    artistDominantColor?.copy(alpha = 0.35f) ?: Color.Transparent,
+                                                    artistDominantColor?.copy(alpha = 0.10f) ?: Color.Transparent,
                                                     Color.Transparent
                                                 )
                                             )
