@@ -16,10 +16,13 @@ export function Home() {
   const [genre, setGenre] = useState<string>('')
   const [genreSongs, setGenreSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     if (!creds) return
     setLoading(true)
+    setLoadError(false)
     Promise.all([
       getAlbumList(creds, 'newest', 18),
       getAlbumList(creds, 'frequent', 18),
@@ -30,7 +33,7 @@ export function Home() {
         setFrequent(f)
         setRandom(r)
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
     getGenres(creds)
       .then((g) => {
@@ -47,7 +50,7 @@ export function Home() {
     loadCatalog()
     const id = setInterval(loadCatalog, 60000)
     return () => clearInterval(id)
-  }, [creds])
+  }, [creds, retry])
 
   useEffect(() => {
     if (!creds || !genre) return
@@ -56,11 +59,12 @@ export function Home() {
       .catch(() => setGenreSongs([]))
   }, [creds, genre])
 
-  if (loading) return <div className="empty">{t('common.loading')}</div>
+  if (loading) return <div className="home-loading" role="status" aria-label={t('common.loading')}><div className="skeleton-heading" /> <div className="grid">{Array.from({ length: 8 }, (_, i) => <div className="skeleton-card" key={i}><div className="skeleton-cover"/><div className="skeleton-line"/><div className="skeleton-line short"/></div>)}</div><span className="sr-only">{t('common.loading')}</span></div>
 
   return (
     <div>
       <div className="page-title">{t('nav.home')}</div>
+      {loadError && <div className="home-error" role="alert"><span>Could not load server music.</span><button type="button" className="btn-sm" onClick={() => setRetry(v => v + 1)}>Retry</button></div>
 
       {newSongs.length > 0 && (
         <>
@@ -98,13 +102,14 @@ export function Home() {
           <div className="section-title">{t('home.genres')}</div>
           <div style={{ marginBottom: 14 }}>
             {genres.map((g) => (
-              <span
+              <button type="button"
                 key={g}
                 className={`chip ${genre === g ? 'active' : ''}`}
+                aria-pressed={genre === g}
                 onClick={() => setGenre(g)}
               >
                 {g}
-              </span>
+              </button>
             ))}
           </div>
           <TrackList songs={genreSongs} />
@@ -129,11 +134,11 @@ export function AlbumRow({
       <div className="section-title">{title}</div>
       <div className="grid">
         {albums.map((a) => (
-          <div key={a.id} className="card" onClick={() => onOpen(a.id)}>
+          <button type="button" key={a.id} className="card album-card" onClick={() => onOpen(a.id)} aria-label={`${a.name} — ${a.artist}`}>
             <Cover id={a.coverArt} />
             <div className="card-title">{a.name}</div>
             <div className="card-sub">{a.artist}</div>
-          </div>
+          </button>
         ))}
       </div>
     </>
