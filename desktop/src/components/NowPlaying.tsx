@@ -111,6 +111,7 @@ export function NowPlaying() {
             <span className="time">{fmtDuration(progress)}</span>
             <input
               type="range"
+              aria-label="Playback position"
               min={0}
               max={duration || 0}
               step={1}
@@ -136,6 +137,9 @@ export function NowPlaying() {
               key={i}
               data-i={i}
               className={`lyric-line ${i === active ? 'active' : ''} ${l.time < 0 ? 'plain' : ''}`}
+              role={l.time >= 0 ? "button" : undefined}
+              tabIndex={l.time >= 0 ? 0 : undefined}
+              onKeyDown={(e) => { if (l.time >= 0 && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); seek(l.time) } }}
               onClick={() => l.time >= 0 && seek(l.time)}
             >
               {l.text || '♪'}
