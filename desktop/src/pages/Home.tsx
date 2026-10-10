@@ -23,33 +23,36 @@ export function Home() {
     if (!creds) return
     setLoading(true)
     setLoadError(false)
+    let active = true
     Promise.all([
       getAlbumList(creds, 'newest', 18),
       getAlbumList(creds, 'frequent', 18),
       getRandomSongs(creds, 20)
     ])
       .then(([n, f, r]) => {
+        if (!active) return
         setRecent(n)
         setFrequent(f)
         setRandom(r)
       })
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false))
+      .catch(() => { if (active) setLoadError(true) })
+      .finally(() => { if (active) setLoading(false) })
     getGenres(creds)
       .then((g) => {
+        if (!active) return
         setGenres(g)
         if (g.length) setGenre(g[0])
       })
-      .catch(() => setGenres([]))
+      .catch(() => { if (active) setGenres([]) })
     // Latest shared-catalog songs ("Newest Iranian"), refreshed periodically so
     // songs newly posted to the channel appear without a manual reload.
     const loadCatalog = () =>
       fetchCatalog()
-        .then((list) => setNewSongs(list.slice(0, 12).map(catalogToSong)))
+        .then((list) => { if (active) setNewSongs(list.slice(0, 12).map(catalogToSong)) })
         .catch(() => {})
     loadCatalog()
     const id = setInterval(loadCatalog, 60000)
-    return () => clearInterval(id)
+    return () => { active = false; clearInterval(id) }
   }, [creds, retry])
 
   useEffect(() => {
