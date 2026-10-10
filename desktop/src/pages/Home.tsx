@@ -63,7 +63,7 @@ export function Home() {
 
   return (
     <div>
-      <div className="page-title">{t('nav.home')}</div>
+      <header className="home-head"><h1 className="page-title">{t('nav.home')}</h1><button type="button" className="home-search-btn" onClick={() => navigate('search')}>{t('nav.search')} <span aria-hidden="true">⌕</span></button></header>
       {loadError && <div className="home-error" role="alert"><span>Could not load server music.</span><button type="button" className="btn-sm" onClick={() => setRetry(v => v + 1)}>Retry</button></div>
 
       {newSongs.length > 0 && (
@@ -85,7 +85,7 @@ export function Home() {
       <AlbumRow title={t('home.newest')} albums={recent} onOpen={(id) => navigate('album', id)} />
       <AlbumRow title={t('home.frequent')} albums={frequent} onOpen={(id) => navigate('album', id)} />
 
-      <div className="section-title">
+      {random.length > 0 && <div className="section-title">
         {t('home.random')}{' '}
         <button
           className="chip active"
@@ -95,7 +95,7 @@ export function Home() {
           {t('common.playAll')}
         </button>
       </div>
-      <TrackList songs={random} />
+      {random.length > 0 && <TrackList songs={random} />}
 
       {genres.length > 0 && (
         <>
@@ -131,7 +131,7 @@ export function AlbumRow({
   if (!albums.length) return null
   return (
     <>
-      <div className="section-title">{title}</div>
+      <h2 className="section-title">{title}</h2>
       <div className="grid">
         {albums.map((a) => (
           <button type="button" key={a.id} className="card album-card" onClick={() => onOpen(a.id)} aria-label={`${a.name} — ${a.artist}`}>
