@@ -1508,8 +1508,36 @@ fun HomeScreen(
     }
 
     if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = AppleRed)
+        // Content-shaped placeholders reduce layout jumps while real data loads.
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Box(
+                Modifier.fillMaxWidth(0.52f).height(24.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f))
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(4) {
+                    Column(modifier = Modifier.width(152.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Box(
+                            Modifier.size(152.dp).clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        )
+                        Box(
+                            Modifier.fillMaxWidth(0.75f).height(14.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        )
+                    }
+                }
+            }
+            Box(
+                Modifier.fillMaxWidth(0.44f).height(22.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f))
+            )
         }
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
