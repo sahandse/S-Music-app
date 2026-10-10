@@ -1,0 +1,18 @@
+/* Keyboard-accessible desktop navigation polish */
+.sidebar .nav-item { width: 100%; text-align: start; flex-shrink: 0; }
+.sidebar .nav-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sidebar .nav-item .ico { flex: 0 0 20px; }
+@media (max-width: 850px) {
+  .app-shell { grid-template-columns: 76px minmax(0,1fr); }
+  .sidebar { padding-inline: 9px; }
+  .sidebar .brand { font-size: 12px; padding-inline: 0; justify-content: center; }
+  .sidebar .nav-item { justify-content: center; padding-inline: 8px; }
+  .sidebar .nav-item > span:not(.ico) { display:none; }
+  .sidebar-footer .card-sub { display:none; }
+  .main { padding: 20px 16px 30px; min-width:0; }
+  .player { grid-template-columns: minmax(0,1fr) 2fr; padding-inline: 12px; }
+  .player-right { display:none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar .nav-item { transition: none; }
+}
