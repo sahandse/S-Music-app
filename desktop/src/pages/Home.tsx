@@ -16,10 +16,13 @@ export function Home() {
   const [genre, setGenre] = useState<string>('')
   const [genreSongs, setGenreSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retry, setRetry] = useState(0)
 
   useEffect(() => {
     if (!creds) return
     setLoading(true)
+    setLoadError(false)
     Promise.all([
       getAlbumList(creds, 'newest', 18),
       getAlbumList(creds, 'frequent', 18),
@@ -30,7 +33,7 @@ export function Home() {
         setFrequent(f)
         setRandom(r)
       })
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
     getGenres(creds)
       .then((g) => {
@@ -47,7 +50,7 @@ export function Home() {
     loadCatalog()
     const id = setInterval(loadCatalog, 60000)
     return () => clearInterval(id)
-  }, [creds])
+  }, [creds, retry])
 
   useEffect(() => {
     if (!creds || !genre) return
@@ -61,6 +64,7 @@ export function Home() {
   return (
     <div>
       <div className="page-title">{t('nav.home')}</div>
+      {loadError && <div className="home-error" role="alert"><span>Could not load server music.</span><button type="button" className="btn-sm" onClick={() => setRetry(v => v + 1)}>Retry</button></div>
 
       {newSongs.length > 0 && (
         <>
