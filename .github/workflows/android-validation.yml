@@ -29,7 +29,15 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
       - uses: android-actions/setup-android@v3
+      - name: Generate local debug keystore
+        run: |
+          keytool -genkeypair -keystore debug.keystore -storepass android -keypass android \\
+            -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \\
+            -dname "CN=Android Debug,O=S-Music,C=US"
+      - name: Verify Gradle wrapper
+        run: test -f gradle/wrapper/gradle-wrapper.jar
       - name: Validate Android debug build
         run: bash ./gradlew :app:assembleDebug --stacktrace --no-daemon
