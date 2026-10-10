@@ -19,6 +19,8 @@ const DICT: Record<string, [string, string]> = {
   'nav.logout': ['خروج', 'Log out'],
 
   // common
+  'common.loadError': ['دریافت موسیقی از سرور ناموفق بود.', 'Could not load music from server.'],
+  'common.retry': ['تلاش دوباره', 'Retry'],
   'common.loading': ['در حال بارگذاری...', 'Loading…'],
   'common.searching': ['در حال جستجو...', 'Searching…'],
   'common.noSongs': ['آهنگی نیست', 'No songs'],
