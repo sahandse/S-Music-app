@@ -5667,7 +5667,7 @@ fun ArtistDetailView(
                                             Icon(
                                                 imageVector = Icons.Default.Info,
                                                 contentDescription = null,
-                                                tint = AppleRed,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Text(
@@ -5728,7 +5728,7 @@ fun ArtistDetailView(
                                             Icon(
                                                 imageVector = Icons.Default.OpenInBrowser,
                                                 contentDescription = null,
-                                                tint = AppleRed,
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(16.dp)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
@@ -6008,7 +6008,7 @@ fun ArtistDetailView(
                                         Icon(
                                             imageVector = Icons.Default.PlayCircleOutline,
                                             contentDescription = "موزیک ویدیو",
-                                            tint = AppleRed,
+                                            tint = MaterialTheme.colorScheme.primary,
                                             modifier = Modifier.size(22.dp)
                                         )
                                     }
@@ -6037,7 +6037,7 @@ fun ArtistDetailView(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "بازگشت",
+                        contentDescription = translate("بازگشت", "Back", viewModel),
                         tint = Color.White,
                         modifier = Modifier.size(20.dp)
                     )
@@ -6340,7 +6340,7 @@ fun AlbumDetailView(
         ) {
             Icon(
                 imageVector = Icons.Default.ArrowBack,
-                contentDescription = "بازگشت",
+                contentDescription = translate("بازگشت", "Back", viewModel),
                 tint = Color.White,
                 modifier = Modifier.size(20.dp)
             )
