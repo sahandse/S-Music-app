@@ -146,7 +146,7 @@ fun Modifier.tvFocusable(
         .scale(scale)
         .border(
             width = if (isFocused) 2.dp else 0.dp,
-            color = if (isFocused) AppleRed.copy(alpha = borderAlpha) else Color.Transparent,
+            color = if (isFocused) MaterialTheme.colorScheme.primary.copy(alpha = borderAlpha) else Color.Transparent,
             shape = RoundedCornerShape(cornerRadius)
         )
 }
@@ -404,15 +404,15 @@ fun AppNavigation(viewModel: MusicViewModel) {
     val isConfigured by viewModel.isServerConfigured.collectAsStateWithLifecycle()
     val onboardingPreferencesSet by viewModel.onboardingPreferencesSet.collectAsStateWithLifecycle()
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-        if (!isConfigured) {
+    // Layout direction follows the selected language at the Activity root.
+    // Do not force RTL here: English must remain LTR on phones and TV.
+    if (!isConfigured) {
             LoginScreen(viewModel = viewModel)
         } else if (!onboardingPreferencesSet) {
             GenrePreferenceScreen(viewModel = viewModel)
         } else {
             MainMusicApp(viewModel = viewModel)
         }
-    }
 }
 
 // --- Login & Server Configuration ---
@@ -1303,10 +1303,10 @@ fun MiniPlayer(
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .padding(horizontal = 12.dp, vertical = 6.dp)
             .fillMaxWidth()
-            .height(64.dp)
-            .glassmorphic(cornerRadius = 16.dp)
+            .height(68.dp)
+            .glassmorphic(cornerRadius = 20.dp)
             .clickable(onClick = onClick)
     ) {
         Row(
@@ -1474,18 +1474,7 @@ fun HomeScreen(
 
     val remixSongs = remember(randomSongs) {
         val existingRemixes = randomSongs.filter { it.title.contains("remix", ignoreCase = true) || it.title.contains("mix", ignoreCase = true) }
-        if (existingRemixes.isNotEmpty()) {
-            existingRemixes
-        } else {
-            randomSongs.take(5).map { song ->
-                val remixSuffix = when (song.id.hashCode() % 3) {
-                    0 -> " (Remix)"
-                    1 -> " (Club Mix)"
-                    else -> " (Deep Chill Remix)"
-                }
-                song.copy(title = song.title + remixSuffix)
-            }
-        }
+        existingRemixes.take(10)
     }
 
     // Themed rows built from library genre tags. Only rendered when matching
@@ -1519,8 +1508,36 @@ fun HomeScreen(
     }
 
     if (isLoading) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = AppleRed)
+        // Content-shaped placeholders reduce layout jumps while real data loads.
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            Box(
+                Modifier.fillMaxWidth(0.52f).height(24.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f))
+            )
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(4) {
+                    Column(modifier = Modifier.width(152.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Box(
+                            Modifier.size(152.dp).clip(RoundedCornerShape(16.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        )
+                        Box(
+                            Modifier.fillMaxWidth(0.75f).height(14.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        )
+                    }
+                }
+            }
+            Box(
+                Modifier.fillMaxWidth(0.44f).height(22.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.75f))
+            )
         }
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -2924,6 +2941,7 @@ fun SearchScreen(
     onAlbumClick: (SubsonicAlbum) -> Unit,
     onBack: (() -> Unit)? = null
 ) {
+    val language by viewModel.language.collectAsStateWithLifecycle()
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val history by viewModel.searchHistory.collectAsStateWithLifecycle()
@@ -2949,7 +2967,7 @@ fun SearchScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -2992,7 +3010,7 @@ fun SearchScreen(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = null,
-                    tint = AppleRed,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 10.dp).size(22.dp)
                 )
                 BasicTextField(
@@ -3004,7 +3022,7 @@ fun SearchScreen(
                         fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(AppleRed),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .weight(1f)
                         .testTag("search_input"),
@@ -3664,9 +3682,10 @@ fun LibraryScreen(
         item {
             Text(
                 text = translate("کتابخانه", "Library", viewModel),
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 12.dp),
+                fontFamily = LocalAppFontFamily.current
             )
         }
 
@@ -3678,9 +3697,9 @@ fun LibraryScreen(
             Triple("all_artists", "مرور همه هنرمندان" to "Browse All Artists", Icons.Outlined.Groups),
             Triple("downloads", "دانلودهای آفلاین" to "Offline Downloads", Icons.Outlined.OfflinePin),
             Triple("device_songs", "آهنگ‌های داخل گوشی" to "Songs on Device", Icons.Outlined.PhoneAndroid),
-            Triple("catalog", "🎵 کاتالوگ آنلاین" to "🎵 Online Catalog", Icons.Outlined.LibraryMusic),
+            Triple("catalog", "کاتالوگ آنلاین" to "Online Catalog", Icons.Outlined.LibraryMusic),
             Triple("podcasts", "پادکست" to "Podcasts", Icons.Outlined.Podcasts),
-            Triple("quiz", "🎮 بازی حدس آهنگ" to "🎮 Music Quiz", Icons.Outlined.SportsEsports)
+            Triple("quiz", "بازی حدس آهنگ" to "Music Quiz", Icons.Outlined.SportsEsports)
         )
 
         items(categories) { cat ->
@@ -3688,6 +3707,8 @@ fun LibraryScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.22f))
                         .clickable { onItemClick(cat.first) }
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -4872,8 +4893,33 @@ fun SubLibraryItemsView(
 
 @Composable
 fun EmptyStateView(message: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(text = message, color = Color.Gray, fontSize = 14.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(24.dp))
+    Column(
+        modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier.size(76.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.LibraryMusic,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp)
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(
+            text = message,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            fontFamily = LocalAppFontFamily.current,
+            fontSize = 14.sp,
+            lineHeight = 22.sp,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -6481,7 +6527,7 @@ fun ProfileScreen(viewModel: MusicViewModel, onSettingsClick: () -> Unit = {}) {
         ) {
             Text(
                 text = translate("پروفایل", "Profile", viewModel),
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = LocalAppFontFamily.current
             )
@@ -7193,7 +7239,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
             }
             Text(
                 text = translate("تنظیمات", "Settings", viewModel),
-                fontSize = 32.sp,
+                fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = LocalAppFontFamily.current
             )
@@ -7219,7 +7265,7 @@ fun SettingsScreen(viewModel: MusicViewModel, onBack: () -> Unit = {}) {
                     Icon(
                         imageVector = Icons.Default.Language,
                         contentDescription = null,
-                        tint = AppleRed,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
@@ -8197,8 +8243,8 @@ fun FullscreenPlayer(
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .blur(140.dp)
-                .graphicsLayer(alpha = 0.70f),
+                .blur(64.dp)
+                .graphicsLayer(alpha = 0.48f),
             contentScale = ContentScale.Crop
         )
 
