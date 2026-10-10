@@ -2941,6 +2941,7 @@ fun SearchScreen(
     onAlbumClick: (SubsonicAlbum) -> Unit,
     onBack: (() -> Unit)? = null
 ) {
+    val language by viewModel.language.collectAsStateWithLifecycle()
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
     val searchResults by viewModel.searchResults.collectAsStateWithLifecycle()
     val history by viewModel.searchHistory.collectAsStateWithLifecycle()
@@ -2966,7 +2967,7 @@ fun SearchScreen(
         }
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+    CompositionLocalProvider(LocalLayoutDirection provides if (language == "fa") LayoutDirection.Rtl else LayoutDirection.Ltr) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -3009,7 +3010,7 @@ fun SearchScreen(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = null,
-                    tint = AppleRed,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = 10.dp).size(22.dp)
                 )
                 BasicTextField(
@@ -3021,7 +3022,7 @@ fun SearchScreen(
                         fontFamily = LocalAppFontFamily.current,
                         color = MaterialTheme.colorScheme.onSurface
                     ),
-                    cursorBrush = androidx.compose.ui.graphics.SolidColor(AppleRed),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .weight(1f)
                         .testTag("search_input"),
