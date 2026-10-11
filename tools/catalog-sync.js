@@ -192,16 +192,23 @@ function songMeta(audio, post) {
   }
 
   // 2) Fall back to the file's own tags, cleaned of promo junk.
-  title = clean(title) || clean(audio.title) || clean(audio.file_name) || 'آهنگ'
-  artist = clean(artist) || clean(audio.performer) || ''
+  // Avoid treating promotional captions such as "New🔥" and channel
+  // mentions as metadata. Prefer the actual audio file tags in that case.
+  const isPromo = (value) => !value || /^(?:new|جدید|آهنگ جدید|موزیک جدید)[\\s🔥✨!]*$/iu.test(value.trim()) || /^@[a-z0-9_]+$/i.test(value.trim())
+  title = clean(title)
+  artist = clean(artist)
+  if (isPromo(title)) title = ''
+  if (isPromo(artist)) artist = ''
+  title = title || clean(audio.title) || clean(audio.file_name) || ''
+  artist = artist || clean(audio.performer) || ''
+  if (!title) title = 'بدون عنوان'
   return { title, artist }
 }
 
 async function main() {
   for (const [k, v] of Object.entries({ TELEGRAM_BOT_TOKEN: TG_TOKEN, CATALOG_PAT: PAT, CATALOG_REPO })) {
     if (!v) {
-      console.error(`${k} not set — skipping.`)
-      return
+      throw new Error(`${k} secret is not configured`)
     }
   }
 
@@ -300,6 +307,7 @@ async function main() {
   let release = null
   let maxUpdateId = offset - 1
   let added = 0
+  let failedUpdateId = null
   // A cover photo posted just BEFORE a song/video is attached to it.
   let pendingCover = null
 
@@ -336,7 +344,7 @@ async function main() {
 
     try {
       const got = await tgGetFileBytes(media.file_id)
-      if (!got) continue
+      if (!got) { failedUpdateId = Math.min(failedUpdateId ?? u.update_id, u.update_id); continue }
       if (!release) release = await ensureRelease()
 
       const defaultExt = isVideo ? 'mp4' : 'mp3'
@@ -391,11 +399,14 @@ async function main() {
       }
       added++
     } catch (e) {
+      failedUpdateId = Math.min(failedUpdateId ?? u.update_id, u.update_id)
       console.error('Failed on update', u.update_id, e.message)
     }
   }
 
-  state.offset = maxUpdateId + 1
+  // Do not permanently acknowledge a failed media upload; the next sync
+  // must be able to retry from the first unsuccessful update.
+  state.offset = failedUpdateId === null ? maxUpdateId + 1 : Math.min(failedUpdateId, maxUpdateId + 1)
   fs.writeFileSync(catalogPath, JSON.stringify(catalog, null, 2) + '\n')
   fs.writeFileSync(statePath, JSON.stringify(state, null, 2) + '\n')
 
