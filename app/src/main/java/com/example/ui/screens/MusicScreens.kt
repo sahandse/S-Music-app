@@ -233,7 +233,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -252,7 +252,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                         (if (lang == "fa") "هنرمندان مورد علاقه‌ات رو انتخاب کن" else "Choose your favorite artists"),
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    color = MaterialTheme.colorScheme.onBackground,
                     fontFamily = LocalAppFontFamily.current,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -263,7 +263,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                     else
                         (if (lang == "fa") "این کمک می‌کنه پیشنهادهای بهتری بهت بدیم" else "This helps us give you better recommendations"),
                     fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                     fontFamily = LocalAppFontFamily.current,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
@@ -296,7 +296,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                             ) {
                                 Text(
                                     text = genre,
-                                    color = Color.White,
+                                    color = MaterialTheme.colorScheme.onBackground,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
                                     fontFamily = LocalAppFontFamily.current
@@ -380,7 +380,7 @@ fun GenrePreferenceScreen(viewModel: MusicViewModel) {
                 ) {
                     Text(
                         text = if (step == 0) (if (lang == "fa") "بعدی" else "Next") else (if (lang == "fa") "شروع سفر موسیقی" else "Start Music Journey"),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontWeight = FontWeight.Bold,
                         fontFamily = LocalAppFontFamily.current,
                         fontSize = 15.sp
@@ -770,7 +770,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
 
     val dominantColorArgb by viewModel.dominantColorArgb.collectAsStateWithLifecycle()
     val accentColor by animateColorAsState(
-        targetValue = Color(dominantColorArgb),
+        targetValue = MaterialTheme.colorScheme.primary,
         animationSpec = tween(durationMillis = 900),
         label = "AppAccentColor"
     )
@@ -785,7 +785,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE || isTelevision
 
     val isLight = themeMode == "light" || themeMode == "glass"
-    val backgroundColor = if (themeMode == "glass") Color(0xFFF0F2F6) else if (isLight) Color.White else Color.Black
+    val backgroundColor = MaterialTheme.colorScheme.background
     val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x55
     val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x38
     val ambientColor1 = accentColor.copy(alpha = ambientAlpha1 / 255f)
