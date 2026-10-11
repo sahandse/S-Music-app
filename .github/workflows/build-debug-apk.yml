@@ -49,3 +49,11 @@ jobs:
           APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
           echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
 
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: high-music-android-debug
+          path: app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 14
