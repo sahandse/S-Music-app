@@ -784,6 +784,7 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE || isTelevision
 
     val backgroundColor = MaterialTheme.colorScheme.background
+    val isLight = themeMode == "light" || themeMode == "glass"
     val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x55
     val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x38
     val ambientColor1 = accentColor.copy(alpha = ambientAlpha1 / 255f)
@@ -5762,9 +5763,10 @@ fun ArtistDetailView(
                     }
 
                     // MusicBrainz: Wikipedia link + band members
-                    if (artistMbDetail != null) {
-                        val wikiRelation = artistMbDetail.relations?.firstOrNull { it.type == "wikipedia" }
-                        val memberRelations = artistMbDetail.relations?.filter {
+                    val mbDetail = artistMbDetail
+                    if (mbDetail != null) {
+                        val wikiRelation = mbDetail.relations?.firstOrNull { it.type == "wikipedia" }
+                        val memberRelations = mbDetail.relations?.filter {
                             it.type == "member of band" || it.type == "members"
                         } ?: emptyList()
 
