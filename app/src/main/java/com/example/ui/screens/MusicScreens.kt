@@ -4494,6 +4494,42 @@ fun SubLibraryItemsView(
                     }
 
                     Column(modifier = Modifier.fillMaxSize()) {
+                        // A compact summary and clear download states precede storage tools.
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    text = translate("دانلودهای من", "My Downloads", viewModel),
+                                    fontSize = 23.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    fontFamily = LocalAppFontFamily.current,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = translate("${downloads.size} آهنگ ذخیره‌شده", "${downloads.size} saved tracks", viewModel),
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontFamily = LocalAppFontFamily.current
+                                )
+                            }
+                            if (activeDownloads.isNotEmpty()) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                ) {
+                                    Text(
+                                        text = translate("${activeDownloads.size} در حال دانلود", "${activeDownloads.size} downloading", viewModel),
+                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                        fontSize = 12.sp,
+                                        fontFamily = LocalAppFontFamily.current,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
                         // Advanced Storage & Management Dashboard Card with Custom Visual Graph
                         Card(
                             modifier = Modifier
