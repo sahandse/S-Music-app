@@ -194,7 +194,7 @@ function songMeta(audio, post) {
   // 2) Fall back to the file's own tags, cleaned of promo junk.
   // Avoid treating promotional captions such as "New🔥" and channel
   // mentions as metadata. Prefer the actual audio file tags in that case.
-  const isPromo = (value) => !value || /^(?:new|جدید|آهنگ جدید|موزیک جدید)[\\s🔥✨!]*$/iu.test(value.trim()) || /^@[a-z0-9_]+$/i.test(value.trim())
+  const isPromo = (value) => !value || /^(?:new|جدید|آهنگ جدید|موزیک جدید)[\s🔥✨!]*$/iu.test(value.trim()) || /^@[a-z0-9_]+$/i.test(value.trim())
   title = clean(title)
   artist = clean(artist)
   if (isPromo(title)) title = ''
