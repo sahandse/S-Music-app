@@ -768,7 +768,6 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val isPlaying by viewModel.playbackConnection.isPlaying.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
 
-    val dominantColorArgb by viewModel.dominantColorArgb.collectAsStateWithLifecycle()
     val accentColor by animateColorAsState(
         targetValue = MaterialTheme.colorScheme.primary,
         animationSpec = tween(durationMillis = 900),
@@ -784,7 +783,6 @@ fun MainMusicApp(viewModel: MusicViewModel) {
     val isTelevision = (configuration.uiMode and Configuration.UI_MODE_TYPE_MASK) == Configuration.UI_MODE_TYPE_TELEVISION
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE || isTelevision
 
-    val isLight = themeMode == "light" || themeMode == "glass"
     val backgroundColor = MaterialTheme.colorScheme.background
     val ambientAlpha1 = if (themeMode == "glass") 0x60 else if (isLight) 0x1B else 0x55
     val ambientAlpha2 = if (themeMode == "glass") 0x50 else if (isLight) 0x13 else 0x38
