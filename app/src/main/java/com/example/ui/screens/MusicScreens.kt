@@ -4439,6 +4439,7 @@ fun SubLibraryItemsView(
                     val activeDownloads by viewModel.downloadProgresses.collectAsStateWithLifecycle()
                     val context = LocalContext.current
 
+                    var showStorageDetails by remember { mutableStateOf(false) }
                     var searchQuery by remember { mutableStateOf("") }
                     var sortBy by remember { mutableStateOf("date") } // "date", "title", "artist", "size"
                     var showLocationDialog by remember { mutableStateOf(false) }
@@ -4530,6 +4531,22 @@ fun SubLibraryItemsView(
                                 }
                             }
                         }
+                        TextButton(
+                            onClick = { showStorageDetails = !showStorageDetails },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (showStorageDetails) Icons.Default.ExpandLess else Icons.Default.Tune,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                translate("مدیریت حافظه و تنظیمات", "Storage & settings", viewModel),
+                                fontFamily = LocalAppFontFamily.current
+                            )
+                        }
+                        if (showStorageDetails) {
                         // Advanced Storage & Management Dashboard Card with Custom Visual Graph
                         Card(
                             modifier = Modifier
@@ -4667,6 +4684,8 @@ fun SubLibraryItemsView(
                                     }
                                 }
                             }
+                        }
+
                         }
 
                         // Active Download Queue Indicator if any
